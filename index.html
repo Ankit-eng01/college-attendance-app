@@ -1198,14 +1198,27 @@
       <!-- FILTER CHIPS ROW -->
       <div class="filter-scroll" id="filterChipsRow"></div>
 
+      <!-- COURSES HEADER ROW WITH + ADD SUBJECT -->
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:2px; padding:0 2px;">
+        <span style="font-size:12.5px; font-weight:800; color:#fff; text-transform:uppercase; letter-spacing:0.04em;">
+          My Subjects (<span id="subjectCountBadge">0</span>)
+        </span>
+        <button type="button" class="icon-btn" style="padding:5px 11px; font-size:11.5px; font-weight:700;" onclick="openAddSingleModal()">
+          <span>+</span> Add Subject
+        </button>
+      </div>
+
       <!-- 2. SUBJECT-WISE ANALYTICS LIST -->
       <div id="subjectsList" class="subjects-list"></div>
 
-      <div id="emptyState" style="display:none; text-align:center; padding:32px 16px; color:var(--text-muted);">
-        <p style="font-size:14px; font-weight:700; color:#fff; margin-bottom:6px;">No Subjects Added Yet</p>
-        <p style="font-size:12.5px; margin-bottom:14px;">Tap Setup below to configure your semester courses.</p>
-        <button type="button" class="btn-primary" style="margin:0 auto;" onclick="openSetupModal()">
-          ⚡ Start Semester Setup
+      <div id="emptyState" style="display:none; text-align:center; padding:36px 18px; background:var(--bg-card); border:1px solid var(--border-accent); border-radius:var(--radius-lg); margin-top:8px;">
+        <div style="font-size:40px; margin-bottom:8px;">🎓</div>
+        <p style="font-size:17px; font-weight:800; color:#fff; margin-bottom:6px;">No Subjects Configured Yet</p>
+        <p style="font-size:13px; color:var(--text-muted); max-width:340px; margin:0 auto 16px; line-height:1.45;">
+          Tell Attendify how many courses you have this semester and name them to start calculating your 75% attendance criteria.
+        </p>
+        <button type="button" class="btn-primary" style="margin:0 auto; padding:12px 24px;" onclick="openSetupModal()">
+          ⚡ Start Semester Setup (30 sec)
         </button>
       </div>
 
@@ -1455,20 +1468,33 @@
     </div>
   </nav>
 
-  <!-- ONBOARDING / SETUP MODAL -->
+  <!-- ONBOARDING / SEMESTER SETUP WIZARD -->
   <div id="setupModal" class="modal-backdrop" onclick="closeOnBackdrop(event)">
     <div class="modal-sheet">
       <div class="sheet-handle"></div>
       <div class="sheet-title">
-        <span>⚡ Quick Semester Setup</span>
+        <span>🎓 Semester Setup Wizard</span>
         <button type="button" class="close-btn" onclick="closeSetupModal()">✕</button>
       </div>
 
-      <!-- Step 1: Count -->
+      <!-- Step 1: Number of Subjects -->
       <div id="setupStep1">
-        <p style="font-size:13px; color:var(--text-muted); text-align:center;">
-          How many subjects do you have this semester?
-        </p>
+        <div style="text-align:center; margin-bottom:14px;">
+          <h3 style="font-size:16px; font-weight:800; color:#fff;">How many subjects do you have?</h3>
+          <p style="font-size:12.5px; color:var(--text-muted); margin-top:4px;">
+            Choose your course count for this semester:
+          </p>
+        </div>
+
+        <!-- Quick 1-tap presets -->
+        <div style="display:flex; justify-content:center; gap:8px; flex-wrap:wrap; margin-bottom:14px;">
+          <button type="button" class="filter-chip" onclick="setSubjectCountDirect(3)">3 Courses</button>
+          <button type="button" class="filter-chip" onclick="setSubjectCountDirect(4)">4 Courses</button>
+          <button type="button" class="filter-chip active" id="chipPreset5" onclick="setSubjectCountDirect(5)">5 Courses</button>
+          <button type="button" class="filter-chip" onclick="setSubjectCountDirect(6)">6 Courses</button>
+          <button type="button" class="filter-chip" onclick="setSubjectCountDirect(7)">7 Courses</button>
+          <button type="button" class="filter-chip" onclick="setSubjectCountDirect(8)">8 Courses</button>
+        </div>
 
         <div class="setup-stepper">
           <button type="button" class="step-btn" onclick="adjustSubjectCount(-1)">−</button>
@@ -1476,16 +1502,19 @@
           <button type="button" class="step-btn" onclick="adjustSubjectCount(1)">+</button>
         </div>
 
-        <button type="button" class="btn-primary" style="width:100%; margin-top:14px;" onclick="goToSetupStep2()">
-          Next: Name Your Subjects ➔
+        <button type="button" class="btn-primary" style="width:100%; margin-top:16px;" onclick="goToSetupStep2()">
+          Next: Enter Subject Names ➔
         </button>
       </div>
 
-      <!-- Step 2: Details for each subject -->
+      <!-- Step 2: Name each subject and customize -->
       <div id="setupStep2" style="display:none;">
-        <p style="font-size:12.5px; color:var(--text-muted); margin-bottom:12px;">
-          Configure your <span id="step2CountLabel">5</span> courses with category and current attendance:
-        </p>
+        <div style="margin-bottom:12px;">
+          <h3 style="font-size:16px; font-weight:800; color:#fff;">Customize Your <span id="step2CountLabel">5</span> Subjects</h3>
+          <p style="font-size:12px; color:var(--text-muted); margin-top:2px;">
+            Enter the name of each course and whether it is Theory, Lab, or Elective:
+          </p>
+        </div>
 
         <div id="setupSubjectsContainer" style="display:flex; flex-direction:column; gap:10px; max-height:48vh; overflow-y:auto; padding-right:2px;"></div>
 
@@ -1494,7 +1523,7 @@
             ← Back
           </button>
           <button type="button" class="btn-primary" style="flex:2; height:44px;" onclick="finishSetup()">
-            ✓ Save &amp; Launch Tracker
+            ✓ Save &amp; Start Tracking 🚀
           </button>
         </div>
       </div>
@@ -1701,7 +1730,7 @@
     // ATTENDIFY CORE ENGINE (SECURITY & PRIVACY HARDENED)
     // -------------------------------------------------------------
 
-    const STORAGE_KEY = 'attendify_state_v2';
+    const STORAGE_KEY = 'attendify_state_v5';
 
     // 1. SECURITY & SANITIZATION UTILITIES (XSS PREVENTION)
     function escapeHtml(str) {
@@ -1729,13 +1758,8 @@
 
     function getDefaultState() {
       return {
-        subjects: [
-          { id: 'sub_1', name: 'Data Structures & Algorithms', category: 'theory', attended: 21, total: 24, target: 75 },
-          { id: 'sub_2', name: 'Database Management Systems', category: 'theory', attended: 14, total: 20, target: 75 },
-          { id: 'sub_3', name: 'Computer Networks', category: 'theory', attended: 11, total: 18, target: 75 },
-          { id: 'sub_4', name: 'Operating Systems Lab', category: 'lab', attended: 9, total: 10, target: 75 },
-          { id: 'sub_5', name: 'Open Elective (AI/ML)', category: 'elective', attended: 16, total: 20, target: 75 }
-        ],
+        isSetupCompleted: false,
+        subjects: [],
         calendar: {},
         history: [],
         globalTarget: 75,
@@ -1766,6 +1790,13 @@
       applyPrivacyModeUI();
       renderApp();
       initServiceWorker();
+
+      // Automatically launch onboarding setup wizard for new users
+      if (!appState.isSetupCompleted || !appState.subjects || appState.subjects.length === 0) {
+        setTimeout(() => {
+          openSetupModal();
+        }, 150);
+      }
     });
 
     function initDate() {
@@ -2006,7 +2037,7 @@
 
       renderSmartDashboard();
       renderChips();
-      renderSubjectAnalyticsList();
+      renderSubjectAnalyticsList(); const badge = document.getElementById('subjectCountBadge'); if(badge) badge.textContent = appState.subjects.length;
     }
 
     // 7. COMPONENT 1: SMART DASHBOARD
@@ -2061,10 +2092,20 @@
       const alertBar = document.getElementById('dashAlertBanner');
 
       if (appState.subjects.length === 0) {
-        healthTag.textContent = '● New Semester Setup';
-        healthTag.className = 'health-tag health-good';
-        adviceEl.innerHTML = `Tap <strong>Setup</strong> in the top bar to configure your subjects.`;
-        alertBar.style.display = 'none';
+        document.getElementById('dashOverallPct').textContent = '--%';
+        circle.style.strokeDashoffset = circumference;
+        healthTag.textContent = '● Setup Required';
+        healthTag.className = 'health-tag health-warning';
+        adviceEl.innerHTML = `Tap <strong>Setup</strong> in the top bar to enter your subjects and start tracking.`;
+        alertBar.className = 'shortage-banner banner-safe';
+        alertBar.style.display = 'flex';
+        alertBar.innerHTML = `
+          <span>👋</span>
+          <div>
+            <strong>Welcome to Attendify!</strong> How many subjects do you have this semester?
+            <button type="button" class="btn-primary" style="margin-top:8px; padding:6px 14px; font-size:12px;" onclick="openSetupModal()">⚡ Setup My Subjects Now</button>
+          </div>
+        `;
         return;
       }
 
@@ -2131,7 +2172,7 @@
     function filterCategory(cat) {
       appState.activeCategory = cat;
       renderChips();
-      renderSubjectAnalyticsList();
+      renderSubjectAnalyticsList(); const badge = document.getElementById('subjectCountBadge'); if(badge) badge.textContent = appState.subjects.length;
     }
 
     // 9. COMPONENT 2: SUBJECT-WISE ANALYTICS CARDS (XSS ESCAPED)
@@ -2552,10 +2593,11 @@
       recordAttendanceEntry(date, currentHistorySubId, status);
     }
 
-    // 12. ONBOARDING / SETUP WIZARD (NO-SLOP)
+    // 12. ONBOARDING / SETUP WIZARD (INTERACTIVE & CUSTOMIZED)
     function openSetupModal() {
       wizardSubjectCount = appState.subjects && appState.subjects.length > 0 ? appState.subjects.length : 5;
       document.getElementById('setupCountDisplay').textContent = wizardSubjectCount;
+      updatePresetChips(wizardSubjectCount);
       document.getElementById('setupStep1').style.display = 'block';
       document.getElementById('setupStep2').style.display = 'none';
       document.getElementById('setupModal').classList.add('open');
@@ -2565,9 +2607,23 @@
       document.getElementById('setupModal').classList.remove('open');
     }
 
+    function setSubjectCountDirect(count) {
+      wizardSubjectCount = Math.max(1, Math.min(15, count));
+      document.getElementById('setupCountDisplay').textContent = wizardSubjectCount;
+      updatePresetChips(wizardSubjectCount);
+    }
+
     function adjustSubjectCount(delta) {
       wizardSubjectCount = Math.max(1, Math.min(15, wizardSubjectCount + delta));
       document.getElementById('setupCountDisplay').textContent = wizardSubjectCount;
+      updatePresetChips(wizardSubjectCount);
+    }
+
+    function updatePresetChips(count) {
+      [3, 4, 5, 6, 7, 8].forEach(c => {
+        const el = document.getElementById(`chipPreset${c}`);
+        if (el) el.classList.toggle('active', c === count);
+      });
     }
 
     function goToSetupStep2() {
@@ -2578,28 +2634,44 @@
       const container = document.getElementById('setupSubjectsContainer');
       let html = '';
 
+      const sampleNames = [
+        'Mathematics / Calculus',
+        'Data Structures & Algorithms',
+        'Operating Systems',
+        'Database Systems',
+        'Computer Networks Lab',
+        'Artificial Intelligence',
+        'Software Engineering',
+        'Web Development',
+        'Physics / Electronics'
+      ];
+
       for (let i = 0; i < wizardSubjectCount; i++) {
         const existing = appState.subjects[i];
         const defaultName = existing ? escapeHtml(existing.name) : '';
         const defaultCat = existing ? (existing.category || 'theory') : (i >= 4 ? 'lab' : 'theory');
         const defaultAttended = existing ? existing.attended : 0;
         const defaultTotal = existing ? existing.total : 0;
+        const placeholderName = sampleNames[i % sampleNames.length];
 
         html += `
           <div class="subject-setup-row">
-            <span style="font-size:11px; font-weight:700; color:var(--brand); text-transform:uppercase;">Subject ${i + 1}</span>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-size:11px; font-weight:800; color:var(--brand); text-transform:uppercase;">Subject ${i + 1}</span>
+              <span style="font-size:10px; color:var(--text-dim);">Course #${i + 1}</span>
+            </div>
             <div class="setup-row-top">
-              <input type="text" id="wizName_${i}" class="form-inp" style="flex:1;" placeholder="e.g. Subject ${i+1} Name" value="${defaultName}" maxlength="80">
-              <select id="wizCat_${i}" class="form-sel" style="width:110px;">
+              <input type="text" id="wizName_${i}" class="form-inp" style="flex:1;" placeholder="e.g. ${placeholderName}" value="${defaultName}" maxlength="80" required>
+              <select id="wizCat_${i}" class="form-sel" style="width:115px;">
                 <option value="theory" ${defaultCat === 'theory' ? 'selected' : ''}>Theory</option>
-                <option value="lab" ${defaultCat === 'lab' ? 'selected' : ''}>Lab</option>
+                <option value="lab" ${defaultCat === 'lab' ? 'selected' : ''}>Lab / Practical</option>
                 <option value="elective" ${defaultCat === 'elective' ? 'selected' : ''}>Elective</option>
                 <option value="tutorial" ${defaultCat === 'tutorial' ? 'selected' : ''}>Tutorial</option>
               </select>
             </div>
             <div class="setup-row-bottom">
               <div>
-                <label style="font-size:10px; color:var(--text-dim); display:block; margin-bottom:2px;">Attended so far</label>
+                <label style="font-size:10px; color:var(--text-dim); display:block; margin-bottom:2px;">Classes attended so far</label>
                 <input type="number" id="wizAtt_${i}" class="form-inp" style="width:100%; padding:6px 8px; font-size:13px;" value="${defaultAttended}" min="0" max="2000">
               </div>
               <div>
@@ -2612,6 +2684,10 @@
       }
 
       container.innerHTML = html;
+      setTimeout(() => {
+        const firstInput = document.getElementById('wizName_0');
+        if (firstInput) firstInput.focus();
+      }, 100);
     }
 
     function backToStep1() {
@@ -2629,7 +2705,7 @@
 
         let rawName = nameInput ? nameInput.value : '';
         let name = sanitizeText(rawName);
-        if (!name) name = `Subject ${i + 1}`;
+        if (!name) name = `Course ${i + 1}`;
         if (name.length > 80) name = name.substring(0, 80);
 
         const category = catSelect ? catSelect.value : 'theory';
@@ -2647,8 +2723,24 @@
       }
 
       appState.subjects = newSubjects;
+      appState.isSetupCompleted = true;
       closeSetupModal();
       saveState();
+
+      alert(`🎉 Semester Setup Saved!
+Created ${newSubjects.length} customized subjects for you.`);
+    }
+
+    function openAddSingleModal() {
+      document.getElementById('singleModalHeading').textContent = 'Add Single Course / Subject';
+      document.getElementById('singleEditId').value = '';
+      document.getElementById('singleName').value = '';
+      document.getElementById('singleCategory').value = 'theory';
+      document.getElementById('singleAttended').value = '0';
+      document.getElementById('singleTotal').value = '0';
+      document.getElementById('singleDeleteBtn').style.display = 'none';
+      document.getElementById('singleModal').classList.add('open');
+      setTimeout(() => document.getElementById('singleName').focus(), 150);
     }
 
     // 13. SINGLE SUBJECT ADD/EDIT
