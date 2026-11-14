@@ -1,0 +1,21 @@
+{
+  "name": "Attendify - College Attendance Tracker",
+  "short_name": "Attendify",
+  "description": "Smart college attendance tracker with subject categories, bunk/attend intelligence, and dark mode.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "window-controls-overlay"],
+  "orientation": "portrait",
+  "background_color": "#0b0f19",
+  "theme_color": "#0b0f19",
+  "categories": ["education", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
