@@ -1,9 +1,12 @@
-const CACHE_NAME = 'attendify-v4';
+const CACHE_NAME = 'attendify-v5';
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
-  './icon.svg'
+  './icon.svg',
+  './icon-192.png',
+  './icon-512.png',
+  './icon-maskable.png'
 ];
 
 self.addEventListener('install', (event) => {
