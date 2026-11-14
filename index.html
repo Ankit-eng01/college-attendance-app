@@ -9,7 +9,7 @@
   <meta name="referrer" content="no-referrer">
   
   <!-- SECURITY: CONTENT SECURITY POLICY TO PREVENT ARBITRARY SCRIPT INJECTION -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; img-src 'self' data: blob: https:; font-src 'self' https://fonts.gstatic.com data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; connect-src 'self';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; img-src 'self' data: blob: https:; font-src 'self' https://fonts.gstatic.com data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; connect-src 'self' https://*.supabase.co https://bzvhfoedeyopdtsqisdn.supabase.co;">
 
   <title>Attendify — College Attendance & 75% Tracker</title>
 
@@ -1118,12 +1118,16 @@
           </svg>
         </div>
         <div>
-          <h1 class="brand-title">Attendify</h1>
-          <p class="brand-subtitle" id="topDateStr">College Tracker</p>
+          <h1 class="brand-title" id="topBrandTitle">Attendify</h1>
+          <p class="brand-subtitle" id="topDateStr">College Tracker • <span id="topCloudStatus">☁️ Cloud</span></p>
         </div>
       </div>
 
       <div class="header-actions">
+        <!-- CLOUD STORAGE SYNC BUTTON -->
+        <button type="button" class="icon-btn" id="headerCloudSyncBtn" onclick="triggerManualSync()" title="Sync to Supabase Cloud Storage">
+          <span>☁️</span>
+        </button>
         <!-- DISCREET PRIVACY MODE TOGGLE -->
         <button type="button" class="icon-btn" id="privacyToggleBtn" onclick="togglePrivacyMode()" title="Discreet Screen Mode (Anti-Shoulder Surfing)">
           <span>👁️</span>
@@ -1337,6 +1341,53 @@
         </div>
       </div>
 
+      <!-- SUPABASE CLOUD STORAGE & SYNC CARD -->
+      <div class="calc-card">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <h2 style="font-size:17px; font-weight:800; color:#fff;">☁️ Cloud Storage &amp; Sync</h2>
+          <span class="criteria-pill pill-safe" id="cloudConnectionBadge"><span class="pill-dot dot-green"></span> Supabase Connected</span>
+        </div>
+        <p style="font-size:12.5px; color:var(--text-muted);">
+          Your attendance records are backed up automatically to Supabase Cloud PostgreSQL storage.
+        </p>
+
+        <div style="background:var(--bg-surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:12px; display:flex; flex-direction:column; gap:10px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <span style="font-size:10px; color:var(--text-dim); text-transform:uppercase; font-weight:700;">Student Name</span>
+              <div id="settingsStudentNameDisplay" style="font-size:14px; font-weight:800; color:#fff;">--</div>
+            </div>
+            <button type="button" class="icon-btn" style="padding:4px 9px; font-size:11px;" onclick="openEditNameModal()">
+              ✏️ Edit Name
+            </button>
+          </div>
+
+          <div style="border-top:1px solid rgba(255,255,255,0.06); padding-top:8px; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <span style="font-size:10px; color:var(--text-dim); text-transform:uppercase; font-weight:700;">Your Cloud Sync Code</span>
+              <div id="settingsSyncCodeDisplay" style="font-size:13px; font-weight:800; font-family:var(--font-mono); color:var(--brand);">--</div>
+            </div>
+            <button type="button" class="icon-btn" style="padding:4px 9px; font-size:11px;" onclick="copySyncCode()">
+              📋 Copy Code
+            </button>
+          </div>
+
+          <div style="border-top:1px solid rgba(255,255,255,0.06); padding-top:8px; font-size:11.5px; color:var(--text-muted); display:flex; justify-content:space-between;">
+            <span>Last Cloud Sync:</span>
+            <span id="settingsLastSyncTime" style="color:#34d399; font-weight:700;">Just now</span>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="btn-primary" style="flex:1; height:42px; font-size:12.5px;" onclick="triggerManualSync()">
+            🔄 Sync to Cloud Now
+          </button>
+          <button type="button" class="icon-btn" style="flex:1; justify-content:center; height:42px; font-size:12px;" onclick="openRestoreCloudModal()">
+            📥 Restore from Cloud
+          </button>
+        </div>
+      </div>
+
       <!-- STUDENT PRIVACY & SECURITY SUITE -->
       <div class="calc-card">
         <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -1477,13 +1528,23 @@
         <button type="button" class="close-btn" onclick="closeSetupModal()">✕</button>
       </div>
 
-      <!-- Step 1: Number of Subjects -->
+      <!-- Step 1: Student Name & Number of Subjects -->
       <div id="setupStep1">
         <div style="text-align:center; margin-bottom:14px;">
-          <h3 style="font-size:16px; font-weight:800; color:#fff;">How many subjects do you have?</h3>
+          <h3 style="font-size:17px; font-weight:800; color:#fff;">Welcome to Attendify 🎓</h3>
           <p style="font-size:12.5px; color:var(--text-muted); margin-top:4px;">
-            Choose your course count for this semester:
+            Set up your name and subjects to sync with cloud storage:
           </p>
+        </div>
+
+        <!-- Student Name Input -->
+        <div class="form-group" style="margin-bottom:14px;">
+          <label class="form-lbl" for="wizStudentName">Your Name</label>
+          <input type="text" id="wizStudentName" class="form-inp" placeholder="e.g. Ankit" maxlength="50" required>
+        </div>
+
+        <div style="margin-top:10px; margin-bottom:6px;">
+          <label class="form-lbl">How many subjects do you have this semester?</label>
         </div>
 
         <!-- Quick 1-tap presets -->
@@ -1730,7 +1791,7 @@
     // ATTENDIFY CORE ENGINE (SECURITY & PRIVACY HARDENED)
     // -------------------------------------------------------------
 
-    const STORAGE_KEY = 'attendify_state_v5';
+    const STORAGE_KEY = 'attendify_state_v6';
 
     // 1. SECURITY & SANITIZATION UTILITIES (XSS PREVENTION)
     function escapeHtml(str) {
@@ -1759,6 +1820,10 @@
     function getDefaultState() {
       return {
         isSetupCompleted: false,
+        studentName: '',
+        syncCode: generateSyncCode(),
+        cloudSyncEnabled: true,
+        lastSyncedAt: null,
         subjects: [],
         calendar: {},
         history: [],
@@ -1822,6 +1887,7 @@
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
         renderApp();
+        queueCloudSync();
       } catch (err) {
         console.error('Failed to save state:', err);
       }
@@ -2035,9 +2101,23 @@
       const settingsTarget = document.getElementById('settingsTargetLabel');
       if (settingsTarget) settingsTarget.textContent = `${target}%`;
 
+      // Update personalized brand greeting
+      const brandTitle = document.getElementById('topBrandTitle');
+      if (brandTitle) {
+        brandTitle.textContent = appState.studentName ? `Hi, ${appState.studentName} 👋` : 'Attendify';
+      }
+
+      // Update Settings cloud details
+      const nameDisp = document.getElementById('settingsStudentNameDisplay');
+      if (nameDisp) nameDisp.textContent = appState.studentName || 'Not Set';
+      const syncDisp = document.getElementById('settingsSyncCodeDisplay');
+      if (syncDisp) syncDisp.textContent = appState.syncCode || '--';
+
       renderSmartDashboard();
       renderChips();
-      renderSubjectAnalyticsList(); const badge = document.getElementById('subjectCountBadge'); if(badge) badge.textContent = appState.subjects.length;
+      renderSubjectAnalyticsList();
+      const badge = document.getElementById('subjectCountBadge');
+      if (badge) badge.textContent = appState.subjects.length;
     }
 
     // 7. COMPONENT 1: SMART DASHBOARD
@@ -2593,14 +2673,19 @@
       recordAttendanceEntry(date, currentHistorySubId, status);
     }
 
-    // 12. ONBOARDING / SETUP WIZARD (INTERACTIVE & CUSTOMIZED)
+    // 12. ONBOARDING / SETUP WIZARD (NAME INPUT & CUSTOMIZATION)
     function openSetupModal() {
       wizardSubjectCount = appState.subjects && appState.subjects.length > 0 ? appState.subjects.length : 5;
       document.getElementById('setupCountDisplay').textContent = wizardSubjectCount;
+      const nameInp = document.getElementById('wizStudentName');
+      if (nameInp) nameInp.value = appState.studentName || '';
       updatePresetChips(wizardSubjectCount);
       document.getElementById('setupStep1').style.display = 'block';
       document.getElementById('setupStep2').style.display = 'none';
       document.getElementById('setupModal').classList.add('open');
+      setTimeout(() => {
+        if (nameInp && !nameInp.value) nameInp.focus();
+      }, 150);
     }
 
     function closeSetupModal() {
@@ -2627,6 +2712,16 @@
     }
 
     function goToSetupStep2() {
+      const nameInp = document.getElementById('wizStudentName');
+      const rawName = nameInp ? nameInp.value : '';
+      const cleanName = sanitizeText(rawName);
+      if (!cleanName) {
+        alert('Please enter your name to customize your attendance dashboard.');
+        if (nameInp) nameInp.focus();
+        return;
+      }
+      appState.studentName = cleanName;
+
       document.getElementById('setupStep1').style.display = 'none';
       document.getElementById('setupStep2').style.display = 'block';
       document.getElementById('step2CountLabel').textContent = wizardSubjectCount;
@@ -3032,11 +3127,233 @@ Created ${newSubjects.length} customized subjects for you.`);
       }
     }
 
+
+    // -------------------------------------------------------------
+    // SUPABASE CLOUD STORAGE CONFIGURATION & ENGINE
+    // -------------------------------------------------------------
+    const SUPABASE_URL = 'https://bzvhfoedeyopdtsqisdn.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6dmhmb2VkZXlvcGR0c3Fpc2RuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ2Nzc5MTMsImV4cCI6MjExMDI1MzkxM30.SWt1gUD614LqE4dtsRNVKvQFOgox_YjJ9GD9b2ARhdk';
+
+    function generateSyncCode() {
+      const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+      let code = 'ATTEND-';
+      for (let i = 0; i < 4; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+      code += '-';
+      for (let i = 0; i < 4; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+      return code;
+    }
+
+    let syncDebounceTimer = null;
+
+    function queueCloudSync() {
+      if (syncDebounceTimer) clearTimeout(syncDebounceTimer);
+      syncDebounceTimer = setTimeout(() => {
+        syncToCloudStorage();
+      }, 800);
+    }
+
+    async function syncToCloudStorage() {
+      if (!appState.syncCode) appState.syncCode = generateSyncCode();
+
+      const statusEl = document.getElementById('topCloudStatus');
+      const headerBtn = document.getElementById('headerCloudSyncBtn');
+      if (statusEl) statusEl.innerHTML = '☁️ <span style="color:#fbbf24;">Syncing...</span>';
+      if (headerBtn) headerBtn.style.opacity = '0.6';
+
+      const payload = {
+        sync_code: appState.syncCode,
+        data: {
+          studentName: appState.studentName || '',
+          subjects: appState.subjects || [],
+          calendar: appState.calendar || {},
+          history: appState.history || [],
+          globalTarget: appState.globalTarget || 75,
+          activeTheme: appState.activeTheme || 'navy-purple',
+          privacyMode: appState.privacyMode || false,
+          lastUpdated: new Date().toISOString()
+        },
+        updated_at: new Date().toISOString()
+      };
+
+      try {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/attendify_sync`, {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'resolution=merge-duplicates,return=minimal'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (response.ok || response.status === 201 || response.status === 204) {
+          appState.lastSyncedAt = Date.now();
+          if (statusEl) statusEl.innerHTML = '☁️ <span style="color:#34d399;">Synced</span>';
+          const lastSyncEl = document.getElementById('settingsLastSyncTime');
+          if (lastSyncEl) lastSyncEl.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } else {
+          console.warn('Cloud sync response error:', response.status);
+          if (statusEl) statusEl.innerHTML = '☁️ <span style="color:#94a3b8;">Local</span>';
+        }
+      } catch (err) {
+        console.warn('Offline or network error syncing to cloud:', err);
+        if (statusEl) statusEl.innerHTML = '☁️ <span style="color:#94a3b8;">Offline</span>';
+      } finally {
+        if (headerBtn) headerBtn.style.opacity = '1';
+      }
+    }
+
+    async function triggerManualSync() {
+      const headerBtn = document.getElementById('headerCloudSyncBtn');
+      if (headerBtn) headerBtn.classList.add('active');
+      await syncToCloudStorage();
+      setTimeout(() => {
+        if (headerBtn) headerBtn.classList.remove('active');
+      }, 600);
+      alert(`☁️ Cloud Storage Synced!
+Your attendance records are backed up securely under Code: ${appState.syncCode}`);
+    }
+
+    function copySyncCode() {
+      if (!appState.syncCode) return;
+      navigator.clipboard.writeText(appState.syncCode).then(() => {
+        alert(`📋 Copied Cloud Sync Code: ${appState.syncCode}
+Save this code to restore your courses on another phone or computer!`);
+      }).catch(() => {
+        prompt('Copy your Cloud Sync Code:', appState.syncCode);
+      });
+    }
+
+    function openRestoreCloudModal() {
+      document.getElementById('restoreCloudModal').classList.add('open');
+      setTimeout(() => document.getElementById('restoreSyncCodeInput').focus(), 100);
+    }
+    function closeRestoreCloudModal() {
+      document.getElementById('restoreCloudModal').classList.remove('open');
+    }
+
+    async function confirmRestoreFromCloud() {
+      const codeInput = document.getElementById('restoreSyncCodeInput');
+      const code = (codeInput ? codeInput.value : '').trim().toUpperCase();
+      if (!code) {
+        alert('Please enter your Cloud Sync Code.');
+        return;
+      }
+
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/attendify_sync?sync_code=eq.${encodeURIComponent(code)}`, {
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+          }
+        });
+
+        if (!res.ok) throw new Error('Cloud fetch failed');
+        const rows = await res.json();
+        if (!rows || rows.length === 0) {
+          alert('❌ No attendance record found with Sync Code: ' + code);
+          return;
+        }
+
+        const cloudData = rows[0].data;
+        const validated = validateAndSanitizeState(cloudData);
+
+        appState = validated;
+        appState.syncCode = code;
+        appState.isSetupCompleted = true;
+        appState.studentName = sanitizeText(cloudData.studentName || '');
+
+        applyThemeUI(appState.activeTheme || 'navy-purple');
+        applyPrivacyModeUI();
+        saveState();
+        closeRestoreCloudModal();
+
+        alert(`🎉 Cloud Restore Successful!
+Welcome back, ${appState.studentName || 'Student'}!
+Restored ${appState.subjects.length} subjects from cloud storage.`);
+      } catch (err) {
+        alert('❌ Error connecting to Cloud Storage: ' + err.message);
+      }
+    }
+
+    function openEditNameModal() {
+      document.getElementById('editNameInput').value = appState.studentName || '';
+      document.getElementById('editNameModal').classList.add('open');
+      setTimeout(() => document.getElementById('editNameInput').focus(), 100);
+    }
+    function closeEditNameModal() {
+      document.getElementById('editNameModal').classList.remove('open');
+    }
+    function saveEditedName() {
+      const inp = document.getElementById('editNameInput');
+      const newName = sanitizeText(inp ? inp.value : '');
+      if (newName) {
+        appState.studentName = newName;
+        saveState();
+        queueCloudSync();
+      }
+      closeEditNameModal();
+    }
+
     function initServiceWorker() {
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js').catch(() => {});
       }
     }
   </script>
+  <!-- RESTORE FROM CLOUD STORAGE MODAL -->
+  <div id="restoreCloudModal" class="modal-backdrop" onclick="closeOnBackdrop(event)">
+    <div class="modal-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-title">
+        <span>☁️ Restore from Cloud Storage</span>
+        <button type="button" class="close-btn" onclick="closeRestoreCloudModal()">✕</button>
+      </div>
+
+      <p style="font-size:13px; color:var(--text-muted); line-height:1.45;">
+        Open Attendify on any phone, tablet, or PC and restore your customized courses and attendance history:
+      </p>
+
+      <div class="form-group">
+        <label class="form-lbl" for="restoreSyncCodeInput">Enter Your Cloud Sync Code</label>
+        <input type="text" id="restoreSyncCodeInput" class="form-inp" placeholder="e.g. ATTEND-7K2X-9P4M" style="font-family:var(--font-mono); text-transform:uppercase;">
+      </div>
+
+      <div style="display:flex; gap:10px; margin-top:8px;">
+        <button type="button" class="icon-btn" style="flex:1; justify-content:center; height:44px;" onclick="closeRestoreCloudModal()">
+          Cancel
+        </button>
+        <button type="button" class="btn-primary" style="flex:2; height:44px;" onclick="confirmRestoreFromCloud()">
+          📥 Fetch &amp; Restore
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- EDIT STUDENT NAME MODAL -->
+  <div id="editNameModal" class="modal-backdrop" onclick="closeOnBackdrop(event)">
+    <div class="modal-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-title">
+        <span>✏️ Edit Your Name</span>
+        <button type="button" class="close-btn" onclick="closeEditNameModal()">✕</button>
+      </div>
+
+      <div class="form-group">
+        <label class="form-lbl" for="editNameInput">Your Name</label>
+        <input type="text" id="editNameInput" class="form-inp" maxlength="50" placeholder="e.g. Ankit">
+      </div>
+
+      <div style="display:flex; gap:10px; margin-top:8px;">
+        <button type="button" class="icon-btn" style="flex:1; justify-content:center; height:44px;" onclick="closeEditNameModal()">
+          Cancel
+        </button>
+        <button type="button" class="btn-primary" style="flex:2; height:44px;" onclick="saveEditedName()">
+          Save Name
+        </button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
