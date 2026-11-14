@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "io.github.ankit_eng01.attendify",
+        "sha256_cert_fingerprints": ["EF:E6:BE:2F:9D:FE:F9:BA:36:21:2C:4B:08:48:AB:AF:F6:B1:24:0C:A0:3F:D4:A2:CE:AF:53:C8:77:9F:FE:2D"]
+      }
+    }]

@@ -1,0 +1,7 @@
+*.keystore
+*.jks
+*key-info*.txt
+signing*
+*.zip
+*-unsigned.*
+*.aab
