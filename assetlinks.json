@@ -3,6 +3,6 @@
       "target": {
         "namespace": "android_app",
         "package_name": "io.github.ankit_eng01.attendify",
-        "sha256_cert_fingerprints": ["D6:8B:09:15:7E:3B:B8:C4:41:E6:6F:B3:D4:C7:91:0D:D8:11:D0:7D:67:A9:33:1D:0D:91:1C:44:61:55:C5:F4"]
+        "sha256_cert_fingerprints": ["41:BD:D9:C6:FE:7C:00:85:31:4D:E4:E0:B2:BB:47:58:19:88:9F:74:DF:D2:BB:2B:74:C2:B3:6D:87:53:02:CB"]
       }
     }]

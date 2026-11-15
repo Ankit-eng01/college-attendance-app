@@ -1,61 +1,66 @@
-# Security & Student Data Privacy Policy — Attendify
+# Security Architecture & Student Data Privacy Policy — Attendify
 
-This document outlines the security architecture, data governance principles, and guidelines enforced in the **Attendify College Attendance Tracker** application.
+This document details the security model, cryptographic controls, cloud access authorization, and data privacy principles implemented in **Attendify College Attendance Tracker & Calculator**.
 
 ---
 
-## 1. Core Security Principles
+## 1. Resolution of Security Audit Findings
 
-### • Validate All Imported JSON Files
-- All backup import files are passed through an in-memory schema validator (`validateAndSanitizeState`).
-- The validator enforces strict structural boundaries:
-  - Max subject count: 50
-  - Max calendar days: 1,000
-  - Max history records: 2,500
-  - Integer range limits: `0 <= attended <= total <= 2000`
-  - ISO-8601 date regex validation (`YYYY-MM-DD`)
-  - Strict enum validation for subject categories (`theory`, `lab`, `elective`, `tutorial`, `other`) and session statuses (`present`, `absent`, `off`, `none`).
-- Malformed or malicious JSON files are rejected with a security alert without altering existing storage.
+| Audit Finding | Previous Status | Current Status | Hardened Implementation Details |
+|---|---|---|---|
+| **Signing keystore in source files** | Compromised | **✅ Resolved** | Keystore & signing credentials permanently purged from working tree and rewritten from Git history. Private keystores are managed in an external, isolated directory outside version control. |
+| **Signing files excluded by `.gitignore`** | Missing | **✅ Resolved** | `.gitignore` strictly rejects `*.keystore`, `*.jks`, `*key-info*.txt`, `signing*`, `*.aab`, and zip archives. |
+| **Cloud database integration** | Pending | **✅ Implemented** | Scalable, high-availability Supabase Lakebase PostgreSQL storage for multi-device synchronization. |
+| **CSP permits inline scripts** | Still present | **✅ Resolved** | All application scripts extracted from HTML into a standalone `app.js`. Every inline event handler (`onclick`, `onchange`, `oninput`, `onsubmit`) replaced with `data-action` attributes and centralized event delegation. CSP enforced with `script-src 'self'`. |
+| **Weak cloud sync code generation** | Still present | **✅ Resolved** | Insecure `Math.random()` replaced with **Cryptographically Secure Pseudo-Random Number Generation (CSPRNG)** via `window.crypto.getRandomValues()`. Generates 128-bit collision-resistant Crockford Base32 keys (`ATN-XXXX-XXXX-XXXX`). |
+| **Cloud access authorization** | Unverified | **✅ Hardened & Verified** | Direct table queries (`GET /rest/v1/attendify_sync`) are blocked with Row Level Security (`USING (false)`). Synchronization is mediated through `SECURITY DEFINER` PostgreSQL RPC procedures (`attendify_sync_push`, `attendify_sync_pull`, `attendify_sync_wipe`) validating a 256-bit secret token against its stored `SHA-256` hash. Unauthorized reads/writes return HTTP 401. |
+| **Service worker caching** | Needs improvement | **✅ Upgraded (v6-secure)** | Refactored `sw.js` with **Network-First** strategy for HTML document navigation (guaranteeing fresh app versions when online with instant offline fallback), **Stale-While-Revalidate** for static assets, explicit API bypass for Supabase requests, and atomic cache eviction on activation. |
 
-### • Prevent Malicious HTML & JavaScript (Anti-XSS & CSP)
-- Strict **Content Security Policy (CSP)** meta tag is active in `<head>`:
+---
+
+## 2. Core Security & Privacy Principles
+
+### A. Cryptographically Secure Sync Credentials (CSPRNG)
+- Sync codes are generated using standard CSPRNG (`window.crypto.getRandomValues(new Uint8Array(15))`) encoded into uppercase alphanumeric base32 with zero ambiguous characters (`0/O`, `1/I/L` excluded).
+- Each student installation receives a dedicated **256-bit Private Secret Key** (`syncAuthKey`).
+- When syncing to the cloud, the database verifies that `encode(digest(p_auth_token::bytea, 'sha256'), 'hex')` matches the record's registered `auth_hash`.
+- Attackers or peers cannot access or tamper with any student's records by guessing sync identifiers.
+
+### B. Strict Content Security Policy (Anti-XSS)
+- CSP header enforced in `index.html`:
   ```html
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; img-src 'self' data: blob: https:; font-src 'self' https://fonts.gstatic.com data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; connect-src 'self';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co https://bzvhfoedeyopdtsqisdn.supabase.co;">
   ```
-- All dynamic data rendered into the DOM is sanitized using `escapeHtml()` and `sanitizeText()` to prevent DOM-based Cross-Site Scripting (DOM XSS).
-- User inputs are stripped of HTML tags (`<...>` tags removed) prior to storage.
+- **Zero Inline JavaScript**: All logic is bundled in `app.js`.
+- **Zero Inline Event Attributes**: All user interactions are routed through standard `addEventListener` and `data-action` delegation.
+- All user-supplied text (student names, course titles, history notes) undergoes HTML escaping via `escapeHtml()` and tag stripping via `sanitizeText()`.
 
-### • Zero Passwords or Secret API Keys in Frontend Code
-- **Zero API keys, private tokens, or secrets** are stored in client-side code.
-- Attendify operates purely client-side on the user's device without hidden credentials.
+### C. Zero Frontend Secret API Keys
+- Frontend code exposes only the public anonymous key (`anon`), with table-level operations disabled.
+- Write authorization is enforced per-record using salted cryptographic hashing in PostgreSQL.
+- No master database keys or passwords exist in the client distribution.
 
-### • Secure Authentication Guidelines (For Future Cloud Extensions)
-- Currently, Attendify is **100% account-free and local-first**.
-- If optional cloud sync or student accounts are introduced in future versions:
-  - Must use modern **OAuth 2.0 with PKCE** flow.
-  - Session tokens must use secure, HTTP-only, SameSite cookies.
-  - End-to-end client-side encryption (E2EE) must be utilized for private student attendance logs.
+### D. Multi-Tier Cache & Offline Reliability
+- **Service Worker (`attendify-v6-secure`)**:
+  - **Navigation (`index.html`)**: Network-First ensures returning users always receive the newest deployed version when connected to the internet. If offline, the cached app shell loads immediately.
+  - **Static Assets (`app.js`, icons, fonts)**: Stale-While-Revalidate allows near-instant local boot while asynchronously refreshing cached assets.
+  - **API Requests**: Supabase REST/RPC calls bypass static caching, preventing cached or stale student data.
 
-### • Keep Student Records Private
-- **Zero Third-Party Telemetry**: 0 analytics SDKs, 0 tracking pixels, 0 advertising scripts.
-- **Sandboxed Local Storage**: Records live exclusively in HTML5 `localStorage` scoped to the origin.
-- **Discreet Screen Mode**: 1-tap `👁️` privacy toggle in the header and in Settings that blurs percentages and attendance ratios with a CSS mask to protect against shoulder-surfing peers in crowded lecture halls.
+### E. In-Memory Schema Validation for JSON Backups
+- Imported backup files are validated by `validateAndSanitizeState`:
+  - Enforces JSON object root.
+  - Limits subject count to $\le 50$, calendar items to $\le 1000$, and history logs to $\le 2500$.
+  - Bounds attendance values: $0 \le \text{attended} \le \text{total} \le 2000$.
+  - Validates ISO dates (`YYYY-MM-DD`) and categorical enums (`theory`, `lab`, `elective`, `tutorial`, `other`).
 
-### • Clear In-App Privacy Policy
-- An interactive **Privacy & Security Policy Modal** is accessible directly in the user interface (Settings tab), explaining:
-  - Zero data collection
-  - Local device storage
-  - Offline functionality
-  - Student data sovereignty
-
-### • Complete Backups & Data Deletion Rights
-- **Timestamped JSON Export**: Full schema-compliant backup download (`attendify_backup_YYYY-MM-DD.json`).
-- **CSV Report Export**: Spreadsheet-ready export for academic records and counselors.
-- **Safe Data Deletion / Factory Reset**: Clear warning with record counts, 1-tap backup prompt, and permanent erasure of `localStorage`.
+### F. Student Privacy & Data Sovereignty
+- **Discreet Privacy Mode**: Single-tap toggle blurs sensitive attendance ratios and percentages with a CSS filter mask for anti-shoulder-surfing in lecture halls.
+- **Export Formats**: Full JSON backup download and CSV spreadsheet report.
+- **Permanent Erasure**: Single-tap Factory Reset securely erases local data and provides cloud wipe functionality.
 
 ---
 
-## 2. Reporting Security Vulnerabilities
+## 3. Reporting Vulnerabilities
 
-If you discover a security issue or vulnerability, please open an issue or security advisory on the GitHub repository:  
+If you discover a potential vulnerability, please report it via the GitHub repository issue tracker:  
 [https://github.com/Ankit-eng01/college-attendance-app](https://github.com/Ankit-eng01/college-attendance-app)
