@@ -1386,7 +1386,8 @@ Created ${newSubjects.length} customized subjects for you.`);
     }
 
     async function syncToCloudStorage() {
-      if (!appState.syncCode) appState.syncCode = generateSyncCode();
+      if (!appState.syncCode || !appState.syncCode.startsWith('ATN-')) appState.syncCode = generateSyncCode();
+      if (!appState.syncAuthKey) appState.syncAuthKey = generateAuthToken();
 
       const statusEl = document.getElementById('topCloudStatus');
       const headerBtn = document.getElementById('headerCloudSyncBtn');
@@ -1394,8 +1395,9 @@ Created ${newSubjects.length} customized subjects for you.`);
       if (headerBtn) headerBtn.style.opacity = '0.6';
 
       const payload = {
-        sync_code: appState.syncCode,
-        data: {
+        p_sync_code: appState.syncCode,
+        p_auth_token: appState.syncAuthKey,
+        p_data: {
           studentName: appState.studentName || '',
           subjects: appState.subjects || [],
           calendar: appState.calendar || {},
@@ -1404,23 +1406,21 @@ Created ${newSubjects.length} customized subjects for you.`);
           activeTheme: appState.activeTheme || 'navy-purple',
           privacyMode: appState.privacyMode || false,
           lastUpdated: new Date().toISOString()
-        },
-        updated_at: new Date().toISOString()
+        }
       };
 
       try {
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/attendify_sync`, {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/attendify_sync_push`, {
           method: 'POST',
           headers: {
             'apikey': SUPABASE_ANON_KEY,
             'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json',
-            'Prefer': 'resolution=merge-duplicates,return=minimal'
+            'Content-Type': 'application/json'
           },
           body: JSON.stringify(payload)
         });
 
-        if (response.ok || response.status === 201 || response.status === 204) {
+        if (response.ok) {
           appState.lastSyncedAt = Date.now();
           if (statusEl) statusEl.innerHTML = '☁️ <span style="color:#34d399;">Synced</span>';
           const lastSyncEl = document.getElementById('settingsLastSyncTime');
