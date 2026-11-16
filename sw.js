@@ -3,11 +3,11 @@
 // Strategy:
 // 1. Navigation (HTML): Network-First with cached offline fallback
 // 2. Static Shell Assets (app.js, icons, manifest): Stale-While-Revalidate
-// 3. Supabase REST/RPC APIs: Network-Only (no static cache poisoning)
+// 3. Cloud Sync REST APIs: Network-Only (no static cache poisoning)
 // 4. Non-GET requests: Direct bypass
 // ==========================================================================
 
-const CACHE_NAME = 'attendify-v6-secure';
+const CACHE_NAME = 'attendify-v7-neon';
 
 // Critical core assets to precache on install
 const PRECACHE_ASSETS = [
@@ -56,8 +56,8 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // B. Cloud API calls (Supabase): Network-only, never poisoned in static cache
-  if (url.hostname.includes('supabase.co')) {
+  // B. Cloud API calls (Neon Functions): Network-only, never poisoned in static cache
+  if (url.hostname.includes('neon.tech')) {
     event.respondWith(
       fetch(request).catch(() => {
         return new Response(JSON.stringify({ error: 'Network unavailable. Running in offline mode.' }), {

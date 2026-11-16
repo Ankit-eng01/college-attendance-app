@@ -1400,20 +1400,12 @@ Created ${newSubjects.length} customized subjects for you.`);
 
       let cloudDeleteResult = 'skipped';
 
-      // 1. Delete cloud backup from Supabase servers if credentials exist
+      // 1. Delete cloud backup from Neon servers if credentials exist
       if (codeToDelete && keyToDelete) {
         try {
-          const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/attendify_sync_delete`, {
-            method: 'POST',
-            headers: {
-              'apikey': SUPABASE_ANON_KEY,
-              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              p_sync_code: codeToDelete,
-              p_auth_token: keyToDelete
-            })
+          const response = await syncApiRequest('/delete', {
+            sync_code: codeToDelete,
+            auth_token: keyToDelete
           });
 
           if (response.ok) {
@@ -1456,7 +1448,7 @@ Created ${newSubjects.length} customized subjects for you.`);
 
       // 3. User feedback
       if (cloudDeleteResult === 'deleted') {
-        alert('✓ Attendify has been reset.\n\n• Local attendance records erased.\n• Supabase cloud backup permanently deleted.');
+        alert('✓ Attendify has been reset.\n\n• Local attendance records erased.\n• Cloud backup permanently deleted.');
       } else if (cloudDeleteResult === 'not_found' || cloudDeleteResult === 'skipped') {
         alert('✓ Attendify has been reset.\n\n• Local attendance records erased.');
       } else {
@@ -1473,7 +1465,7 @@ Created ${newSubjects.length} customized subjects for you.`);
       }
 
       const confirmed = confirm(
-        `⚠️ Permanently delete cloud backup for sync code "${appState.syncCode}"?\n\nThis will remove your stored attendance data from Supabase servers.\n\nYour local data on this phone will NOT be deleted.`
+        `⚠️ Permanently delete cloud backup for sync code "${appState.syncCode}"?\n\nThis will remove your stored attendance data from the cloud server.\n\nYour local data on this phone will NOT be deleted.`
       );
       if (!confirmed) return;
 
@@ -1481,30 +1473,22 @@ Created ${newSubjects.length} customized subjects for you.`);
       const originalText = wipeBtn ? wipeBtn.innerHTML : '';
       if (wipeBtn) {
         wipeBtn.disabled = true;
-        wipeBtn.innerHTML = '⏳ Deleting from Supabase...';
+        wipeBtn.innerHTML = '⏳ Deleting from cloud...';
       }
 
       const statusEl = document.getElementById('topCloudStatus');
       if (statusEl) statusEl.innerHTML = '☁️ <span style="color:#ef4444;">Deleting...</span>';
 
       try {
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/attendify_sync_delete`, {
-          method: 'POST',
-          headers: {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            p_sync_code: appState.syncCode,
-            p_auth_token: appState.syncAuthKey
-          })
+        const response = await syncApiRequest('/delete', {
+          sync_code: appState.syncCode,
+          auth_token: appState.syncAuthKey
         });
 
         const resData = await response.json().catch(() => ({}));
 
         if (!response.ok) {
-          throw new Error(resData.message || `HTTP ${response.status}`);
+          throw new Error(resData.error || resData.message || `HTTP ${response.status}`);
         }
 
         appState.lastSyncedAt = null;
@@ -1515,7 +1499,7 @@ Created ${newSubjects.length} customized subjects for you.`);
         if (lastSyncEl) lastSyncEl.textContent = 'Deleted from server';
 
         if (resData.status === 'deleted') {
-          alert('✅ Cloud backup has been permanently deleted from Supabase servers.');
+          alert('✅ Cloud backup has been permanently deleted from the server.');
         } else if (resData.status === 'not_found') {
           alert('ℹ️ No backup was found in the cloud for this sync code. Nothing to delete.');
         } else {
@@ -1548,10 +1532,19 @@ Created ${newSubjects.length} customized subjects for you.`);
 
 
     // -------------------------------------------------------------
-    // SUPABASE CLOUD STORAGE CONFIGURATION & ENGINE
+    // CLOUD STORAGE CONFIGURATION & ENGINE (NEON FUNCTIONS API)
     // -------------------------------------------------------------
-    const SUPABASE_URL = 'https://bzvhfoedeyopdtsqisdn.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6dmhmb2VkZXlvcGR0c3Fpc2RuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ2Nzc5MTMsImV4cCI6MjExMDI1MzkxM30.SWt1gUD614LqE4dtsRNVKvQFOgox_YjJ9GD9b2ARhdk';
+    const SYNC_API_URL = 'https://br-fancy-block-azi8u9jd-sync.compute.c-3.ap-southeast-1.aws.neon.tech';
+
+    // Single entry point for the Attendify Sync API.
+    // Endpoints: POST /push, POST /pull, POST /delete, GET /health
+    function syncApiRequest(path, payload) {
+      return fetch(`${SYNC_API_URL}${path}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    }
 
     // Cryptographically Secure Sync Credentials Generation (CSPRNG)
     function generateSyncCode() {
@@ -1590,9 +1583,9 @@ Created ${newSubjects.length} customized subjects for you.`);
       if (headerBtn) headerBtn.style.opacity = '0.6';
 
       const payload = {
-        p_sync_code: appState.syncCode,
-        p_auth_token: appState.syncAuthKey,
-        p_data: {
+        sync_code: appState.syncCode,
+        auth_token: appState.syncAuthKey,
+        data: {
           studentName: appState.studentName || '',
           subjects: appState.subjects || [],
           calendar: appState.calendar || {},
@@ -1605,15 +1598,7 @@ Created ${newSubjects.length} customized subjects for you.`);
       };
 
       try {
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/attendify_sync_push`, {
-          method: 'POST',
-          headers: {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(payload)
-        });
+        const response = await syncApiRequest('/push', payload);
 
         if (response.ok) {
           appState.lastSyncedAt = Date.now();
@@ -1727,27 +1712,20 @@ Save this code to restore your courses on another phone or computer!`);
       }
 
       try {
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/attendify_sync_pull`, {
-          method: 'POST',
-          headers: {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            p_sync_code: code,
-            p_auth_token: key
-          })
+        const response = await syncApiRequest('/pull', {
+          sync_code: code,
+          auth_token: key
         });
 
         if (!response.ok) {
           const errData = await response.json().catch(() => ({}));
-          if (response.status === 401 || (errData.message && errData.message.includes('Authorization failed'))) {
+          const errMsg = errData.error || errData.message || '';
+          if (response.status === 401 || errMsg.includes('Authorization failed')) {
             alert('❌ Authorization Failed: The secret key does not match this Sync Code.');
-          } else if (response.status === 404 || response.status === 400 || (errData.message && errData.message.includes('Record not found'))) {
+          } else if (response.status === 404 || response.status === 400 || errMsg.includes('Record not found')) {
             alert('❌ Sync code not found in Cloud Storage. Please check for typos.');
           } else {
-            alert('❌ Cloud Restore Error: ' + (errData.message || `HTTP ${response.status}`));
+            alert('❌ Cloud Restore Error: ' + (errMsg || `HTTP ${response.status}`));
           }
           return;
         }

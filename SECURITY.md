@@ -10,13 +10,13 @@ This document details the security model, cryptographic controls, cloud access a
 |---|---|---|---|
 | **Signing keystore in source files** | Compromised | **✅ Resolved** | Keystore & signing credentials permanently purged from working tree and rewritten from Git history. Private keystores are managed in an external, isolated directory outside version control. |
 | **Signing files excluded by `.gitignore`** | Missing | **✅ Resolved** | `.gitignore` strictly rejects `*.keystore`, `*.jks`, `*key-info*.txt`, `signing*`, `*.aab`, and zip archives. |
-| **Cloud database integration** | Pending | **✅ Implemented** | Scalable, high-availability Supabase Lakebase PostgreSQL storage for multi-device synchronization. |
+| **Cloud database integration** | Pending | **✅ Implemented** | Scalable, high-availability Neon serverless PostgreSQL storage exposed through a serverless Function API for multi-device synchronization. |
 | **CSP permits inline scripts** | Still present | **✅ Resolved** | All application scripts extracted from HTML into a standalone `app.js`. Every inline event handler (`onclick`, `onchange`, `oninput`, `onsubmit`) replaced with `data-action` attributes and centralized event delegation. CSP enforced with `script-src 'self'`. |
 | **Weak cloud sync code generation** | Still present | **✅ Resolved** | Insecure `Math.random()` replaced with **Cryptographically Secure Pseudo-Random Number Generation (CSPRNG)** via `window.crypto.getRandomValues()`. Generates 128-bit collision-resistant Crockford Base32 keys (`ATN-XXXX-XXXX-XXXX`). |
 | **Local Credential Persistence on Restart** | Bug found | **✅ Resolved** | Fixed `validateAndSanitizeState()` to retain `studentName`, `syncCode`, `syncAuthKey`, `isSetupCompleted`, and `lastSyncedAt`. Credentials and user identity now persist across restarts, app reopens, and browser refreshes without regenerating. |
-| **Cloud Access Authorization** | Unverified | **✅ Hardened & Verified** | Direct table queries (`GET /rest/v1/attendify_sync`) are blocked with Row Level Security (`USING (false)`). Synchronization is mediated through `SECURITY DEFINER` PostgreSQL RPC procedures (`attendify_sync_push`, `attendify_sync_pull`, and `attendify_sync_delete`) validating a 256-bit secret token against its stored `SHA-256` hash. Unauthorized reads/writes return HTTP 401. |
-| **Actual Cloud Deletion (Factory Reset)** | Bug found | **✅ Resolved** | Factory Reset (`confirmPermanentDelete()`) and the dedicated "Wipe Cloud Backup" button invoke `attendify_sync_delete` RPC procedure, permanently erasing the student's records from Supabase PostgreSQL servers. |
-| **Service Worker Caching** | Needs improvement | **✅ Upgraded (v6-secure)** | Refactored `sw.js` with **Network-First** strategy for HTML document navigation (guaranteeing fresh app versions when online with instant offline fallback), **Stale-While-Revalidate** for static assets, explicit API bypass for Supabase requests, and atomic cache eviction on activation. |
+| **Cloud Access Authorization** | Unverified | **✅ Hardened & Verified** | Direct table queries are impossible from the browser: the PWA talks only to the Neon Function API (`POST /push`, `/pull`, `/delete`), which mediates every call through `SECURITY DEFINER` PostgreSQL procedures (`attendify_sync_push`, `attendify_sync_pull`, and `attendify_sync_delete`) validating a 256-bit secret token against its stored `SHA-256` hash. Unauthorized reads/writes return HTTP 401. |
+| **Actual Cloud Deletion (Factory Reset)** | Bug found | **✅ Resolved** | Factory Reset (`confirmPermanentDelete()`) and the dedicated "Wipe Cloud Backup" button invoke the cloud `attendify_sync_delete` procedure, permanently erasing the student's records from the Neon PostgreSQL database. |
+| **Service Worker Caching** | Needs improvement | **✅ Upgraded (v7-neon)** | Refactored `sw.js` with **Network-First** strategy for HTML document navigation (guaranteeing fresh app versions when online with instant offline fallback), **Stale-While-Revalidate** for static assets, explicit API bypass for cloud sync requests, and atomic cache eviction on activation. |
 
 ---
 
@@ -33,29 +33,29 @@ This document details the security model, cryptographic controls, cloud access a
 - Attackers or peers cannot access or tamper with any student's records by guessing sync identifiers.
 
 ### C. Server-Side Cloud Deletion & Student Data Sovereignty
-- **Factory Reset**: Executing a Factory Reset erases local storage and triggers the `attendify_sync_delete` RPC to wipe the cloud record in Supabase.
+- **Factory Reset**: Executing a Factory Reset erases local storage and triggers the cloud delete endpoint to wipe the record in Neon.
 - **Standalone Cloud Deletion**: Students can erase their cloud backup at any time from Settings while keeping local device data intact.
 - Multi-device pairing and restoration verified end-to-end with token authentication.
 
 ### D. Strict Content Security Policy (Anti-XSS)
 - CSP header enforced in `index.html`:
   ```html
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co https://bzvhfoedeyopdtsqisdn.supabase.co;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' https://br-fancy-block-azi8u9jd-sync.compute.c-3.ap-southeast-1.aws.neon.tech;">
   ```
 - **Zero Inline JavaScript**: All logic is bundled in `app.js`.
 - **Zero Inline Event Attributes**: All user interactions are routed through standard `addEventListener` and `data-action` delegation.
 - All user-supplied text (student names, course titles, history notes) undergoes HTML escaping via `escapeHtml()` and tag stripping via `sanitizeText()`.
 
 ### E. Zero Frontend Secret API Keys
-- Frontend code exposes only the public anonymous key (`anon`), with table-level operations disabled.
+- Frontend code ships **no** API key, database URL, or credential of any kind. It only knows the public sync endpoint origin; the function holds `DATABASE_URL` server-side.
 - Write authorization is enforced per-record using salted cryptographic hashing in PostgreSQL.
 - No master database keys or passwords exist in the client distribution.
 
 ### F. Multi-Tier Cache & Offline Reliability
-- **Service Worker (`attendify-v6-secure`)**:
+- **Service Worker (`attendify-v7-neon`)**:
   - **Navigation (`index.html`)**: Network-First ensures returning users always receive the newest deployed version when connected to the internet. If offline, the cached app shell loads immediately.
   - **Static Assets (`app.js`, icons, fonts)**: Stale-While-Revalidate allows near-instant local boot while asynchronously refreshing cached assets.
-  - **API Requests**: Supabase REST/RPC calls bypass static caching, preventing cached or stale student data.
+  - **API Requests**: Cloud sync API calls bypass static caching, preventing cached or stale student data.
 
 ### G. Keystore & Release Signing Key Isolation
 - **Git History Cleanliness**: A full historical audit (`git log --all --full-history --diff-filter=A --name-only`) confirms that `signing.keystore` and `signing-key-info.txt` were **never committed** to git history or git object storage.

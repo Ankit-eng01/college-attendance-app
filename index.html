@@ -9,7 +9,7 @@
   <meta name="referrer" content="no-referrer">
   
   <!-- SECURITY: CONTENT SECURITY POLICY TO PREVENT ARBITRARY SCRIPT INJECTION -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co https://bzvhfoedeyopdtsqisdn.supabase.co;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' https://br-fancy-block-azi8u9jd-sync.compute.c-3.ap-southeast-1.aws.neon.tech;">
 
   <title>Attendify — College Attendance & 75% Tracker</title>
 
@@ -1163,7 +1163,7 @@
 
       <div class="header-actions">
         <!-- CLOUD STORAGE SYNC BUTTON -->
-        <button type="button" class="icon-btn" id="headerCloudSyncBtn" data-action="triggerManualSync" title="Sync to Supabase Cloud Storage">
+        <button type="button" class="icon-btn" id="headerCloudSyncBtn" data-action="triggerManualSync" title="Sync to Cloud Storage">
           <span>☁️</span>
         </button>
         <!-- DISCREET PRIVACY MODE TOGGLE -->
@@ -1379,14 +1379,14 @@
         </div>
       </div>
 
-      <!-- SUPABASE CLOUD STORAGE & SYNC CARD -->
+      <!-- CLOUD STORAGE & SYNC CARD -->
       <div class="calc-card">
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <h2 style="font-size:17px; font-weight:800; color:#fff;">☁️ Cloud Storage &amp; Sync</h2>
-          <span class="criteria-pill pill-safe" id="cloudConnectionBadge"><span class="pill-dot dot-green"></span> Supabase Connected</span>
+          <span class="criteria-pill pill-safe" id="cloudConnectionBadge"><span class="pill-dot dot-green"></span> Cloud Connected</span>
         </div>
         <p style="font-size:12.5px; color:var(--text-muted);">
-          Your attendance records are backed up automatically to Supabase Cloud PostgreSQL storage.
+          Your attendance records are backed up automatically to Cloud PostgreSQL storage.
         </p>
 
         <div style="background:var(--bg-surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:12px; display:flex; flex-direction:column; gap:10px;">
@@ -1447,7 +1447,7 @@
         </div>
 
         <div style="margin-top:8px;">
-          <button type="button" class="act-btn act-absent" style="width:100%; height:38px; justify-content:center; font-size:11.5px; font-weight:700;" data-action="wipeCloudBackupOnly" title="Erase your cloud backup record from Supabase servers">
+          <button type="button" class="act-btn act-absent" style="width:100%; height:38px; justify-content:center; font-size:11.5px; font-weight:700;" data-action="wipeCloudBackupOnly" title="Erase your cloud backup record from the server">
             🗑️ Wipe Cloud Backup from Server
           </button>
         </div>
@@ -1826,7 +1826,7 @@
       </div>
 
       <p style="font-size:13px; color:var(--text-muted); line-height:1.5;">
-        You are about to permanently erase all subjects, attendance logs, and calendar entries from your device storage, and <strong>automatically delete your cloud backup from Supabase servers</strong>. This action <strong>cannot be undone</strong>.
+        You are about to permanently erase all subjects, attendance logs, and calendar entries from your device storage, and <strong>automatically delete your cloud backup from the server</strong>. This action <strong>cannot be undone</strong>.
       </p>
 
       <div id="deleteStatsPreview" style="background:var(--bg-surface); border:1px solid rgba(239,68,68,0.25); border-radius:var(--radius-md); padding:12px; font-size:12.5px; color:#fca5a5;">
