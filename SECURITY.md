@@ -57,6 +57,14 @@ This document details the security model, cryptographic controls, cloud access a
   - **Static Assets (`app.js`, icons, fonts)**: Stale-While-Revalidate allows near-instant local boot while asynchronously refreshing cached assets.
   - **API Requests**: Supabase REST/RPC calls bypass static caching, preventing cached or stale student data.
 
+### G. Keystore & Release Signing Key Isolation
+- **Git History Cleanliness**: A full historical audit (`git log --all --full-history --diff-filter=A --name-only`) confirms that `signing.keystore` and `signing-key-info.txt` were **never committed** to git history or git object storage.
+- **Repository Isolation**: Private keystores and passwords reside strictly outside version control in local private scratch space (`scratch/private_keys/`).
+- **`.gitignore` Enforced**: Patterns `*.keystore`, `*.jks`, `*key-info*.txt`, `signing*`, and `*.aab` are strictly ignored to prevent accidental future commits.
+- **Digital Asset Links**: Both `.well-known/assetlinks.json` and root `assetlinks.json` specify the exact SHA-256 certificate fingerprint matching the production signed release:
+  `5A:E4:A9:D0:42:FB:4D:87:26:E8:A2:A5:47:C4:5C:E0:74:3E:16:FB:6A:64:FA:CA:40:DC:B9:B9:7A:8D:8A:7A`
+
+
 ---
 
 ## 3. Reporting Vulnerabilities
