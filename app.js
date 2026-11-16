@@ -90,8 +90,8 @@
         if (!raw) return getDefaultState();
         const parsed = JSON.parse(raw);
         const st = validateAndSanitizeState(parsed);
+        if (!st.syncCode) st.syncCode = generateSyncCode();
         if (!st.syncAuthKey) st.syncAuthKey = generateAuthToken();
-        if (!st.syncCode || st.syncCode.length < 12 || !st.syncCode.startsWith('ATN-')) st.syncCode = generateSyncCode();
         return st;
       } catch (e) {
         console.warn('Could not parse saved state, fallback to default:', e);
@@ -103,9 +103,20 @@
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
         renderApp();
-        queueCloudSync();
+        if (appState.isSetupCompleted && appState.subjects && appState.subjects.length > 0) {
+          queueCloudSync();
+        }
       } catch (err) {
         console.error('Failed to save state:', err);
+      }
+    }
+
+    function saveStateOnly() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+        renderApp();
+      } catch (err) {
+        console.error('Failed to save state locally:', err);
       }
     }
 
@@ -203,7 +214,43 @@
 
       const privacyMode = Boolean(raw.privacyMode);
 
+      // Validate Setup Completion Flag
+      const isSetupCompleted = Boolean(raw.isSetupCompleted);
+
+      // Validate Student Name (max 50 chars, sanitized)
+      let studentName = '';
+      if (typeof raw.studentName === 'string') {
+        studentName = sanitizeText(raw.studentName).substring(0, 50);
+      }
+
+      // Validate Cloud Sync Code (CSPRNG format: ATN-XXXX-XXXX-XXXX or safe alphanumeric string)
+      let syncCode = '';
+      if (typeof raw.syncCode === 'string' && /^[a-zA-Z0-9_-]{6,64}$/.test(raw.syncCode.trim())) {
+        syncCode = raw.syncCode.trim().toUpperCase();
+      }
+
+      // Validate Secret Auth Passkey (CSPRNG 32+ hex chars or safe token string)
+      let syncAuthKey = '';
+      if (typeof raw.syncAuthKey === 'string' && /^[a-zA-Z0-9_-]{16,128}$/.test(raw.syncAuthKey.trim())) {
+        syncAuthKey = raw.syncAuthKey.trim();
+      }
+
+      // Cloud Sync Preference
+      const cloudSyncEnabled = raw.cloudSyncEnabled !== false;
+
+      // Last Synced Timestamp
+      let lastSyncedAt = null;
+      if (typeof raw.lastSyncedAt === 'number' || typeof raw.lastSyncedAt === 'string') {
+        lastSyncedAt = raw.lastSyncedAt;
+      }
+
       return {
+        isSetupCompleted,
+        studentName,
+        syncCode,
+        syncAuthKey,
+        cloudSyncEnabled,
+        lastSyncedAt,
         subjects: sanitizedSubjects,
         calendar: sanitizedCalendar,
         history: sanitizedHistory,
@@ -328,6 +375,17 @@
       if (nameDisp) nameDisp.textContent = appState.studentName || 'Not Set';
       const syncDisp = document.getElementById('settingsSyncCodeDisplay');
       if (syncDisp) syncDisp.textContent = appState.syncCode || '--';
+      const keyDisp = document.getElementById('settingsSyncKeyDisplay');
+      if (keyDisp) keyDisp.textContent = isKeyVisible ? (appState.syncAuthKey || 'Not Set') : '••••••••••••••••';
+      const lastSyncEl = document.getElementById('settingsLastSyncTime');
+      if (lastSyncEl) {
+        if (appState.lastSyncedAt) {
+          const d = new Date(appState.lastSyncedAt);
+          lastSyncEl.textContent = isNaN(d.getTime()) ? 'Recently' : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } else {
+          lastSyncEl.textContent = 'Not synced yet';
+        }
+      }
 
       renderSmartDashboard();
       renderChips();
@@ -1322,7 +1380,37 @@ Created ${newSubjects.length} customized subjects for you.`);
       document.getElementById('deleteModal').classList.remove('open');
     }
 
-    function confirmPermanentDelete() {
+    async function confirmPermanentDelete() {
+      const codeToDelete = appState.syncCode;
+      const keyToDelete = appState.syncAuthKey;
+
+      if (syncDebounceTimer) {
+        clearTimeout(syncDebounceTimer);
+        syncDebounceTimer = null;
+      }
+
+      // 1. Delete cloud backup from Supabase servers if credentials exist
+      if (codeToDelete && keyToDelete) {
+        try {
+          await fetch(`${SUPABASE_URL}/rest/v1/rpc/attendify_sync_delete`, {
+            method: 'POST',
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              p_sync_code: codeToDelete,
+              p_auth_token: keyToDelete
+            })
+          });
+          console.log('[Attendify] Cloud backup deleted from Supabase during factory reset.');
+        } catch (err) {
+          console.warn('[Attendify] Could not reach cloud to delete backup during reset (device may be offline):', err);
+        }
+      }
+
+      // 2. Clear local storage & reset state
       localStorage.removeItem(STORAGE_KEY);
       appState = getDefaultState();
       appState.subjects = [];
@@ -1331,10 +1419,57 @@ Created ${newSubjects.length} customized subjects for you.`);
 
       applyThemeUI('navy-purple');
       applyPrivacyModeUI();
-      saveState();
+      saveStateOnly();
 
       closeDeleteModal();
       openSetupModal();
+    }
+
+    async function wipeCloudBackupOnly() {
+      if (!appState.syncCode || !appState.syncAuthKey) {
+        alert('No cloud backup credentials found.');
+        return;
+      }
+
+      const confirmed = confirm(
+        `⚠️ Permanently delete cloud backup for sync code "${appState.syncCode}"?\n\nThis will remove your stored attendance data from Supabase servers.\n\nYour local data on this phone will NOT be deleted.`
+      );
+      if (!confirmed) return;
+
+      const statusEl = document.getElementById('topCloudStatus');
+      if (statusEl) statusEl.innerHTML = '☁️ <span style="color:#ef4444;">Deleting...</span>';
+
+      try {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/attendify_sync_delete`, {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            p_sync_code: appState.syncCode,
+            p_auth_token: appState.syncAuthKey
+          })
+        });
+
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          throw new Error(errData.message || `HTTP ${response.status}`);
+        }
+
+        appState.lastSyncedAt = null;
+        saveStateOnly();
+
+        if (statusEl) statusEl.innerHTML = '☁️ <span style="color:#94a3b8;">Wiped</span>';
+        const lastSyncEl = document.getElementById('settingsLastSyncTime');
+        if (lastSyncEl) lastSyncEl.textContent = 'Deleted from server';
+
+        alert('✅ Cloud backup has been permanently deleted from Supabase servers.');
+      } catch (err) {
+        alert('❌ Error deleting cloud backup: ' + err.message);
+        if (statusEl) statusEl.innerHTML = '☁️ <span style="color:#ef4444;">Error</span>';
+      }
     }
 
     // 19. PRIVACY POLICY MODAL
@@ -1750,6 +1885,9 @@ Save this code to restore your courses on another phone or computer!`);
           break;
         case 'closeRestoreCloudModal':
           closeRestoreCloudModal();
+          break;
+        case 'wipeCloudBackupOnly':
+          wipeCloudBackupOnly();
           break;
         case 'confirmRestoreFromCloud':
           confirmRestoreFromCloud();

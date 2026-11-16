@@ -1445,6 +1445,12 @@
             📥 Restore from Cloud
           </button>
         </div>
+
+        <div style="margin-top:8px;">
+          <button type="button" class="act-btn act-absent" style="width:100%; height:38px; justify-content:center; font-size:11.5px; font-weight:700;" data-action="wipeCloudBackupOnly" title="Erase your cloud backup record from Supabase servers">
+            🗑️ Wipe Cloud Backup from Server
+          </button>
+        </div>
       </div>
 
       <!-- STUDENT PRIVACY & SECURITY SUITE -->
@@ -1820,7 +1826,7 @@
       </div>
 
       <p style="font-size:13px; color:var(--text-muted); line-height:1.5;">
-        You are about to permanently erase all subjects, attendance logs, and calendar entries from your device storage. This action <strong>cannot be undone</strong>.
+        You are about to permanently erase all subjects, attendance logs, and calendar entries from your device storage, and <strong>automatically delete your cloud backup from Supabase servers</strong>. This action <strong>cannot be undone</strong>.
       </p>
 
       <div id="deleteStatsPreview" style="background:var(--bg-surface); border:1px solid rgba(239,68,68,0.25); border-radius:var(--radius-md); padding:12px; font-size:12.5px; color:#fca5a5;">
@@ -1836,7 +1842,7 @@
           <span>⬇</span> Download Backup First
         </button>
         <button type="button" class="act-btn act-absent" style="height:44px; font-weight:800;" data-action="confirmPermanentDelete">
-          🗑️ Permanently Delete All Data &amp; Reset
+          🗑️ Erase Local Data &amp; Wipe Cloud Backup
         </button>
         <button type="button" class="icon-btn" style="justify-content:center; height:40px;" data-action="closeDeleteModal">
           Cancel
