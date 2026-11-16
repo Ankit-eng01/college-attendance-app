@@ -297,7 +297,9 @@
     }
 
     function applyThemeUI(theme) {
-      document.documentElement.setAttribute('data-theme', theme);
+      if (document.documentElement) {
+        document.documentElement.setAttribute('data-theme', theme);
+      }
       const themeColors = {
         'navy-purple': '#060913',
         'violet': '#090514',
@@ -1381,6 +1383,13 @@ Created ${newSubjects.length} customized subjects for you.`);
     }
 
     async function confirmPermanentDelete() {
+      const deleteBtn = document.querySelector('[data-action="confirmPermanentDelete"]');
+      const originalBtnText = deleteBtn ? deleteBtn.innerHTML : '';
+      if (deleteBtn) {
+        deleteBtn.disabled = true;
+        deleteBtn.innerHTML = '⏳ Erasing data & cloud backup...';
+      }
+
       const codeToDelete = appState.syncCode;
       const keyToDelete = appState.syncAuthKey;
 
@@ -1389,10 +1398,12 @@ Created ${newSubjects.length} customized subjects for you.`);
         syncDebounceTimer = null;
       }
 
+      let cloudDeleteResult = 'skipped';
+
       // 1. Delete cloud backup from Supabase servers if credentials exist
       if (codeToDelete && keyToDelete) {
         try {
-          await fetch(`${SUPABASE_URL}/rest/v1/rpc/attendify_sync_delete`, {
+          const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/attendify_sync_delete`, {
             method: 'POST',
             headers: {
               'apikey': SUPABASE_ANON_KEY,
@@ -1404,14 +1415,29 @@ Created ${newSubjects.length} customized subjects for you.`);
               p_auth_token: keyToDelete
             })
           });
-          console.log('[Attendify] Cloud backup deleted from Supabase during factory reset.');
+
+          if (response.ok) {
+            const resJson = await response.json().catch(() => ({}));
+            cloudDeleteResult = resJson.status === 'deleted' ? 'deleted' : 'not_found';
+            console.log('[Attendify] Cloud backup deleted successfully:', resJson);
+          } else {
+            const errData = await response.json().catch(() => ({}));
+            console.warn('[Attendify] Cloud deletion error from server:', response.status, errData);
+            cloudDeleteResult = 'failed';
+          }
         } catch (err) {
-          console.warn('[Attendify] Could not reach cloud to delete backup during reset (device may be offline):', err);
+          console.warn('[Attendify] Cloud deletion network failure:', err);
+          cloudDeleteResult = 'offline';
         }
       }
 
-      // 2. Clear local storage & reset state
-      localStorage.removeItem(STORAGE_KEY);
+      // 2. Clear local storage & reset in-memory state
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+      } catch (err) {
+        console.warn('Could not remove localStorage key:', err);
+      }
+
       appState = getDefaultState();
       appState.subjects = [];
       appState.calendar = {};
@@ -1421,13 +1447,28 @@ Created ${newSubjects.length} customized subjects for you.`);
       applyPrivacyModeUI();
       saveStateOnly();
 
+      if (deleteBtn) {
+        deleteBtn.disabled = false;
+        deleteBtn.innerHTML = originalBtnText;
+      }
+
       closeDeleteModal();
+
+      // 3. User feedback
+      if (cloudDeleteResult === 'deleted') {
+        alert('✓ Attendify has been reset.\n\n• Local attendance records erased.\n• Supabase cloud backup permanently deleted.');
+      } else if (cloudDeleteResult === 'not_found' || cloudDeleteResult === 'skipped') {
+        alert('✓ Attendify has been reset.\n\n• Local attendance records erased.');
+      } else {
+        alert('⚠️ Local attendance records erased.\n\nNote: Could not reach cloud server to delete remote backup. Please reconnect and wipe your cloud record if needed.');
+      }
+
       openSetupModal();
     }
 
     async function wipeCloudBackupOnly() {
       if (!appState.syncCode || !appState.syncAuthKey) {
-        alert('No cloud backup credentials found.');
+        alert('No cloud backup credentials found on this device.');
         return;
       }
 
@@ -1435,6 +1476,13 @@ Created ${newSubjects.length} customized subjects for you.`);
         `⚠️ Permanently delete cloud backup for sync code "${appState.syncCode}"?\n\nThis will remove your stored attendance data from Supabase servers.\n\nYour local data on this phone will NOT be deleted.`
       );
       if (!confirmed) return;
+
+      const wipeBtn = document.querySelector('[data-action="wipeCloudBackupOnly"]');
+      const originalText = wipeBtn ? wipeBtn.innerHTML : '';
+      if (wipeBtn) {
+        wipeBtn.disabled = true;
+        wipeBtn.innerHTML = '⏳ Deleting from Supabase...';
+      }
 
       const statusEl = document.getElementById('topCloudStatus');
       if (statusEl) statusEl.innerHTML = '☁️ <span style="color:#ef4444;">Deleting...</span>';
@@ -1453,9 +1501,10 @@ Created ${newSubjects.length} customized subjects for you.`);
           })
         });
 
+        const resData = await response.json().catch(() => ({}));
+
         if (!response.ok) {
-          const errData = await response.json().catch(() => ({}));
-          throw new Error(errData.message || `HTTP ${response.status}`);
+          throw new Error(resData.message || `HTTP ${response.status}`);
         }
 
         appState.lastSyncedAt = null;
@@ -1465,10 +1514,21 @@ Created ${newSubjects.length} customized subjects for you.`);
         const lastSyncEl = document.getElementById('settingsLastSyncTime');
         if (lastSyncEl) lastSyncEl.textContent = 'Deleted from server';
 
-        alert('✅ Cloud backup has been permanently deleted from Supabase servers.');
+        if (resData.status === 'deleted') {
+          alert('✅ Cloud backup has been permanently deleted from Supabase servers.');
+        } else if (resData.status === 'not_found') {
+          alert('ℹ️ No backup was found in the cloud for this sync code. Nothing to delete.');
+        } else {
+          alert('✅ Cloud deletion completed successfully.');
+        }
       } catch (err) {
         alert('❌ Error deleting cloud backup: ' + err.message);
         if (statusEl) statusEl.innerHTML = '☁️ <span style="color:#ef4444;">Error</span>';
+      } finally {
+        if (wipeBtn) {
+          wipeBtn.disabled = false;
+          wipeBtn.innerHTML = originalText;
+        }
       }
     }
 

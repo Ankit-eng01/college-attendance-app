@@ -1,7 +1,42 @@
+# ==============================================================================
+# ATTENDIFY GITIGNORE — SECURITY, KEYSTORES & BUILD EXCLUSIONS
+# ==============================================================================
+
+# Private Android Signing Keys & Keystores (CRITICAL SECURITY)
 *.keystore
 *.jks
 *key-info*.txt
 signing*
-*.zip
-*-unsigned.*
+*.p12
+*.pem
+*.key
+*.pk8
+
+# Android App Bundles & Build Archives
 *.aab
+*-unsigned.*
+*.zip
+*.tar.gz
+*.idsig
+
+# Node & Package Managers
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Environment & Sensitive Variables
+.env
+.env.local
+.env.*.local
+
+# Operating System & IDE Files
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*.bak
+*.tmp
