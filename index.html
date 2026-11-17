@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="navy-purple">
+<html lang="en" data-theme="navy-purple" data-mode="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#060913">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#05070f">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="referrer" content="no-referrer">
@@ -24,34 +25,72 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
 
   <style>
-    /* THEME 1: ELEGANT NAVY & PURPLE (DEFAULT) */
+    /* THEME 1: ELEGANT NAVY & PURPLE (DEFAULT DARK) */
     :root, [data-theme="navy-purple"] {
-      --bg: #060913;
-      --bg-surface: #0c1224;
-      --bg-card: #111833;
-      --bg-card-hover: #172144;
-      --bg-elevated: #1d2954;
-      --border: #232d54;
-      --border-subtle: rgba(168, 85, 247, 0.16);
-      --border-accent: rgba(139, 92, 246, 0.35);
+      color-scheme: dark;
 
-      --text: #f8fafc;
-      --text-muted: #94a3b8;
-      --text-dim: #64748b;
+      --bg: #05070f;
+      --bg-surface: #0a0f1f;
+      --bg-card: #0e1529;
+      --bg-card-hover: #141d38;
+      --bg-elevated: #1a2550;
+      --border: #232e55;
+      --border-subtle: rgba(148, 163, 184, 0.12);
+      --border-accent: rgba(139, 92, 246, 0.42);
+
+      --text: #f7f9fc;
+      --text-muted: #a5b2c7;
+      --text-dim: #71809a;
+      --text-strong: #ffffff;
 
       --brand: #8b5cf6;               /* Royal Purple */
-      --brand-gradient: linear-gradient(135deg, #4f46e5 0%, #8b5cf6 55%, #c084fc 100%);
-      --brand-glow: rgba(139, 92, 246, 0.35);
+      --brand-gradient: linear-gradient(135deg, #4f46e5 0%, #8b5cf6 48%, #d946ef 100%);
+      --brand-glow: rgba(139, 92, 246, 0.38);
+      --brand-text-gradient: linear-gradient(135deg, #ffffff 30%, #c4b5fd 100%);
       --navy: #3b82f6;                /* Elegant Navy Blue */
       --purple: #a855f7;              /* Electric Purple */
-      --purple-glow: rgba(168, 85, 247, 0.3);
+      --purple-glow: rgba(168, 85, 247, 0.32);
 
       --success: #10b981;
+      --success-text: #34d399;
       --success-glow: rgba(16, 185, 129, 0.3);
       --warning: #f59e0b;
+      --warning-text: #fbbf24;
       --warning-glow: rgba(245, 158, 11, 0.3);
       --danger: #ef4444;
+      --danger-text: #f87171;
       --danger-glow: rgba(239, 68, 68, 0.35);
+      --info-text: #60a5fa;
+
+      /* Premium glass surfaces */
+      --hairline: rgba(255, 255, 255, 0.075);
+      --hairline-strong: rgba(255, 255, 255, 0.14);
+      --inset-highlight: rgba(255, 255, 255, 0.08);
+      --glass-1: rgba(21, 30, 58, 0.72);
+      --glass-2: rgba(8, 13, 26, 0.88);
+      --glass-hover: rgba(26, 37, 72, 0.9);
+      --surface-translucent: rgba(11, 17, 33, 0.62);
+      --surface-strong: rgba(13, 20, 38, 0.86);
+      --nav-bg: rgba(8, 12, 24, 0.84);
+      --modal-backdrop: rgba(2, 4, 10, 0.72);
+      --shadow-card: 0 26px 60px -22px rgba(0, 0, 0, 0.9);
+      --shadow-soft: 0 14px 34px -18px rgba(0, 0, 0, 0.75);
+      --shadow-sheet: 0 -18px 60px -16px rgba(0, 0, 0, 0.75);
+      --progress-track: rgba(255, 255, 255, 0.08);
+      --progress-marker: rgba(255, 255, 255, 0.85);
+      --swatch-border: rgba(255, 255, 255, 0.22);
+      --card-sheen: rgba(139, 92, 246, 0.16);
+
+      /* Ambient backdrop */
+      --ambient-top: rgba(99, 102, 241, 0.22);
+      --ambient-a: rgba(59, 130, 246, 0.17);
+      --ambient-b: rgba(168, 85, 247, 0.18);
+      --ambient-c: rgba(14, 165, 233, 0.1);
+      --ambient-warm: rgba(251, 191, 36, 0.08);
+      --grid-color: rgba(148, 163, 184, 0.055);
+      --noise-opacity: 0.05;
+      --vignette: rgba(2, 4, 10, 0.55);
+      --orb-opacity: 0.95;
 
       --radius-sm: 8px;
       --radius-md: 14px;
@@ -67,44 +106,143 @@
 
     /* THEME 2: CYBER VIOLET AMETHYST */
     [data-theme="violet"] {
-      --bg: #090514;
-      --bg-surface: #120a26;
-      --bg-card: #1a0f36;
-      --bg-card-hover: #24154a;
-      --bg-elevated: #2e1a5e;
-      --border: #351f68;
-      --border-subtle: rgba(217, 70, 239, 0.2);
-      --border-accent: rgba(217, 70, 239, 0.4);
+      --bg: #070310;
+      --bg-surface: #0f0722;
+      --bg-card: #160a2e;
+      --bg-card-hover: #1f0f40;
+      --bg-elevated: #2a1157;
+      --border: #331c63;
+      --border-subtle: rgba(217, 70, 239, 0.16);
+      --border-accent: rgba(217, 70, 239, 0.44);
       --brand: #c026d3;
-      --brand-gradient: linear-gradient(135deg, #9333ea 0%, #c026d3 55%, #f472b6 100%);
-      --brand-glow: rgba(192, 38, 211, 0.35);
+      --brand-gradient: linear-gradient(135deg, #7c3aed 0%, #c026d3 50%, #f472b6 100%);
+      --brand-glow: rgba(192, 38, 211, 0.4);
+      --brand-text-gradient: linear-gradient(135deg, #ffffff 30%, #f0abfc 100%);
+      --glass-1: rgba(35, 18, 66, 0.72);
+      --glass-2: rgba(10, 5, 22, 0.9);
+      --glass-hover: rgba(46, 24, 88, 0.9);
+      --surface-translucent: rgba(16, 8, 34, 0.64);
+      --surface-strong: rgba(20, 10, 42, 0.88);
+      --nav-bg: rgba(10, 5, 22, 0.85);
+      --card-sheen: rgba(217, 70, 239, 0.15);
+      --ambient-top: rgba(192, 38, 211, 0.22);
+      --ambient-a: rgba(147, 51, 234, 0.17);
+      --ambient-b: rgba(236, 72, 153, 0.15);
+      --ambient-c: rgba(99, 102, 241, 0.12);
+      --ambient-warm: rgba(251, 146, 60, 0.09);
     }
 
     /* THEME 3: PURE MIDNIGHT AMOLED */
     [data-theme="amoled"] {
       --bg: #000000;
-      --bg-surface: #09090b;
-      --bg-card: #121215;
-      --bg-card-hover: #18181c;
-      --bg-elevated: #222228;
-      --border: #27272a;
-      --border-subtle: rgba(255, 255, 255, 0.08);
-      --border-accent: rgba(255, 255, 255, 0.2);
-      --brand: #6366f1;
-      --brand-gradient: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
-      --brand-glow: rgba(99, 102, 241, 0.3);
+      --bg-surface: #070708;
+      --bg-card: #0c0c10;
+      --bg-card-hover: #121218;
+      --bg-elevated: #191922;
+      --border: #25252e;
+      --border-subtle: rgba(255, 255, 255, 0.07);
+      --border-accent: rgba(129, 140, 248, 0.38);
+      --brand: #818cf8;
+      --brand-gradient: linear-gradient(135deg, #4f46e5 0%, #6366f1 58%, #a855f7 100%);
+      --brand-glow: rgba(99, 102, 241, 0.35);
+      --brand-text-gradient: linear-gradient(135deg, #ffffff 35%, #c7d2fe 100%);
+      --glass-1: rgba(18, 18, 24, 0.8);
+      --glass-2: rgba(4, 4, 6, 0.92);
+      --surface-translucent: rgba(10, 10, 14, 0.7);
+      --surface-strong: rgba(13, 13, 18, 0.9);
+      --nav-bg: rgba(5, 5, 8, 0.88);
+      --card-sheen: rgba(129, 140, 248, 0.12);
+      --ambient-top: rgba(99, 102, 241, 0.16);
+      --ambient-a: rgba(59, 130, 246, 0.11);
+      --ambient-b: rgba(168, 85, 247, 0.12);
+      --ambient-c: rgba(14, 165, 233, 0.07);
+      --ambient-warm: rgba(251, 191, 36, 0.05);
+      --grid-color: rgba(255, 255, 255, 0.04);
+    }
+
+    /* APPEARANCE MODE: LIGHT (overrides dark surfaces, keeps accent themes) */
+    [data-mode="light"] {
+      color-scheme: light;
+
+      --bg: #eef2f9;
+      --bg-surface: #f4f6fc;
+      --bg-card: #ffffff;
+      --bg-card-hover: #f5f7fd;
+      --bg-elevated: #e9edf7;
+      --border: #dde4f2;
+      --border-subtle: rgba(15, 23, 42, 0.08);
+      --border-accent: rgba(79, 70, 229, 0.32);
+
+      --text: #101828;
+      --text-muted: #526079;
+      --text-dim: #6e7c92;
+      --text-strong: #0b1220;
+
+      --brand: #6d28d9;
+      --brand-gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #a21caf 100%);
+      --brand-glow: rgba(109, 40, 217, 0.22);
+      --brand-text-gradient: linear-gradient(135deg, #0b1220 25%, #6d28d9 100%);
+      --purple: #7e22ce;
+      --purple-glow: rgba(126, 34, 206, 0.18);
+
+      --success-text: #047857;
+      --warning-text: #b45309;
+      --danger-text: #b91c1c;
+      --info-text: #1d4ed8;
+
+      --hairline: rgba(15, 23, 42, 0.075);
+      --hairline-strong: rgba(15, 23, 42, 0.12);
+      --inset-highlight: rgba(255, 255, 255, 0.95);
+      --glass-1: rgba(255, 255, 255, 0.9);
+      --glass-2: rgba(247, 249, 255, 0.94);
+      --glass-hover: #ffffff;
+      --surface-translucent: rgba(255, 255, 255, 0.76);
+      --surface-strong: rgba(255, 255, 255, 0.9);
+      --nav-bg: rgba(255, 255, 255, 0.86);
+      --modal-backdrop: rgba(15, 23, 42, 0.42);
+      --shadow-card: 0 28px 60px -28px rgba(30, 41, 59, 0.4);
+      --shadow-soft: 0 16px 36px -20px rgba(30, 41, 59, 0.28);
+      --shadow-sheet: 0 -24px 60px -28px rgba(15, 23, 42, 0.35);
+      --progress-track: rgba(15, 23, 42, 0.08);
+      --progress-marker: rgba(15, 23, 42, 0.7);
+      --swatch-border: rgba(15, 23, 42, 0.14);
+      --card-sheen: rgba(109, 40, 217, 0.07);
+
+      --ambient-top: rgba(99, 102, 241, 0.19);
+      --ambient-a: rgba(56, 189, 248, 0.18);
+      --ambient-b: rgba(168, 85, 247, 0.16);
+      --ambient-c: rgba(14, 165, 233, 0.1);
+      --ambient-warm: rgba(251, 146, 60, 0.14);
+      --grid-color: rgba(15, 23, 42, 0.04);
+      --noise-opacity: 0.028;
+      --vignette: rgba(203, 213, 225, 0.38);
+      --orb-opacity: 0.85;
+    }
+
+    [data-mode="light"][data-theme="violet"] {
+      --brand: #a21caf;
+      --brand-gradient: linear-gradient(135deg, #7c3aed 0%, #c026d3 50%, #db2777 100%);
+      --brand-glow: rgba(162, 28, 175, 0.22);
+      --brand-text-gradient: linear-gradient(135deg, #0b1220 25%, #a21caf 100%);
+      --ambient-b: rgba(236, 72, 153, 0.15);
+    }
+
+    [data-mode="light"][data-theme="amoled"] {
+      --brand: #4338ca;
+      --brand-gradient: linear-gradient(135deg, #4f46e5 0%, #6366f1 55%, #7c3aed 100%);
+      --brand-glow: rgba(67, 56, 202, 0.2);
+      --brand-text-gradient: linear-gradient(135deg, #0b1220 30%, #4338ca 100%);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
+    html {
+      background-color: var(--bg);
+      scrollbar-color: var(--border) transparent;
+    }
+
     body {
       background-color: var(--bg);
-      background-image: 
-        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(139, 92, 246, 0.22), transparent 70%),
-        radial-gradient(circle 350px at 0% 25%, rgba(59, 130, 246, 0.15), transparent 60%),
-        radial-gradient(circle 350px at 100% 65%, rgba(168, 85, 247, 0.15), transparent 60%),
-        radial-gradient(ellipse 60% 40% at 50% 100%, rgba(30, 41, 59, 0.5), transparent 70%);
-      background-attachment: fixed;
       color: var(--text);
       font-family: var(--font);
       min-height: 100vh;
@@ -114,6 +252,114 @@
       user-select: none;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
+      position: relative;
+      isolation: isolate;
+      transition: background-color 0.35s ease, color 0.35s ease;
+    }
+
+    /* Premium layered ambient backdrop */
+    .bg-canvas {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      overflow: hidden;
+      pointer-events: none;
+      background: var(--bg);
+      transition: background-color 0.35s ease;
+    }
+    .bg-canvas::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(var(--grid-color) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+      background-size: 64px 64px;
+      -webkit-mask-image: radial-gradient(ellipse 95% 65% at 50% 0%, #000 0%, transparent 72%);
+      mask-image: radial-gradient(ellipse 95% 65% at 50% 0%, #000 0%, transparent 72%);
+      opacity: 0.9;
+    }
+    .bg-canvas::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 85% 65% at 50% 38%, transparent 30%, var(--vignette) 100%);
+    }
+    .bg-orb {
+      position: absolute;
+      border-radius: 50%;
+      background: radial-gradient(circle, var(--orb-color) 0%, transparent 68%);
+      opacity: var(--orb-opacity);
+      will-change: transform;
+    }
+    .bg-orb-a {
+      width: 78vmax;
+      height: 78vmax;
+      top: -38vmax;
+      left: -20vmax;
+      --orb-color: var(--ambient-top);
+      animation: ambientA 34s ease-in-out infinite alternate;
+    }
+    .bg-orb-b {
+      width: 64vmax;
+      height: 64vmax;
+      top: 18vmax;
+      right: -34vmax;
+      --orb-color: var(--ambient-b);
+      animation: ambientB 42s ease-in-out infinite alternate;
+    }
+    .bg-orb-c {
+      width: 58vmax;
+      height: 58vmax;
+      bottom: -26vmax;
+      left: -18vmax;
+      --orb-color: var(--ambient-a);
+      animation: ambientC 38s ease-in-out infinite alternate;
+    }
+    .bg-orb-d {
+      width: 50vmax;
+      height: 50vmax;
+      bottom: -18vmax;
+      right: -16vmax;
+      --orb-color: var(--ambient-warm);
+      animation: ambientA 46s ease-in-out infinite alternate-reverse;
+    }
+    .bg-grain {
+      position: absolute;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+      background-size: 180px 180px;
+      opacity: var(--noise-opacity);
+      mix-blend-mode: overlay;
+    }
+    @keyframes ambientA {
+      0% { transform: translate3d(0, 0, 0) scale(1); }
+      50% { transform: translate3d(6vw, 4vh, 0) scale(1.08); }
+      100% { transform: translate3d(-3vw, 7vh, 0) scale(1.02); }
+    }
+    @keyframes ambientB {
+      0% { transform: translate3d(0, 0, 0) scale(1); }
+      50% { transform: translate3d(-7vw, 5vh, 0) scale(1.12); }
+      100% { transform: translate3d(2vw, -4vh, 0) scale(1.03); }
+    }
+    @keyframes ambientC {
+      0% { transform: translate3d(0, 0, 0) scale(1); }
+      50% { transform: translate3d(5vw, -6vh, 0) scale(1.1); }
+      100% { transform: translate3d(-4vw, 2vh, 0) scale(1.04); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .bg-orb { animation: none; }
+      body { transition: none; }
+    }
+
+    ::selection {
+      background: var(--brand-glow);
+      color: var(--text-strong);
+    }
+
+    :focus-visible {
+      outline: 2px solid var(--brand);
+      outline-offset: 2px;
     }
 
     /* DISCREET / PRIVACY MODE (ANTI-SHOULDER-SURFING) */
@@ -143,12 +389,18 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: 10px;
       padding: 10px 4px 6px;
     }
     .brand-row {
       display: flex;
       align-items: center;
       gap: 10px;
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+    .brand-row > div:last-child {
+      min-width: 0;
     }
     .brand-icon {
       width: 40px;
@@ -159,14 +411,19 @@
       align-items: center;
       justify-content: center;
       box-shadow: 0 4px 16px var(--brand-glow);
+      flex-shrink: 0;
     }
     .brand-title {
       font-size: 19px;
       font-weight: 800;
       letter-spacing: -0.02em;
-      background: linear-gradient(135deg, #ffffff 40%, #c084fc 100%);
+      background: var(--brand-text-gradient);
       -webkit-background-clip: text;
+      background-clip: text;
       -webkit-text-fill-color: transparent;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .brand-subtitle {
       font-size: 11px;
@@ -174,11 +431,15 @@
       font-family: var(--font-mono);
       text-transform: uppercase;
       letter-spacing: 0.05em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .header-actions {
       display: flex;
       gap: 6px;
       align-items: center;
+      flex-shrink: 0;
     }
     .icon-btn {
       background: var(--bg-card);
@@ -200,9 +461,45 @@
       transform: translateY(-1px);
     }
     .icon-btn.active {
-      background: rgba(139, 92, 246, 0.2);
+      background: rgba(139, 92, 246, 0.18);
       border-color: var(--brand);
-      color: #e9d5ff;
+      color: var(--text-strong);
+    }
+
+    /* Header light / dark quick toggle */
+    .theme-toggle-btn {
+      width: 34px;
+      height: 34px;
+      padding: 0 !important;
+      justify-content: center;
+      border-radius: 50%;
+    }
+    .theme-icon {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 17px;
+      height: 17px;
+    }
+    [data-mode="dark"] .theme-icon-sun { display: inline-flex; }
+    [data-mode="light"] .theme-icon-moon { display: inline-flex; }
+
+    @media (max-width: 440px) {
+      .header-actions { gap: 4px; }
+      .header .icon-btn { padding: 7px 7px; }
+      .header .icon-btn .btn-label { display: none; }
+      .header #topTargetVal { display: none; }
+      .brand-title { font-size: 17px; }
+      .brand-subtitle { font-size: 9.5px; }
+      .brand-icon { width: 38px; height: 38px; border-radius: 11px; }
+      .theme-toggle-btn { width: 32px; height: 32px; }
+    }
+    @media (max-width: 380px) {
+      .header-actions { gap: 3px; }
+      .header .icon-btn { padding: 7px 6px; }
+      .header #headerCloudSyncBtn { display: none; }
+      .brand-title { font-size: 16px; }
+      .brand-row { gap: 8px; }
     }
 
     /* Criteria Pill Badges */
@@ -219,17 +516,17 @@
     .pill-safe {
       background: rgba(16, 185, 129, 0.14);
       border: 1px solid rgba(16, 185, 129, 0.35);
-      color: #34d399;
+      color: var(--success-text);
     }
     .pill-short {
       background: rgba(239, 68, 68, 0.16);
       border: 1px solid rgba(239, 68, 68, 0.4);
-      color: #f87171;
+      color: var(--danger-text);
     }
     .pill-neutral {
       background: rgba(148, 163, 184, 0.12);
       border: 1px solid rgba(148, 163, 184, 0.25);
-      color: #cbd5e1;
+      color: var(--text-muted);
     }
     .pill-dot {
       width: 6px;
@@ -241,19 +538,21 @@
 
     /* 1. SMART DASHBOARD */
     .dashboard-card {
-      background: linear-gradient(145deg, rgba(17, 24, 51, 0.85) 0%, rgba(12, 18, 36, 0.92) 100%);
+      background:
+        radial-gradient(130% 90% at 100% 0%, var(--card-sheen) 0%, transparent 58%),
+        linear-gradient(155deg, var(--glass-1) 0%, var(--glass-2) 100%);
       backdrop-filter: blur(24px);
       -webkit-backdrop-filter: blur(24px);
-      border: 1px solid rgba(139, 92, 246, 0.3);
+      border: 1px solid var(--border-accent);
       border-radius: 22px;
       padding: 20px 18px;
       display: flex;
       flex-direction: column;
       gap: 18px;
       box-shadow: 
-        0 20px 45px -10px rgba(0, 0, 0, 0.6),
-        0 0 25px -5px rgba(139, 92, 246, 0.15),
-        inset 0 1px 0 rgba(255, 255, 255, 0.12);
+        var(--shadow-card),
+        0 0 36px -14px var(--brand-glow),
+        inset 0 1px 0 var(--inset-highlight);
       position: relative;
       overflow: hidden;
     }
@@ -285,6 +584,15 @@
       height: 96px;
       flex-shrink: 0;
     }
+    .gauge-wrap::before {
+      content: '';
+      position: absolute;
+      inset: -14px;
+      border-radius: 50%;
+      background: radial-gradient(circle, var(--brand-glow) 0%, transparent 68%);
+      opacity: 0.55;
+      pointer-events: none;
+    }
     .gauge-wrap svg {
       transform: rotate(-90deg);
       width: 100%;
@@ -303,7 +611,7 @@
     .gauge-pct {
       font-size: 20px;
       font-weight: 800;
-      color: #ffffff;
+      color: var(--text-strong);
       font-family: var(--font-mono);
       letter-spacing: -0.03em;
     }
@@ -338,10 +646,10 @@
       font-weight: 700;
       width: fit-content;
     }
-    .health-excellent { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
-    .health-good { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
-    .health-warning { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
-    .health-danger { background: rgba(239, 68, 68, 0.18); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); animation: pulse-danger 2s infinite ease-in-out; }
+    .health-excellent { background: rgba(16, 185, 129, 0.15); color: var(--success-text); border: 1px solid rgba(16, 185, 129, 0.3); }
+    .health-good { background: rgba(59, 130, 246, 0.15); color: var(--info-text); border: 1px solid rgba(59, 130, 246, 0.3); }
+    .health-warning { background: rgba(245, 158, 11, 0.15); color: var(--warning-text); border: 1px solid rgba(245, 158, 11, 0.3); }
+    .health-danger { background: rgba(239, 68, 68, 0.18); color: var(--danger-text); border: 1px solid rgba(239, 68, 68, 0.4); animation: pulse-danger 2s infinite ease-in-out; }
     @keyframes pulse-danger {
       0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
       50% { box-shadow: 0 0 12px 2px rgba(239, 68, 68, 0.35); }
@@ -354,26 +662,26 @@
       gap: 8px;
     }
     .stat-box {
-      background: rgba(12, 18, 36, 0.7);
-      border: 1px solid rgba(255, 255, 255, 0.07);
+      background: var(--surface-translucent);
+      border: 1px solid var(--hairline);
       border-radius: 14px;
       display: flex;
       flex-direction: column;
       align-items: center;
       text-align: center;
       padding: 10px 6px;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      box-shadow: inset 0 1px 0 var(--inset-highlight);
       transition: all 0.18s ease;
     }
     .stat-box:hover {
-      background: rgba(23, 33, 68, 0.7);
-      border-color: rgba(139, 92, 246, 0.3);
+      background: var(--glass-hover);
+      border-color: var(--border-accent);
       transform: translateY(-1px);
     }
     .stat-val {
       font-size: 16px;
       font-weight: 800;
-      color: #fff;
+      color: var(--text-strong);
       font-family: var(--font-mono);
     }
     .stat-lbl {
@@ -384,9 +692,9 @@
       margin-top: 2px;
       letter-spacing: 0.02em;
     }
-    .stat-green { color: #34d399; }
-    .stat-red { color: #f87171; }
-    .stat-yellow { color: #fbbf24; }
+    .stat-green { color: var(--success-text); }
+    .stat-red { color: var(--danger-text); }
+    .stat-yellow { color: var(--warning-text); }
 
     /* Hero Shortage / Safety Alert Bar */
     .shortage-banner {
@@ -401,12 +709,12 @@
     .banner-danger {
       background: rgba(239, 68, 68, 0.12);
       border: 1px solid rgba(239, 68, 68, 0.3);
-      color: #fca5a5;
+      color: var(--danger-text);
     }
     .banner-safe {
       background: rgba(16, 185, 129, 0.1);
       border: 1px solid rgba(16, 185, 129, 0.25);
-      color: #a7f3d0;
+      color: var(--success-text);
     }
 
     /* Filter Chips */
@@ -433,7 +741,7 @@
       gap: 6px;
       transition: all 0.15s ease;
     }
-    .filter-chip:hover { color: #fff; border-color: var(--border-accent); }
+    .filter-chip:hover { color: var(--text-strong); border-color: var(--border-accent); }
     .filter-chip.active {
       background: var(--brand-gradient);
       color: #ffffff;
@@ -448,28 +756,30 @@
       gap: 12px;
     }
     .subject-card {
-      background: linear-gradient(145deg, rgba(17, 24, 51, 0.8) 0%, rgba(12, 18, 36, 0.88) 100%);
+      background:
+        radial-gradient(120% 85% at 100% 0%, var(--card-sheen) 0%, transparent 58%),
+        linear-gradient(150deg, var(--glass-1) 0%, var(--glass-2) 100%);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.07);
+      border: 1px solid var(--hairline);
       border-radius: 20px;
       padding: 18px 16px;
       display: flex;
       flex-direction: column;
       gap: 14px;
-      box-shadow: 0 10px 30px -8px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      box-shadow: var(--shadow-soft), inset 0 1px 0 var(--inset-highlight);
       transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
       position: relative;
     }
     .subject-card:hover {
       border-color: var(--border-accent);
       transform: translateY(-2px);
-      box-shadow: 0 16px 36px -6px rgba(0, 0, 0, 0.6), 0 0 20px rgba(139, 92, 246, 0.2);
+      box-shadow: var(--shadow-card), 0 0 24px -6px var(--brand-glow);
     }
     .subject-card.is-short {
       border-color: rgba(239, 68, 68, 0.38);
-      background: linear-gradient(145deg, rgba(239, 68, 68, 0.07) 0%, rgba(17, 24, 51, 0.85) 50%);
-      box-shadow: 0 10px 30px -8px rgba(239, 68, 68, 0.2), inset 0 1px 0 rgba(239, 68, 68, 0.15);
+      background: linear-gradient(145deg, rgba(239, 68, 68, 0.09) 0%, var(--glass-2) 55%);
+      box-shadow: var(--shadow-soft), inset 0 1px 0 rgba(239, 68, 68, 0.16);
     }
     .card-head {
       display: flex;
@@ -491,14 +801,14 @@
       border-radius: 4px;
       letter-spacing: 0.05em;
     }
-    .cat-theory { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
-    .cat-lab { background: rgba(168, 85, 247, 0.2); color: #c084fc; }
-    .cat-elective { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
-    .cat-tutorial { background: rgba(20, 184, 166, 0.2); color: #2dd4bf; }
+    .cat-theory { background: rgba(59, 130, 246, 0.2); color: var(--info-text); }
+    .cat-lab { background: rgba(168, 85, 247, 0.2); color: var(--purple); }
+    .cat-elective { background: rgba(245, 158, 11, 0.2); color: var(--warning-text); }
+    .cat-tutorial { background: rgba(20, 184, 166, 0.2); color: var(--success-text); }
     .card-title {
       font-size: 15.5px;
       font-weight: 700;
-      color: #ffffff;
+      color: var(--text-strong);
       line-height: 1.3;
     }
     .card-score {
@@ -546,8 +856,8 @@
       font-size: 12.5px;
       font-weight: 700;
     }
-    .text-danger { color: #f87171; }
-    .text-success { color: #34d399; }
+    .text-danger { color: var(--danger-text); }
+    .text-success { color: var(--success-text); }
     .alert-chip {
       background: rgba(239, 68, 68, 0.08);
       border-color: rgba(239, 68, 68, 0.25);
@@ -561,7 +871,7 @@
     .prog-wrapper {
       position: relative;
       height: 8px;
-      background: var(--bg-surface);
+      background: var(--progress-track);
       border-radius: 99px;
       overflow: hidden;
     }
@@ -575,7 +885,7 @@
       top: 0;
       bottom: 0;
       width: 2px;
-      background: #ffffff;
+      background: var(--progress-marker);
       opacity: 0.7;
       z-index: 2;
     }
@@ -586,7 +896,7 @@
       gap: 8px;
       align-items: center;
       padding-top: 4px;
-      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      border-top: 1px solid var(--hairline);
     }
     .act-btn {
       flex: 1;
@@ -598,17 +908,17 @@
       align-items: center;
       justify-content: center;
       gap: 5px;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      background: rgba(12, 18, 36, 0.8);
+      border: 1px solid var(--hairline);
+      background: var(--surface-strong);
       color: var(--text);
       cursor: pointer;
       transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      box-shadow: inset 0 1px 0 var(--inset-highlight);
     }
-    .act-btn:hover { background: rgba(23, 33, 68, 0.9); }
+    .act-btn:hover { background: var(--glass-hover); }
     .act-btn:active { transform: scale(0.94); }
     .act-present {
-      color: #34d399;
+      color: var(--success-text);
       background: rgba(16, 185, 129, 0.12);
       border-color: rgba(16, 185, 129, 0.35);
     }
@@ -617,7 +927,7 @@
       box-shadow: 0 0 14px rgba(16, 185, 129, 0.3);
     }
     .act-absent {
-      color: #f87171;
+      color: var(--danger-text);
       background: rgba(239, 68, 68, 0.12);
       border-color: rgba(239, 68, 68, 0.35);
     }
@@ -632,7 +942,7 @@
       flex: 1.1;
       background: rgba(139, 92, 246, 0.14);
       border-color: rgba(139, 92, 246, 0.35);
-      color: #c084fc;
+      color: var(--brand);
     }
     .act-hist:hover { 
       background: rgba(139, 92, 246, 0.26); 
@@ -645,13 +955,16 @@
 
     /* 3. ATTENDANCE CALENDAR */
     .cal-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
+      background:
+        radial-gradient(120% 85% at 100% 0%, var(--card-sheen) 0%, transparent 60%),
+        linear-gradient(155deg, var(--glass-1) 0%, var(--glass-2) 100%);
+      border: 1px solid var(--hairline);
       border-radius: var(--radius-lg);
       padding: 16px;
       display: flex;
       flex-direction: column;
       gap: 14px;
+      box-shadow: var(--shadow-soft), inset 0 1px 0 var(--inset-highlight);
     }
     .cal-header {
       display: flex;
@@ -661,7 +974,7 @@
     .cal-month-title {
       font-size: 16px;
       font-weight: 800;
-      color: #ffffff;
+      color: var(--text-strong);
     }
     .cal-nav-btns {
       display: flex;
@@ -700,7 +1013,7 @@
       aspect-ratio: 1;
       border-radius: var(--radius-sm);
       background: var(--bg-surface);
-      border: 1px solid rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--hairline);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -717,7 +1030,7 @@
     }
     .cal-cell.is-today {
       border: 2px solid var(--brand);
-      color: #ffffff;
+      color: var(--text-strong);
     }
     .cal-cell.is-selected {
       background: var(--brand-gradient);
@@ -733,7 +1046,7 @@
     .cal-cell.is-holiday {
       background: rgba(59, 130, 246, 0.16);
       border-color: rgba(59, 130, 246, 0.35);
-      color: #93c5fd;
+      color: var(--info-text);
     }
     .cal-dot-row {
       display: flex;
@@ -769,7 +1082,7 @@
     .day-detail-date {
       font-size: 14px;
       font-weight: 800;
-      color: #ffffff;
+      color: var(--text-strong);
     }
     .day-sub-entry {
       display: flex;
@@ -777,7 +1090,7 @@
       justify-content: space-between;
       padding: 8px 10px;
       background: var(--bg-card);
-      border: 1px solid rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--hairline);
       border-radius: var(--radius-sm);
     }
     .day-sub-info {
@@ -793,10 +1106,10 @@
       display: inline-block;
       width: fit-content;
     }
-    .status-pill-present { background: rgba(16, 185, 129, 0.2); color: #34d399; }
-    .status-pill-absent { background: rgba(239, 68, 68, 0.2); color: #f87171; }
-    .status-pill-off { background: rgba(148, 163, 184, 0.15); color: #94a3b8; }
-    .status-pill-none { background: rgba(148, 163, 184, 0.08); color: #64748b; }
+    .status-pill-present { background: rgba(16, 185, 129, 0.2); color: var(--success-text); }
+    .status-pill-absent { background: rgba(239, 68, 68, 0.2); color: var(--danger-text); }
+    .status-pill-off { background: rgba(148, 163, 184, 0.15); color: var(--text-muted); }
+    .status-pill-none { background: rgba(148, 163, 184, 0.08); color: var(--text-dim); }
 
     /* Security Status Checklist in Settings */
     .security-status-grid {
@@ -821,12 +1134,76 @@
       margin-top: 1px;
     }
 
+    /* Appearance Settings */
+    .appearance-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .appearance-mode-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      padding: 5px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+    }
+    .appearance-mode-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 10px 6px;
+      border-radius: 10px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-muted);
+      font-family: var(--font);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .appearance-mode-btn:hover {
+      color: var(--text-strong);
+      background: var(--bg-card-hover);
+    }
+    .appearance-mode-btn.active {
+      color: var(--text-strong);
+      background: var(--bg-card);
+      border-color: var(--border-accent);
+      box-shadow: 0 4px 14px -6px var(--brand-glow), inset 0 1px 0 var(--inset-highlight);
+    }
+    .appearance-mode-btn .mode-ico {
+      font-size: 13px;
+      line-height: 1;
+    }
+    .theme-picker-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 10.5px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+    .theme-picker-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, var(--hairline-strong), transparent);
+    }
+
     /* Theme Picker Row in Settings */
     .theme-picker-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 8px;
-      margin-top: 6px;
+      margin-top: 2px;
     }
     .theme-card {
       background: var(--bg-surface);
@@ -841,18 +1218,26 @@
       font-size: 11px;
       font-weight: 700;
       text-align: center;
+      color: var(--text-muted);
       transition: all 0.2s ease;
+    }
+    .theme-card:hover {
+      border-color: var(--border-accent);
+      color: var(--text-strong);
+      transform: translateY(-1px);
     }
     .theme-card.active {
       border-color: var(--brand);
       background: rgba(139, 92, 246, 0.12);
-      box-shadow: 0 0 12px var(--brand-glow);
+      color: var(--text-strong);
+      box-shadow: 0 0 14px -2px var(--brand-glow);
     }
     .theme-swatch {
       width: 28px;
       height: 28px;
       border-radius: 50%;
-      border: 2px solid rgba(255, 255, 255, 0.2);
+      border: 2px solid var(--swatch-border);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
     }
 
     /* Bottom Navigation */
@@ -863,16 +1248,16 @@
       right: 16px;
       max-width: 480px;
       margin: 0 auto;
-      background: rgba(12, 18, 36, 0.85);
-      backdrop-filter: blur(28px);
-      -webkit-backdrop-filter: blur(28px);
-      border: 1px solid rgba(139, 92, 246, 0.25);
+      background: var(--nav-bg);
+      backdrop-filter: blur(28px) saturate(1.25);
+      -webkit-backdrop-filter: blur(28px) saturate(1.25);
+      border: 1px solid var(--border-accent);
       border-radius: 26px;
       padding: 6px 8px calc(6px + var(--safe-bottom));
       box-shadow: 
-        0 16px 40px -4px rgba(0, 0, 0, 0.65),
-        0 0 20px rgba(139, 92, 246, 0.15),
-        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        var(--shadow-card),
+        0 0 26px -8px var(--brand-glow),
+        inset 0 1px 0 var(--inset-highlight);
       z-index: 100;
     }
     .nav-inner {
@@ -904,13 +1289,13 @@
     }
     .nav-item:active { transform: scale(0.92); }
     .nav-item.active {
-      color: #ffffff;
+      color: var(--text-strong);
       background: rgba(139, 92, 246, 0.15);
     }
     .nav-item.active svg {
       transform: translateY(-2px);
-      color: #c084fc;
-      filter: drop-shadow(0 0 8px rgba(168, 85, 247, 0.6));
+      color: var(--brand);
+      filter: drop-shadow(0 0 8px var(--brand-glow));
     }
 
     /* Views */
@@ -927,9 +1312,9 @@
     .modal-backdrop {
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.75);
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
+      background: var(--modal-backdrop);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
       z-index: 200;
       display: none;
       align-items: flex-end;
@@ -939,7 +1324,7 @@
       display: flex;
     }
     .modal-sheet {
-      background: var(--bg-card);
+      background: linear-gradient(180deg, var(--bg-card) 0%, var(--bg-surface) 100%);
       border: 1px solid var(--border-accent);
       border-radius: 24px 24px 0 0;
       width: 100%;
@@ -947,7 +1332,7 @@
       max-height: 88vh;
       overflow-y: auto;
       padding: 20px 18px calc(24px + var(--safe-bottom));
-      box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.6);
+      box-shadow: var(--shadow-sheet);
       display: flex;
       flex-direction: column;
       gap: 16px;
@@ -960,14 +1345,14 @@
     .sheet-handle {
       width: 36px;
       height: 4px;
-      background: var(--border);
+      background: var(--hairline-strong);
       border-radius: 2px;
       margin: 0 auto -6px;
     }
     .sheet-title {
       font-size: 17px;
       font-weight: 800;
-      color: #ffffff;
+      color: var(--text-strong);
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -1009,7 +1394,7 @@
     .history-date {
       font-size: 12px;
       font-weight: 700;
-      color: #ffffff;
+      color: var(--text-strong);
       font-family: var(--font-mono);
     }
     .history-type {
@@ -1030,7 +1415,7 @@
       border-radius: 50%;
       background: var(--bg-surface);
       border: 1px solid var(--border);
-      color: #fff;
+      color: var(--text-strong);
       font-size: 20px;
       font-weight: 800;
       cursor: pointer;
@@ -1090,7 +1475,9 @@
       font-size: 14px;
       font-family: var(--font);
       outline: none;
-      transition: border-color 0.15s;
+      transition: border-color 0.15s, background-color 0.3s ease;
+      width: 100%;
+      min-width: 0;
     }
     .form-inp:focus, .form-sel:focus {
       border-color: var(--brand);
@@ -1115,13 +1502,16 @@
 
     /* Simulator View */
     .calc-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
+      background:
+        radial-gradient(120% 85% at 100% 0%, var(--card-sheen) 0%, transparent 60%),
+        linear-gradient(155deg, var(--glass-1) 0%, var(--glass-2) 100%);
+      border: 1px solid var(--hairline);
       border-radius: var(--radius-lg);
       padding: 18px;
       display: flex;
       flex-direction: column;
       gap: 14px;
+      box-shadow: var(--shadow-soft), inset 0 1px 0 var(--inset-highlight);
     }
     .calc-res-box {
       background: var(--bg-surface);
@@ -1138,11 +1528,19 @@
       font-size: 34px;
       font-weight: 800;
       font-family: var(--font-mono);
-      color: #ffffff;
+      color: var(--text-strong);
     }
   </style>
 </head>
 <body>
+
+  <div class="bg-canvas" aria-hidden="true">
+    <span class="bg-orb bg-orb-a"></span>
+    <span class="bg-orb bg-orb-b"></span>
+    <span class="bg-orb bg-orb-c"></span>
+    <span class="bg-orb bg-orb-d"></span>
+    <span class="bg-grain"></span>
+  </div>
 
   <div class="app-container">
 
@@ -1166,12 +1564,26 @@
         <button type="button" class="icon-btn" id="headerCloudSyncBtn" data-action="triggerManualSync" title="Sync to Cloud Storage">
           <span>☁️</span>
         </button>
+        <!-- DARK / LIGHT THEME QUICK TOGGLE -->
+        <button type="button" class="icon-btn theme-toggle-btn" id="themeModeToggleBtn" data-action="toggleThemeMode" title="Switch to light theme" aria-label="Switch to light theme">
+          <span class="theme-icon theme-icon-sun" aria-hidden="true">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="4"></circle>
+              <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+            </svg>
+          </span>
+          <span class="theme-icon theme-icon-moon" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+          </span>
+        </button>
         <!-- DISCREET PRIVACY MODE TOGGLE -->
         <button type="button" class="icon-btn" id="privacyToggleBtn" data-action="togglePrivacyMode" title="Discreet Screen Mode (Anti-Shoulder Surfing)">
           <span>👁️</span>
         </button>
         <button type="button" class="icon-btn" data-action="openSetupModal" title="Setup or Reconfigure Semester">
-          <span>⚡</span> Setup
+          <span>⚡</span> <span class="btn-label">Setup</span>
         </button>
         <button type="button" class="icon-btn" data-action="openTargetModal" title="Set Criteria Target">
           <span>🎯</span> <span id="topTargetVal">75%</span>
@@ -1242,7 +1654,7 @@
 
       <!-- COURSES HEADER ROW WITH + ADD SUBJECT -->
       <div style="display:flex; justify-content:space-between; align-items:center; margin-top:2px; padding:0 2px;">
-        <span style="font-size:12.5px; font-weight:800; color:#fff; text-transform:uppercase; letter-spacing:0.04em;">
+        <span style="font-size:12.5px; font-weight:800; color:var(--text-strong); text-transform:uppercase; letter-spacing:0.04em;">
           My Subjects (<span id="subjectCountBadge">0</span>)
         </span>
         <button type="button" class="icon-btn" style="padding:5px 11px; font-size:11.5px; font-weight:700;" data-action="openAddSingleModal">
@@ -1255,7 +1667,7 @@
 
       <div id="emptyState" style="display:none; text-align:center; padding:36px 18px; background:var(--bg-card); border:1px solid var(--border-accent); border-radius:var(--radius-lg); margin-top:8px;">
         <div style="font-size:40px; margin-bottom:8px;">🎓</div>
-        <p style="font-size:17px; font-weight:800; color:#fff; margin-bottom:6px;">No Subjects Configured Yet</p>
+        <p style="font-size:17px; font-weight:800; color:var(--text-strong); margin-bottom:6px;">No Subjects Configured Yet</p>
         <p style="font-size:13px; color:var(--text-muted); max-width:340px; margin:0 auto 16px; line-height:1.45;">
           Tell Attendify how many courses you have this semester and name them to start calculating your 75% attendance criteria.
         </p>
@@ -1287,7 +1699,7 @@
         <div class="cal-grid-days" id="calGridDays"></div>
 
         <!-- Calendar Legend -->
-        <div style="display:flex; justify-content:space-around; align-items:center; font-size:11px; color:var(--text-dim); padding-top:6px; border-top:1px solid rgba(255,255,255,0.05);">
+        <div style="display:flex; justify-content:space-around; align-items:center; font-size:11px; color:var(--text-dim); padding-top:6px; border-top:1px solid var(--hairline);">
           <span style="display:flex; align-items:center; gap:4px;"><span class="cal-dot dot-pres" style="width:6px;height:6px;"></span> Present</span>
           <span style="display:flex; align-items:center; gap:4px;"><span class="cal-dot dot-abs" style="width:6px;height:6px;"></span> Absent</span>
           <span style="display:flex; align-items:center; gap:4px;"><span class="cal-dot dot-mix" style="width:6px;height:6px;"></span> Mixed</span>
@@ -1321,7 +1733,7 @@
     <section id="viewCalculator" class="view-content">
       <div class="calc-card">
         <div style="display:flex; justify-content:space-between; align-items:center;">
-          <h2 style="font-size:17px; font-weight:800; color:#fff;">What-If Simulator</h2>
+          <h2 style="font-size:17px; font-weight:800; color:var(--text-strong);">What-If Simulator</h2>
           <span class="criteria-pill pill-safe"><span class="pill-dot dot-green"></span> Live</span>
         </div>
         <p style="font-size:12.5px; color:var(--text-muted);">
@@ -1356,24 +1768,43 @@
     <!-- TAB 4: SETTINGS, SECURITY & DATA -->
     <section id="viewSettings" class="view-content">
 
-      <!-- THEME CUSTOMIZATION -->
+      <!-- APPEARANCE / THEME CUSTOMIZATION -->
       <div class="calc-card">
-        <h2 style="font-size:17px; font-weight:800; color:#fff;">Theme Customization</h2>
-        <p style="font-size:12.5px; color:var(--text-muted);">Select your preferred dark visual theme:</p>
+        <div class="appearance-head">
+          <div>
+            <h2 style="font-size:17px; font-weight:800; color:var(--text-strong);">Appearance</h2>
+            <p style="font-size:12.5px; color:var(--text-muted); margin-top:3px;">Choose a light or dark surface, then pick your accent palette.</p>
+          </div>
+          <span class="criteria-pill pill-neutral" id="appearanceModeBadge">Dark</span>
+        </div>
+
+        <div class="appearance-mode-grid" role="group" aria-label="Appearance mode">
+          <button type="button" class="appearance-mode-btn active" id="modeBtn_dark" data-action="setThemeMode" data-mode="dark" aria-pressed="true">
+            <span class="mode-ico">🌙</span> Dark
+          </button>
+          <button type="button" class="appearance-mode-btn" id="modeBtn_light" data-action="setThemeMode" data-mode="light" aria-pressed="false">
+            <span class="mode-ico">☀️</span> Light
+          </button>
+          <button type="button" class="appearance-mode-btn" id="modeBtn_system" data-action="setThemeMode" data-mode="system" aria-pressed="false">
+            <span class="mode-ico">🖥️</span> System
+          </button>
+        </div>
+
+        <div class="theme-picker-label">Accent palette</div>
 
         <div class="theme-picker-grid">
-          <div class="theme-card active" id="themeBtn_navy-purple" data-action="setAppTheme" data-theme="navy-purple">
-            <div class="theme-swatch" style="background: linear-gradient(135deg, #0c1224 40%, #8b5cf6 100%);"></div>
+          <div class="theme-card active" id="themeBtn_navy-purple" data-action="setAppTheme" data-accent="navy-purple">
+            <div class="theme-swatch" style="background: linear-gradient(135deg, #0a0f1f 35%, #4f46e5 70%, #d946ef 100%);"></div>
             <span>Elegant Navy &amp; Purple</span>
           </div>
 
-          <div class="theme-card" id="themeBtn_violet" data-action="setAppTheme" data-theme="violet">
-            <div class="theme-swatch" style="background: linear-gradient(135deg, #120a26 40%, #c026d3 100%);"></div>
+          <div class="theme-card" id="themeBtn_violet" data-action="setAppTheme" data-accent="violet">
+            <div class="theme-swatch" style="background: linear-gradient(135deg, #0f0722 35%, #c026d3 70%, #f472b6 100%);"></div>
             <span>Cyber Violet</span>
           </div>
 
-          <div class="theme-card" id="themeBtn_amoled" data-action="setAppTheme" data-theme="amoled">
-            <div class="theme-swatch" style="background: linear-gradient(135deg, #000000 40%, #4f46e5 100%);"></div>
+          <div class="theme-card" id="themeBtn_amoled" data-action="setAppTheme" data-accent="amoled">
+            <div class="theme-swatch" style="background: linear-gradient(135deg, #000000 35%, #4f46e5 70%, #a855f7 100%);"></div>
             <span>Midnight AMOLED</span>
           </div>
         </div>
@@ -1382,7 +1813,7 @@
       <!-- CLOUD STORAGE & SYNC CARD -->
       <div class="calc-card">
         <div style="display:flex; justify-content:space-between; align-items:center;">
-          <h2 style="font-size:17px; font-weight:800; color:#fff;">☁️ Cloud Storage &amp; Sync</h2>
+          <h2 style="font-size:17px; font-weight:800; color:var(--text-strong);">☁️ Cloud Storage &amp; Sync</h2>
           <span class="criteria-pill pill-safe" id="cloudConnectionBadge"><span class="pill-dot dot-green"></span> Cloud Connected</span>
         </div>
         <p style="font-size:12.5px; color:var(--text-muted);">
@@ -1393,14 +1824,14 @@
           <div style="display:flex; justify-content:space-between; align-items:center;">
             <div>
               <span style="font-size:10px; color:var(--text-dim); text-transform:uppercase; font-weight:700;">Student Name</span>
-              <div id="settingsStudentNameDisplay" style="font-size:14px; font-weight:800; color:#fff;">--</div>
+              <div id="settingsStudentNameDisplay" style="font-size:14px; font-weight:800; color:var(--text-strong);">--</div>
             </div>
             <button type="button" class="icon-btn" style="padding:4px 9px; font-size:11px;" data-action="openEditNameModal">
               ✏️ Edit Name
             </button>
           </div>
 
-                    <div style="border-top:1px solid rgba(255,255,255,0.06); padding-top:8px; display:flex; justify-content:space-between; align-items:center;">
+                    <div style="border-top:1px solid var(--hairline); padding-top:8px; display:flex; justify-content:space-between; align-items:center;">
             <div>
               <span style="font-size:10px; color:var(--text-dim); text-transform:uppercase; font-weight:700;">Cloud Sync Identifier</span>
               <div id="settingsSyncCodeDisplay" style="font-size:13px; font-weight:800; font-family:var(--font-mono); color:var(--brand);">--</div>
@@ -1410,10 +1841,10 @@
             </button>
           </div>
 
-          <div style="border-top:1px solid rgba(255,255,255,0.06); padding-top:8px; display:flex; justify-content:space-between; align-items:center;">
+          <div style="border-top:1px solid var(--hairline); padding-top:8px; display:flex; justify-content:space-between; align-items:center;">
             <div>
               <span style="font-size:10px; color:var(--text-dim); text-transform:uppercase; font-weight:700;">Private Secret Key (Auth)</span>
-              <div id="settingsSyncKeyDisplay" style="font-size:12px; font-weight:700; font-family:var(--font-mono); color:#a78bfa;">••••••••••••••••</div>
+              <div id="settingsSyncKeyDisplay" style="font-size:12px; font-weight:700; font-family:var(--font-mono); color:var(--brand);">••••••••••••••••</div>
             </div>
             <div style="display:flex; gap:6px;">
               <button type="button" class="icon-btn" id="toggleKeyVisibilityBtn" style="padding:4px 8px; font-size:11px;" data-action="toggleKeyVisibility">
@@ -1425,15 +1856,15 @@
             </div>
           </div>
 
-          <div style="border-top:1px solid rgba(255,255,255,0.06); padding-top:8px; display:flex; justify-content:space-between; align-items:center;">
+          <div style="border-top:1px solid var(--hairline); padding-top:8px; display:flex; justify-content:space-between; align-items:center;">
             <button type="button" class="icon-btn" style="width:100%; justify-content:center; padding:7px; font-size:11.5px; font-weight:700;" data-action="copyPairingCredentials">
               🔑 Copy Full Pairing Credentials (Code:Key)
             </button>
           </div>
 
-          <div style="border-top:1px solid rgba(255,255,255,0.06); padding-top:8px; font-size:11.5px; color:var(--text-muted); display:flex; justify-content:space-between;">
+          <div style="border-top:1px solid var(--hairline); padding-top:8px; font-size:11.5px; color:var(--text-muted); display:flex; justify-content:space-between;">
             <span>Last Cloud Sync:</span>
-            <span id="settingsLastSyncTime" style="color:#34d399; font-weight:700;">Just now</span>
+            <span id="settingsLastSyncTime" style="color:var(--success-text); font-weight:700;">Just now</span>
           </div>
         </div>
 
@@ -1456,7 +1887,7 @@
       <!-- STUDENT PRIVACY & SECURITY SUITE -->
       <div class="calc-card">
         <div style="display:flex; justify-content:space-between; align-items:center;">
-          <h2 style="font-size:17px; font-weight:800; color:#fff;">Security &amp; Privacy</h2>
+          <h2 style="font-size:17px; font-weight:800; color:var(--text-strong);">Security &amp; Privacy</h2>
           <span class="criteria-pill pill-safe"><span class="pill-dot dot-green"></span> Hardened</span>
         </div>
         <p style="font-size:12.5px; color:var(--text-muted);">
@@ -1466,7 +1897,7 @@
         <!-- Privacy / Anti-Shoulder-Surfing Switch -->
         <div style="background:var(--bg-surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:12px; display:flex; justify-content:space-between; align-items:center;">
           <div>
-            <div style="font-size:13.5px; font-weight:700; color:#fff;">Discreet Screen Mode</div>
+            <div style="font-size:13.5px; font-weight:700; color:var(--text-strong);">Discreet Screen Mode</div>
             <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">Masks percentages &amp; attendance from shoulder-surfers in class</div>
           </div>
           <button type="button" class="icon-btn" id="settingsPrivacyBtn" data-action="togglePrivacyMode" style="padding:6px 12px;">
@@ -1501,7 +1932,7 @@
 
       <!-- DATA MANAGEMENT & EXPORT -->
       <div class="calc-card">
-        <h2 style="font-size:17px; font-weight:800; color:#fff;">Data Management &amp; Backups</h2>
+        <h2 style="font-size:17px; font-weight:800; color:var(--text-strong);">Data Management &amp; Backups</h2>
 
         <div style="display:flex; flex-direction:column; gap:10px;">
           <button type="button" class="icon-btn" style="justify-content:space-between; height:44px;" data-action="openSetupModal">
@@ -1596,7 +2027,7 @@
       <!-- Step 1: Student Name & Number of Subjects -->
       <div id="setupStep1">
         <div style="text-align:center; margin-bottom:14px;">
-          <h3 style="font-size:17px; font-weight:800; color:#fff;">Welcome to Attendify 🎓</h3>
+          <h3 style="font-size:17px; font-weight:800; color:var(--text-strong);">Welcome to Attendify 🎓</h3>
           <p style="font-size:12.5px; color:var(--text-muted); margin-top:4px;">
             Set up your name and subjects to sync with cloud storage:
           </p>
@@ -1636,7 +2067,7 @@
       <!-- Step 2: Name each subject and customize -->
       <div id="setupStep2" style="display:none;">
         <div style="margin-bottom:12px;">
-          <h3 style="font-size:16px; font-weight:800; color:#fff;">Customize Your <span id="step2CountLabel">5</span> Subjects</h3>
+          <h3 style="font-size:16px; font-weight:800; color:var(--text-strong);">Customize Your <span id="step2CountLabel">5</span> Subjects</h3>
           <p style="font-size:12px; color:var(--text-muted); margin-top:2px;">
             Enter the name of each course and whether it is Theory, Lab, or Elective:
           </p>
@@ -1756,7 +2187,7 @@
         </div>
         <div style="text-align:right;">
           <span id="histRatio" class="privacy-blur" style="font-size:11px; color:var(--text-muted); font-family:var(--font-mono); display:block;">-- / -- Classes</span>
-          <span id="histGoalText" class="privacy-blur" style="font-size:11px; font-weight:700; color:#34d399;">Safe</span>
+          <span id="histGoalText" class="privacy-blur" style="font-size:11px; font-weight:700; color:var(--success-text);">Safe</span>
         </div>
       </div>
 
@@ -1780,32 +2211,32 @@
 
       <div style="display:flex; flex-direction:column; gap:12px; max-height:65vh; overflow-y:auto; font-size:12.5px; line-height:1.5; color:var(--text-muted);">
         <div style="background:var(--bg-surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:12px;">
-          <strong style="color:#fff; font-size:13px; display:block; margin-bottom:4px;">1. Zero Telemetry &amp; No Data Collection</strong>
+          <strong style="color:var(--text-strong); font-size:13px; display:block; margin-bottom:4px;">1. Zero Telemetry &amp; No Data Collection</strong>
           Attendify does not collect, log, transmit, or sell your personal or academic records. There are no advertising trackers, analytics SDKs, or third-party cookies.
         </div>
 
         <div style="background:var(--bg-surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:12px;">
-          <strong style="color:#fff; font-size:13px; display:block; margin-bottom:4px;">2. Local-First Device Storage</strong>
+          <strong style="color:var(--text-strong); font-size:13px; display:block; margin-bottom:4px;">2. Local-First Device Storage</strong>
           All attendance logs, calculations, and subject lists are stored exclusively on your local device via sandboxed HTML5 LocalStorage. The application functions 100% offline.
         </div>
 
         <div style="background:var(--bg-surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:12px;">
-          <strong style="color:#fff; font-size:13px; display:block; margin-bottom:4px;">3. XSS Protection &amp; Strict Content Security Policy (CSP)</strong>
+          <strong style="color:var(--text-strong); font-size:13px; display:block; margin-bottom:4px;">3. XSS Protection &amp; Strict Content Security Policy (CSP)</strong>
           All rendered user inputs undergo strict character escaping. The app enforces a strict Content Security Policy to stop unauthorized scripts, external payloads, and cross-site scripting (XSS).
         </div>
 
         <div style="background:var(--bg-surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:12px;">
-          <strong style="color:#fff; font-size:13px; display:block; margin-bottom:4px;">4. Verified JSON Backups &amp; Schema Validation</strong>
+          <strong style="color:var(--text-strong); font-size:13px; display:block; margin-bottom:4px;">4. Verified JSON Backups &amp; Schema Validation</strong>
           Imported backup files are checked by an in-memory schema validator that verifies object bounds, property types, and value limits before applying state changes.
         </div>
 
         <div style="background:var(--bg-surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:12px;">
-          <strong style="color:#fff; font-size:13px; display:block; margin-bottom:4px;">5. Zero Plaintext Passwords or Secret Keys</strong>
+          <strong style="color:var(--text-strong); font-size:13px; display:block; margin-bottom:4px;">5. Zero Plaintext Passwords or Secret Keys</strong>
           Attendify does not store API credentials, tokens, or passwords in client code. If optional multi-device sync accounts are introduced, they will enforce OAuth 2.0 PKCE and end-to-end encryption.
         </div>
 
         <div style="background:var(--bg-surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:12px;">
-          <strong style="color:#fff; font-size:13px; display:block; margin-bottom:4px;">6. Student Data Rights &amp; Total Deletion</strong>
+          <strong style="color:var(--text-strong); font-size:13px; display:block; margin-bottom:4px;">6. Student Data Rights &amp; Total Deletion</strong>
           You have full sovereignty over your academic information. You can export a CSV or JSON copy anytime, or execute a permanent factory reset with a single tap.
         </div>
       </div>
@@ -1821,7 +2252,7 @@
     <div class="modal-sheet">
       <div class="sheet-handle"></div>
       <div class="sheet-title">
-        <span style="color:#f87171;">⚠️ Confirm Permanent Data Deletion</span>
+        <span style="color:var(--danger-text);">⚠️ Confirm Permanent Data Deletion</span>
         <button type="button" class="close-btn" data-action="closeDeleteModal">✕</button>
       </div>
 
@@ -1829,7 +2260,7 @@
         You are about to permanently erase all subjects, attendance logs, and calendar entries from your device storage, and <strong>automatically delete your cloud backup from the server</strong>. This action <strong>cannot be undone</strong>.
       </p>
 
-      <div id="deleteStatsPreview" style="background:var(--bg-surface); border:1px solid rgba(239,68,68,0.25); border-radius:var(--radius-md); padding:12px; font-size:12.5px; color:#fca5a5;">
+      <div id="deleteStatsPreview" style="background:var(--bg-surface); border:1px solid rgba(239,68,68,0.25); border-radius:var(--radius-md); padding:12px; font-size:12.5px; color:var(--danger-text);">
         Data to be erased: <strong id="deleteSubCount">0</strong> subjects, <strong id="deleteHistCount">0</strong> logs.
       </div>
 

@@ -42,6 +42,7 @@
         history: [],
         globalTarget: 75,
         activeTheme: 'navy-purple',
+        themeMode: 'dark',
         privacyMode: false,
         activeCategory: 'all',
         activeTab: 'subjects'
@@ -212,6 +213,9 @@
       let activeTheme = typeof raw.activeTheme === 'string' ? raw.activeTheme : 'navy-purple';
       if (!['navy-purple', 'violet', 'amoled'].includes(activeTheme)) activeTheme = 'navy-purple';
 
+      let themeMode = typeof raw.themeMode === 'string' ? raw.themeMode : 'dark';
+      if (!['dark', 'light', 'system'].includes(themeMode)) themeMode = 'dark';
+
       const privacyMode = Boolean(raw.privacyMode);
 
       // Validate Setup Completion Flag
@@ -256,6 +260,7 @@
         history: sanitizedHistory,
         globalTarget,
         activeTheme,
+        themeMode,
         privacyMode,
         activeCategory: raw.activeCategory || 'all',
         activeTab: raw.activeTab || 'subjects'
@@ -289,30 +294,109 @@
     }
 
     // 4. THEME CONTROLLER
+    const THEME_IDS = ['navy-purple', 'violet', 'amoled'];
+    const THEME_MODES = ['dark', 'light', 'system'];
+
     function setAppTheme(theme) {
-      if (!['navy-purple', 'violet', 'amoled'].includes(theme)) return;
+      if (!THEME_IDS.includes(theme)) return;
       appState.activeTheme = theme;
       applyThemeUI(theme);
       saveState();
     }
 
-    function applyThemeUI(theme) {
-      if (document.documentElement) {
-        document.documentElement.setAttribute('data-theme', theme);
+    function setThemeMode(mode) {
+      if (!THEME_MODES.includes(mode)) return;
+      appState.themeMode = mode;
+      applyThemeUI(appState.activeTheme || 'navy-purple');
+      saveState();
+    }
+
+    function toggleThemeMode() {
+      const resolved = getResolvedThemeMode(appState.themeMode);
+      appState.themeMode = resolved === 'dark' ? 'light' : 'dark';
+      applyThemeUI(appState.activeTheme || 'navy-purple');
+      saveState();
+    }
+
+    function getResolvedThemeMode(mode) {
+      if (mode === 'system') {
+        try {
+          return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        } catch (err) {
+          return 'dark';
+        }
       }
-      const themeColors = {
-        'navy-purple': '#060913',
-        'violet': '#090514',
+      return mode === 'light' ? 'light' : 'dark';
+    }
+
+    function applyThemeUI(theme) {
+      if (!THEME_IDS.includes(theme)) theme = 'navy-purple';
+      const mode = THEME_MODES.includes(appState.themeMode) ? appState.themeMode : 'dark';
+      const resolvedMode = getResolvedThemeMode(mode);
+      const root = document.documentElement;
+
+      if (root) {
+        root.setAttribute('data-theme', theme);
+        root.setAttribute('data-mode', resolvedMode);
+        root.style.colorScheme = resolvedMode;
+      }
+
+      const darkThemeColors = {
+        'navy-purple': '#05070f',
+        'violet': '#070310',
         'amoled': '#000000'
       };
       const themeColorMeta = document.querySelector('meta[name="theme-color"]');
-      if (themeColorMeta) themeColorMeta.setAttribute('content', themeColors[theme] || '#060913');
+      if (themeColorMeta) {
+        themeColorMeta.setAttribute('content', resolvedMode === 'light' ? '#eef2f9' : (darkThemeColors[theme] || '#05070f'));
+      }
 
-      ['navy-purple', 'violet', 'amoled'].forEach(t => {
+      THEME_IDS.forEach(t => {
         const btn = document.getElementById(`themeBtn_${t}`);
         if (btn) btn.classList.toggle('active', t === theme);
       });
+
+      THEME_MODES.forEach(m => {
+        const btn = document.getElementById(`modeBtn_${m}`);
+        if (!btn) return;
+        const isActive = m === mode;
+        btn.classList.toggle('active', isActive);
+        btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+      });
+
+      const badge = document.getElementById('appearanceModeBadge');
+      if (badge) {
+        const label = resolvedMode === 'dark' ? 'Dark' : 'Light';
+        badge.textContent = mode === 'system' ? `System · ${label}` : label;
+      }
+
+      const toggleBtn = document.getElementById('themeModeToggleBtn');
+      if (toggleBtn) {
+        const nextLabel = resolvedMode === 'dark' ? 'light' : 'dark';
+        toggleBtn.title = `Switch to ${nextLabel} theme`;
+        toggleBtn.setAttribute('aria-label', `Switch to ${nextLabel} theme`);
+      }
     }
+
+    function initSystemThemeListener() {
+      if (!window.matchMedia) return;
+      try {
+        const schemeQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        const onChange = () => {
+          if (appState.themeMode === 'system') {
+            applyThemeUI(appState.activeTheme || 'navy-purple');
+          }
+        };
+        if (schemeQuery.addEventListener) schemeQuery.addEventListener('change', onChange);
+        else if (schemeQuery.addListener) schemeQuery.addListener(onChange);
+      } catch (err) {
+        // matchMedia unavailable — dark remains the fallback.
+      }
+    }
+
+    // Apply saved appearance immediately (avoids a flash of the wrong theme)
+    applyThemeUI(appState.activeTheme || 'navy-purple');
+    initSystemThemeListener();
 
     // 5. MATHEMATICAL FORMULAS FOR 75% ATTENDANCE CRITERIA
     function calcStats(sub) {
@@ -481,7 +565,7 @@
 
       if (isOverallShort) {
         const needed = Math.ceil(((target * totalConducted) - (100 * totalAtt)) / (100 - target));
-        adviceEl.innerHTML = `You are below criteria. Attend next <strong class="privacy-blur" style="color:#f87171;">${Math.max(1, needed)} lectures</strong> consecutively to recover.`;
+        adviceEl.innerHTML = `You are below criteria. Attend next <strong class="privacy-blur" style="color:var(--danger-text);">${Math.max(1, needed)} lectures</strong> consecutively to recover.`;
         alertBar.className = 'shortage-banner banner-danger';
         alertBar.style.display = 'flex';
         alertBar.innerHTML = `
@@ -494,7 +578,7 @@
       } else {
         const allowedTot = Math.floor((100 * totalAtt) / target);
         const bunks = Math.max(0, allowedTot - totalConducted);
-        adviceEl.innerHTML = `Safe attendance zone. You can safely miss up to <strong class="privacy-blur" style="color:#34d399;">${bunks} classes</strong>.`;
+        adviceEl.innerHTML = `Safe attendance zone. You can safely miss up to <strong class="privacy-blur" style="color:var(--success-text);">${bunks} classes</strong>.`;
         alertBar.className = 'shortage-banner banner-safe';
         alertBar.style.display = 'flex';
         alertBar.innerHTML = `
@@ -823,7 +907,7 @@
             <div class="day-sub-info">
               <div style="display:flex; align-items:center; gap:6px;">
                 <span class="cat-tag cat-${safeCat}">${safeCat.toUpperCase()}</span>
-                <strong style="font-size:13.5px; color:#fff;">${safeSubName}</strong>
+                <strong style="font-size:13.5px; color:var(--text-strong);">${safeSubName}</strong>
               </div>
               <span style="font-size:11px; color:var(--text-muted); margin-top:2px;">
                 Status on this day: 
@@ -886,10 +970,10 @@
 
       if (stats.isShort) {
         document.getElementById('histGoalText').textContent = `Min to 75%: Attend ${stats.minNeededToReach75} in a row`;
-        document.getElementById('histGoalText').style.color = '#f87171';
+        document.getElementById('histGoalText').style.color = 'var(--danger-text)';
       } else {
         document.getElementById('histGoalText').textContent = `Max you can miss: ${stats.maxCanMiss} classes`;
-        document.getElementById('histGoalText').style.color = '#34d399';
+        document.getElementById('histGoalText').style.color = 'var(--success-text)';
       }
 
       const listContainer = document.getElementById('historyListContainer');
@@ -1292,6 +1376,7 @@ Created ${newSubjects.length} customized subjects for you.`);
         exportDate: new Date().toISOString(),
         globalTarget: appState.globalTarget,
         activeTheme: appState.activeTheme,
+        themeMode: appState.themeMode,
         privacyMode: appState.privacyMode,
         subjects: appState.subjects,
         calendar: appState.calendar,
@@ -1477,7 +1562,7 @@ Created ${newSubjects.length} customized subjects for you.`);
       }
 
       const statusEl = document.getElementById('topCloudStatus');
-      if (statusEl) statusEl.innerHTML = '☁️ <span style="color:#ef4444;">Deleting...</span>';
+      if (statusEl) statusEl.innerHTML = '☁️ <span style="color:var(--danger-text);">Deleting...</span>';
 
       try {
         const response = await syncApiRequest('/delete', {
@@ -1494,7 +1579,7 @@ Created ${newSubjects.length} customized subjects for you.`);
         appState.lastSyncedAt = null;
         saveStateOnly();
 
-        if (statusEl) statusEl.innerHTML = '☁️ <span style="color:#94a3b8;">Wiped</span>';
+        if (statusEl) statusEl.innerHTML = '☁️ <span style="color:var(--text-dim);">Wiped</span>';
         const lastSyncEl = document.getElementById('settingsLastSyncTime');
         if (lastSyncEl) lastSyncEl.textContent = 'Deleted from server';
 
@@ -1507,7 +1592,7 @@ Created ${newSubjects.length} customized subjects for you.`);
         }
       } catch (err) {
         alert('❌ Error deleting cloud backup: ' + err.message);
-        if (statusEl) statusEl.innerHTML = '☁️ <span style="color:#ef4444;">Error</span>';
+        if (statusEl) statusEl.innerHTML = '☁️ <span style="color:var(--danger-text);">Error</span>';
       } finally {
         if (wipeBtn) {
           wipeBtn.disabled = false;
@@ -1579,7 +1664,7 @@ Created ${newSubjects.length} customized subjects for you.`);
 
       const statusEl = document.getElementById('topCloudStatus');
       const headerBtn = document.getElementById('headerCloudSyncBtn');
-      if (statusEl) statusEl.innerHTML = '☁️ <span style="color:#fbbf24;">Syncing...</span>';
+      if (statusEl) statusEl.innerHTML = '☁️ <span style="color:var(--warning-text);">Syncing...</span>';
       if (headerBtn) headerBtn.style.opacity = '0.6';
 
       const payload = {
@@ -1592,6 +1677,7 @@ Created ${newSubjects.length} customized subjects for you.`);
           history: appState.history || [],
           globalTarget: appState.globalTarget || 75,
           activeTheme: appState.activeTheme || 'navy-purple',
+          themeMode: appState.themeMode || 'dark',
           privacyMode: appState.privacyMode || false,
           lastUpdated: new Date().toISOString()
         }
@@ -1602,16 +1688,16 @@ Created ${newSubjects.length} customized subjects for you.`);
 
         if (response.ok) {
           appState.lastSyncedAt = Date.now();
-          if (statusEl) statusEl.innerHTML = '☁️ <span style="color:#34d399;">Synced</span>';
+          if (statusEl) statusEl.innerHTML = '☁️ <span style="color:var(--success-text);">Synced</span>';
           const lastSyncEl = document.getElementById('settingsLastSyncTime');
           if (lastSyncEl) lastSyncEl.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         } else {
           console.warn('Cloud sync response error:', response.status);
-          if (statusEl) statusEl.innerHTML = '☁️ <span style="color:#94a3b8;">Local</span>';
+          if (statusEl) statusEl.innerHTML = '☁️ <span style="color:var(--text-dim);">Local</span>';
         }
       } catch (err) {
         console.warn('Offline or network error syncing to cloud:', err);
-        if (statusEl) statusEl.innerHTML = '☁️ <span style="color:#94a3b8;">Offline</span>';
+        if (statusEl) statusEl.innerHTML = '☁️ <span style="color:var(--text-dim);">Offline</span>';
       } finally {
         if (headerBtn) headerBtn.style.opacity = '1';
       }
@@ -1895,7 +1981,13 @@ Save this code to restore your courses on another phone or computer!`);
           toggleHolidayForSelectedDate();
           break;
         case 'setAppTheme':
-          setAppTheme(el.getAttribute('data-theme'));
+          setAppTheme(el.getAttribute('data-accent') || el.getAttribute('data-theme'));
+          break;
+        case 'setThemeMode':
+          setThemeMode(el.getAttribute('data-mode'));
+          break;
+        case 'toggleThemeMode':
+          toggleThemeMode();
           break;
         case 'openEditNameModal':
           openEditNameModal();
