@@ -13,8 +13,8 @@ This document details the security model, cryptographic controls, cloud access a
 | **Cloud database integration** | Pending | **✅ Implemented** | Scalable, high-availability Neon serverless PostgreSQL storage exposed through a serverless Function API for multi-device synchronization. |
 | **CSP permits inline scripts** | Still present | **✅ Resolved** | All application scripts extracted from HTML into a standalone `app.js`. Every inline event handler (`onclick`, `onchange`, `oninput`, `onsubmit`) replaced with `data-action` attributes and centralized event delegation. CSP enforced with `script-src 'self'`. |
 | **Weak cloud sync code generation** | Still present | **✅ Resolved** | Insecure `Math.random()` replaced with **Cryptographically Secure Pseudo-Random Number Generation (CSPRNG)** via `window.crypto.getRandomValues()`. Generates 128-bit collision-resistant Crockford Base32 keys (`ATN-XXXX-XXXX-XXXX`). |
-| **Local Credential Persistence on Restart** | Bug found | **✅ Resolved** | Fixed `validateAndSanitizeState()` to retain `studentName`, `syncCode`, `syncAuthKey`, `isSetupCompleted`, and `lastSyncedAt`. Credentials and user identity now persist across restarts, app reopens, and browser refreshes without regenerating. |
-| **Cloud Access Authorization** | Unverified | **✅ Hardened & Verified** | Direct table queries are impossible from the browser: the PWA talks only to the Neon Function API (`POST /push`, `/pull`, `/delete`), which mediates every call through `SECURITY DEFINER` PostgreSQL procedures (`attendify_sync_push`, `attendify_sync_pull`, and `attendify_sync_delete`) validating a 256-bit secret token against its stored `SHA-256` hash. Unauthorized reads/writes return HTTP 401. |
+| **Local Credential Persistence on Restart** | Bug found | **✅ Resolved** | Fixed `validateAndSanitizeState()` to retain `studentName`, `syncCode`, `syncAuthKey`, `accountEmail`, `isSetupCompleted`, and `lastSyncedAt`. Credentials and user identity now persist across restarts, app reopens, and browser refreshes without regenerating. |
+| **Cloud Access Authorization** | Unverified | **✅ Hardened & Verified** | Direct table queries are impossible from the browser: the PWA talks only to the Neon Function API (`POST /auth/register`, `/auth/login`, `/push`, `/pull`, `/delete`), which mediates every data call through `SECURITY DEFINER` PostgreSQL procedures (`attendify_sync_push`, `attendify_sync_pull`, and `attendify_sync_delete`) validating a 256-bit secret token against its stored `SHA-256` hash. Unauthorized reads/writes return HTTP 401. |
 | **Actual Cloud Deletion (Factory Reset)** | Bug found | **✅ Resolved** | Factory Reset (`confirmPermanentDelete()`) and the dedicated "Wipe Cloud Backup" button invoke the cloud `attendify_sync_delete` procedure, permanently erasing the student's records from the Neon PostgreSQL database. |
 | **Service Worker Caching** | Needs improvement | **✅ Upgraded (v7-neon)** | Refactored `sw.js` with **Network-First** strategy for HTML document navigation (guaranteeing fresh app versions when online with instant offline fallback), **Stale-While-Revalidate** for static assets, explicit API bypass for cloud sync requests, and atomic cache eviction on activation. |
 
@@ -23,7 +23,7 @@ This document details the security model, cryptographic controls, cloud access a
 ## 2. Core Security & Privacy Principles
 
 ### A. Local Persistence & Credential Integrity
-- `validateAndSanitizeState()` validates input schema bounds while guaranteeing that student profile fields (`studentName`), pairing tokens (`syncCode`), and cryptographic secret passkeys (`syncAuthKey`) remain intact in `localStorage`.
+- `validateAndSanitizeState()` validates input schema bounds while guaranteeing that student profile fields (`studentName`), pairing tokens (`syncCode`), cryptographic secret passkeys (`syncAuthKey`), and the signed-in `accountEmail` remain intact in `localStorage`.
 - Automated test suites verify 10+ consecutive restart cycles with zero credential drift or regeneration.
 
 ### B. Cryptographically Secure Sync Credentials (CSPRNG)
@@ -52,7 +52,7 @@ This document details the security model, cryptographic controls, cloud access a
 - No master database keys or passwords exist in the client distribution.
 
 ### F. Multi-Tier Cache & Offline Reliability
-- **Service Worker (`attendify-v7-neon`)**:
+- **Service Worker (`attendify-v14-accounts`)**:
   - **Navigation (`index.html`)**: Network-First ensures returning users always receive the newest deployed version when connected to the internet. If offline, the cached app shell loads immediately.
   - **Static Assets (`app.js`, icons, fonts)**: Stale-While-Revalidate allows near-instant local boot while asynchronously refreshing cached assets.
   - **API Requests**: Cloud sync API calls bypass static caching, preventing cached or stale student data.
@@ -63,6 +63,14 @@ This document details the security model, cryptographic controls, cloud access a
 - **`.gitignore` Enforced**: Patterns `*.keystore`, `*.jks`, `*key-info*.txt`, `signing*`, and `*.aab` are strictly ignored to prevent accidental future commits.
 - **Digital Asset Links**: Both `.well-known/assetlinks.json` and root `assetlinks.json` specify the exact SHA-256 certificate fingerprint matching the production signed release:
   `5A:E4:A9:D0:42:FB:4D:87:26:E8:A2:A5:47:C4:5C:E0:74:3E:16:FB:6A:64:FA:CA:40:DC:B9:B9:7A:8D:8A:7A`
+
+### H. Email/Password Account Authentication
+- Accounts are optional and additive: the original Cloud Sync Code + Private Secret Key flow continues to work unchanged.
+- The browser never stores or transmits a reusable account password to the database. `POST /auth/register` hashes it server-side with **salted scrypt** (16-byte random salt, 64-byte derived key). Plaintext passwords are never persisted.
+- `POST /auth/login` verifies the hash with a constant-time comparison. Unknown emails run an equally expensive dummy scrypt verification plus a short random delay, so timing cannot enumerate registered users. All credential failures return the same generic message.
+- Successful registration/login returns the existing `sync_code` + `auth_token`, so account data is protected by the same per-record `SHA-256` token check on every `/push` and `/pull`.
+- At rest, the pairing secret is sealed with **AES-256-GCM** using a key derived from the server-only `ACCOUNT_TOKEN_SECRET`. It is decrypted only after a successful password verification; there is no account password or encryption key in the client bundle.
+- Signing out clears the local account email and rotates the device's pairing credentials, so the device loses access to the account backup until the user signs in again.
 
 
 ---

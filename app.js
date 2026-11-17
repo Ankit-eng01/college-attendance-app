@@ -37,6 +37,7 @@
         studentName: '',
         syncCode: generateSyncCode(),
         syncAuthKey: generateAuthToken(),
+        accountEmail: '',
         cloudSyncEnabled: true,
         lastSyncedAt: null,
         subjects: [],
@@ -242,6 +243,12 @@
         syncAuthKey = raw.syncAuthKey.trim();
       }
 
+      // Account email (email/password sign-in). Kept separate from the pairing secret.
+      let accountEmail = '';
+      if (typeof raw.accountEmail === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(raw.accountEmail.trim())) {
+        accountEmail = raw.accountEmail.trim().toLowerCase().substring(0, 254);
+      }
+
       // Cloud Sync Preference
       const cloudSyncEnabled = raw.cloudSyncEnabled !== false;
 
@@ -256,6 +263,7 @@
         studentName,
         syncCode,
         syncAuthKey,
+        accountEmail,
         cloudSyncEnabled,
         lastSyncedAt,
         subjects: sanitizedSubjects,
@@ -475,6 +483,7 @@
       if (syncDisp) syncDisp.textContent = appState.syncCode || '--';
       const keyDisp = document.getElementById('settingsSyncKeyDisplay');
       if (keyDisp) keyDisp.textContent = isKeyVisible ? (appState.syncAuthKey || 'Not Set') : '••••••••••••••••';
+      updateAccountUI();
       const lastSyncEl = document.getElementById('settingsLastSyncTime');
       if (lastSyncEl) {
         if (appState.lastSyncedAt) {
@@ -1633,7 +1642,8 @@ Created ${newSubjects.length} customized subjects for you.`);
     const SYNC_API_URL = 'https://br-fancy-block-azi8u9jd-sync.compute.c-3.ap-southeast-1.aws.neon.tech';
 
     // Single entry point for the Attendify Sync API.
-    // Endpoints: POST /push, POST /pull, POST /delete, GET /health
+    // Endpoints: POST /auth/register, POST /auth/login, POST /push,
+    //            POST /pull, POST /delete, GET /health
     function syncApiRequest(path, payload) {
       return fetch(`${SYNC_API_URL}${path}`, {
         method: 'POST',
@@ -1683,6 +1693,7 @@ Created ${newSubjects.length} customized subjects for you.`);
         auth_token: appState.syncAuthKey,
         data: {
           studentName: appState.studentName || '',
+          accountEmail: appState.accountEmail || '',
           subjects: appState.subjects || [],
           calendar: appState.calendar || {},
           history: appState.history || [],
@@ -1834,7 +1845,9 @@ Save this code to restore your courses on another phone or computer!`);
         }
 
         const validated = validateAndSanitizeState(cloudData);
+        const existingAccountEmail = appState.accountEmail || '';
         appState = validated;
+        appState.accountEmail = cloudData.accountEmail || existingAccountEmail;
         appState.syncCode = code;
         appState.syncAuthKey = key;
         appState.isSetupCompleted = true;
@@ -1849,6 +1862,164 @@ Save this code to restore your courses on another phone or computer!`);
       } catch (err) {
         alert('Error connecting to Cloud Storage: ' + err.message);
       }
+    }
+
+    // -------------------------------------------------------------
+    // EMAIL / PASSWORD ACCOUNTS
+    // -------------------------------------------------------------
+    const ACCOUNT_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+    function setAccountMessage(text, kind) {
+      const el = document.getElementById('accountMessage');
+      if (!el) return;
+      el.textContent = text || '';
+      el.style.color = kind === 'error' ? 'var(--danger)' :
+                       kind === 'success' ? 'var(--success-text)' : 'var(--text-muted)';
+    }
+
+    function updateAccountUI() {
+      const signedIn = Boolean(appState.accountEmail);
+      const badge = document.getElementById('accountStatusBadge');
+      if (badge) {
+        badge.textContent = signedIn ? 'Signed in' : 'Not signed in';
+        badge.className = 'criteria-pill ' + (signedIn ? 'pill-safe' : 'pill-neutral');
+      }
+      const signedOutPanel = document.getElementById('accountSignedOutPanel');
+      const signedInPanel = document.getElementById('accountSignedInPanel');
+      if (signedOutPanel) signedOutPanel.style.display = signedIn ? 'none' : '';
+      if (signedInPanel) signedInPanel.style.display = signedIn ? '' : 'none';
+      const emailDisplay = document.getElementById('accountEmailDisplay');
+      if (emailDisplay) emailDisplay.textContent = appState.accountEmail || '--';
+    }
+
+    function readAccountForm(requireStrongPassword) {
+      const emailEl = document.getElementById('accountEmailInput');
+      const pwEl = document.getElementById('accountPasswordInput');
+      const email = ((emailEl && emailEl.value) || '').trim().toLowerCase();
+      const password = (pwEl && pwEl.value) || '';
+      if (!ACCOUNT_EMAIL_RE.test(email)) {
+        setAccountMessage('Enter a valid email address.', 'error');
+        return null;
+      }
+      if (requireStrongPassword) {
+        if (password.length < 8 || !/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) {
+          setAccountMessage('Use 8+ characters with at least one letter and one number.', 'error');
+          return null;
+        }
+      } else if (!password) {
+        setAccountMessage('Enter your password.', 'error');
+        return null;
+      }
+      return { email, password };
+    }
+
+    function setAccountBusy(busy) {
+      ['createAccountBtn', 'signInBtn'].forEach((id) => {
+        const btn = document.getElementById(id);
+        if (btn) btn.disabled = busy;
+      });
+    }
+
+    async function accountRequest(path, body) {
+      const response = await syncApiRequest(path, body);
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.error || `Request failed (${response.status})`);
+      }
+      return data;
+    }
+
+    async function adoptAccountSession(data, restoreCloud) {
+      appState.accountEmail = data.email || '';
+      appState.syncCode = data.sync_code;
+      appState.syncAuthKey = data.auth_token;
+      if (data.student_name && !appState.studentName) {
+        appState.studentName = sanitizeText(data.student_name).substring(0, 50);
+      }
+      saveStateOnly();
+
+      if (restoreCloud) {
+        try {
+          const response = await syncApiRequest('/pull', {
+            sync_code: appState.syncCode,
+            auth_token: appState.syncAuthKey
+          });
+          if (response.ok) {
+            const cloudJson = await response.json();
+            if (cloudJson.data) {
+              const restored = validateAndSanitizeState(cloudJson.data);
+              restored.accountEmail = appState.accountEmail;
+              restored.syncCode = appState.syncCode;
+              restored.syncAuthKey = appState.syncAuthKey;
+              restored.isSetupCompleted = true;
+              appState = restored;
+              applyThemeUI(appState.activeTheme || 'graphite');
+              applyPrivacyModeUI();
+              saveStateOnly();
+            }
+          }
+        } catch (err) {
+          console.warn('Could not pull cloud data after sign in:', err);
+        }
+      }
+
+      renderApp();
+      setAccountMessage(
+        restoreCloud ? 'Signed in successfully.' : 'Account created. Your data is syncing.',
+        'success'
+      );
+      const pwEl = document.getElementById('accountPasswordInput');
+      if (pwEl) pwEl.value = '';
+      await syncToCloudStorage();
+    }
+
+    async function createAccount() {
+      const creds = readAccountForm(true);
+      if (!creds) return;
+      setAccountBusy(true);
+      setAccountMessage('Creating your account...');
+      try {
+        const data = await accountRequest('/auth/register', {
+          email: creds.email,
+          password: creds.password,
+          student_name: appState.studentName || ''
+        });
+        await adoptAccountSession(data, false);
+      } catch (err) {
+        setAccountMessage(err.message, 'error');
+      } finally {
+        setAccountBusy(false);
+      }
+    }
+
+    async function signIn() {
+      const creds = readAccountForm(false);
+      if (!creds) return;
+      setAccountBusy(true);
+      setAccountMessage('Signing in...');
+      try {
+        const data = await accountRequest('/auth/login', creds);
+        const restore = confirm(
+          'Signed in successfully.\n\n' +
+          'OK — Restore your cloud attendance data to this device (replaces data currently on this device).\n' +
+          'Cancel — Keep this device\'s data and sync it to your account instead.'
+        );
+        await adoptAccountSession(data, restore);
+      } catch (err) {
+        setAccountMessage(err.message, 'error');
+      } finally {
+        setAccountBusy(false);
+      }
+    }
+
+    function signOut() {
+      if (!confirm('Sign out of your Attendify account? Your records stay on this device.')) return;
+      appState.accountEmail = '';
+      appState.syncCode = generateSyncCode();
+      appState.syncAuthKey = generateAuthToken();
+      saveStateOnly();
+      renderApp();
+      setAccountMessage('Signed out. This device is now local-only.', 'success');
     }
 
     function openEditNameModal() {
@@ -2008,6 +2179,15 @@ Save this code to restore your courses on another phone or computer!`);
           break;
         case 'saveEditedName':
           saveEditedName();
+          break;
+        case 'createAccount':
+          createAccount();
+          break;
+        case 'signIn':
+          signIn();
+          break;
+        case 'signOut':
+          signOut();
           break;
         case 'copySyncCode':
           copySyncCode();

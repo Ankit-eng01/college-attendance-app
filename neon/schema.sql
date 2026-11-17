@@ -163,3 +163,22 @@ BEGIN
   );
 END;
 $$;
+
+-- =============================================================================
+-- TABLE: attendify_accounts
+-- Email/password accounts. Passwords are scrypt-hashed in the API layer; the
+-- pairing secret is AES-GCM encrypted with ACCOUNT_TOKEN_SECRET so it can be
+-- returned to the student after a successful login.
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS public.attendify_accounts (
+  email          TEXT        PRIMARY KEY,
+  password_hash  TEXT        NOT NULL,
+  sync_code      TEXT        NOT NULL UNIQUE,
+  auth_token_enc TEXT        NOT NULL,
+  student_name   TEXT        NOT NULL DEFAULT '',
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_attendify_accounts_sync_code
+  ON public.attendify_accounts (sync_code);

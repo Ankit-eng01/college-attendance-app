@@ -5,6 +5,12 @@ export default defineConfig({
     sync: {
       name: "Attendify Sync API",
       source: "src/index.ts",
+      env: {
+        ACCOUNT_TOKEN_SECRET: {
+          value: process.env.ACCOUNT_TOKEN_SECRET,
+          required: true,
+        },
+      },
     },
     admin: {
       name: "Attendify Admin",
