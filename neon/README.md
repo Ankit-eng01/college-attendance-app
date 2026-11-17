@@ -33,12 +33,20 @@ Deployed as a separate function so the public sync API stays minimal.
 |---|---|---|
 | `GET /` | none (shell only) | Console UI |
 | `GET /health` | none | Liveness |
-| `GET /api/stats` | bearer | Totals, 24h/7d activity, storage bytes |
+| `GET /api/stats` | bearer | Students, subjects, attendance sums, 24h/7d activity, storage bytes |
 | `GET /api/activity?days=N` | bearer | Per-day creates/updates |
-| `GET /api/records?search=&limit=&offset=` | bearer | Paged metadata (no payloads) |
+| `GET /api/records?search=&sort=&limit=&offset=` | bearer | Paged student summaries (no payloads) |
 | `GET /api/records/:code` | bearer | One record incl. `data` |
 | `DELETE /api/records/:code` | bearer | Delete one backup |
-| `GET /api/export` | bearer | CSV of metadata |
+| `GET /api/export` | bearer | CSV of student summaries |
+
+`sort` is one of `recent` (default), `name`, `attendance`, `shortage`,
+`subjects`. `search` matches the sync code, student name or any subject name.
+
+The UI lists every student with their overall attendance, opens a record as a
+human-readable detail view (per-subject attendance, history feed, profile
+settings) and keeps the raw JSON behind a disclosure. All glyphs in `admin.ts`
+are HTML entities or CSS escapes so the source stays pure ASCII.
 
 Auth is `Authorization: Bearer <ADMIN_TOKEN>`, compared in constant time, with a
 250 ms delay on failure. The token is declared in `neon.ts` as
