@@ -529,7 +529,7 @@
       // Overall criteria pill
       const pillWrap = document.getElementById('dashCriteriaPillWrap');
       if (appState.subjects.length === 0) {
-        pillWrap.innerHTML = `<span class="criteria-pill pill-neutral"><span class="pill-dot dot-green"></span> Ready</span>`;
+        pillWrap.innerHTML = '';
       } else if (isOverallShort) {
         const gap = (target - overallPctNum).toFixed(1);
         pillWrap.innerHTML = `<span class="criteria-pill pill-short">${statusPillIcon('short')} Short by ${gap}%</span>`;
