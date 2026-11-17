@@ -19,10 +19,34 @@ Postgres  public.attendify_sync  (Neon branch: production)
 | Path | Purpose |
 |---|---|
 | `schema.sql` | Table + three `SECURITY DEFINER` functions. Idempotent — safe to re-run. |
-| `fn/src/index.ts` | The function: routes, validation, CORS, pooled `pg` access. |
-| `fn/neon.ts` | Function declaration (`sync`, source `src/index.ts`). |
+| `fn/src/index.ts` | Public sync function: routes, validation, CORS, pooled `pg` access. |
+| `fn/src/admin.ts` | Admin console (UI + JSON API). Token-gated, never returns `auth_hash`. |
+| `fn/neon.ts` | Function declarations (`sync`, `admin`) and their env. |
 | `fn/.neon` | Org / project / branch link. **Gitignored** (machine-local). |
-| `fn/.env.local` | `DATABASE_URL` and friends, pulled by the Neon CLI. **Gitignored**, contains a live password. |
+| `fn/.env.local` | `DATABASE_URL` + `ADMIN_TOKEN`. **Gitignored**, contains live secrets. |
+
+## Admin console
+
+Deployed as a separate function so the public sync API stays minimal.
+
+| Route | Auth | Purpose |
+|---|---|---|
+| `GET /` | none (shell only) | Console UI |
+| `GET /health` | none | Liveness |
+| `GET /api/stats` | bearer | Totals, 24h/7d activity, storage bytes |
+| `GET /api/activity?days=N` | bearer | Per-day creates/updates |
+| `GET /api/records?search=&limit=&offset=` | bearer | Paged metadata (no payloads) |
+| `GET /api/records/:code` | bearer | One record incl. `data` |
+| `DELETE /api/records/:code` | bearer | Delete one backup |
+| `GET /api/export` | bearer | CSV of metadata |
+
+Auth is `Authorization: Bearer <ADMIN_TOKEN>`, compared in constant time, with a
+250 ms delay on failure. The token is declared in `neon.ts` as
+`env: { ADMIN_TOKEN: { value: process.env.ADMIN_TOKEN, required: true } }`, so a
+deploy fails loudly if it is unset. The UI keeps it in `sessionStorage` only.
+
+To rotate: change `ADMIN_TOKEN` in `.env.local`, run `neon deploy -y --env .env.local`.
+
 
 ## API
 

@@ -2014,8 +2014,15 @@ Save this code to restore your courses on another phone or computer!`);
       renderApp();
       initServiceWorker();
 
-      // Initial cloud sync if enabled
-      if (navigator.onLine && appState.cloudSyncEnabled) {
+      // Initial cloud sync if enabled — only once the student has real data,
+      // otherwise every first-time visitor creates an empty cloud record.
+      if (
+        navigator.onLine &&
+        appState.cloudSyncEnabled &&
+        appState.isSetupCompleted &&
+        Array.isArray(appState.subjects) &&
+        appState.subjects.length > 0
+      ) {
         setTimeout(syncToCloudStorage, 1200);
       }
     });
