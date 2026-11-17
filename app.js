@@ -4,6 +4,8 @@
     // -------------------------------------------------------------
 
     const STORAGE_KEY = 'attendify_state_v6';
+    const THEME_IDS = ['graphite', 'sapphire', 'obsidian'];
+    const LEGACY_THEME_IDS = { 'navy-purple': 'graphite', 'violet': 'sapphire', 'amoled': 'obsidian' };
 
     // 1. SECURITY & SANITIZATION UTILITIES (XSS PREVENTION)
     function escapeHtml(str) {
@@ -41,7 +43,7 @@
         calendar: {},
         history: [],
         globalTarget: 75,
-        activeTheme: 'navy-purple',
+        activeTheme: 'graphite',
         themeMode: 'dark',
         privacyMode: false,
         activeCategory: 'all',
@@ -65,7 +67,7 @@
     // Initialization
     window.addEventListener('DOMContentLoaded', () => {
       initDate();
-      applyThemeUI(appState.activeTheme || 'navy-purple');
+      applyThemeUI(appState.activeTheme || 'graphite');
       applyPrivacyModeUI();
       renderApp();
       initServiceWorker();
@@ -80,7 +82,7 @@
 
     function initDate() {
       const now = new Date();
-      const opts = { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' };
+      const opts = { month: 'short', day: 'numeric', year: 'numeric' };
       const el = document.getElementById('topDateStr');
       if (el) el.textContent = now.toLocaleDateString(undefined, opts);
     }
@@ -210,8 +212,9 @@
       let globalTarget = parseInt(raw.globalTarget) || 75;
       if (globalTarget < 50 || globalTarget > 100) globalTarget = 75;
 
-      let activeTheme = typeof raw.activeTheme === 'string' ? raw.activeTheme : 'navy-purple';
-      if (!['navy-purple', 'violet', 'amoled'].includes(activeTheme)) activeTheme = 'navy-purple';
+      let activeTheme = typeof raw.activeTheme === 'string' ? raw.activeTheme : 'graphite';
+      if (LEGACY_THEME_IDS[activeTheme]) activeTheme = LEGACY_THEME_IDS[activeTheme];
+      if (!THEME_IDS.includes(activeTheme)) activeTheme = 'graphite';
 
       let themeMode = typeof raw.themeMode === 'string' ? raw.themeMode : 'dark';
       if (!['dark', 'light', 'system'].includes(themeMode)) themeMode = 'dark';
@@ -280,7 +283,9 @@
 
       const headerBtn = document.getElementById('privacyToggleBtn');
       if (headerBtn) {
-        headerBtn.innerHTML = isPrivate ? '<span>🙈</span>' : '<span>👁️</span>';
+        headerBtn.innerHTML = isPrivate
+          ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m2 2 20 20"></path><path d="M6.7 6.7A10.4 10.4 0 0 0 2 12s3.5 7 10 7a10.6 10.6 0 0 0 4.1-.8"></path><path d="M10.6 5.2A10 10 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-2.2 3.2"></path><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"></path></svg>'
+          : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
         headerBtn.classList.toggle('active', isPrivate);
         headerBtn.title = isPrivate ? 'Discreet Mode Active (Tap to reveal stats)' : 'Discreet Mode Off (Tap to hide stats from peers)';
       }
@@ -294,7 +299,6 @@
     }
 
     // 4. THEME CONTROLLER
-    const THEME_IDS = ['navy-purple', 'violet', 'amoled'];
     const THEME_MODES = ['dark', 'light', 'system'];
 
     function setAppTheme(theme) {
@@ -307,14 +311,14 @@
     function setThemeMode(mode) {
       if (!THEME_MODES.includes(mode)) return;
       appState.themeMode = mode;
-      applyThemeUI(appState.activeTheme || 'navy-purple');
+      applyThemeUI(appState.activeTheme || 'graphite');
       saveState();
     }
 
     function toggleThemeMode() {
       const resolved = getResolvedThemeMode(appState.themeMode);
       appState.themeMode = resolved === 'dark' ? 'light' : 'dark';
-      applyThemeUI(appState.activeTheme || 'navy-purple');
+      applyThemeUI(appState.activeTheme || 'graphite');
       saveState();
     }
 
@@ -330,7 +334,7 @@
     }
 
     function applyThemeUI(theme) {
-      if (!THEME_IDS.includes(theme)) theme = 'navy-purple';
+      if (!THEME_IDS.includes(theme)) theme = 'graphite';
       const mode = THEME_MODES.includes(appState.themeMode) ? appState.themeMode : 'dark';
       const resolvedMode = getResolvedThemeMode(mode);
       const root = document.documentElement;
@@ -341,14 +345,12 @@
         root.style.colorScheme = resolvedMode;
       }
 
-      const darkThemeColors = {
-        'navy-purple': '#05070f',
-        'violet': '#070310',
-        'amoled': '#000000'
-      };
       const themeColorMeta = document.querySelector('meta[name="theme-color"]');
       if (themeColorMeta) {
-        themeColorMeta.setAttribute('content', resolvedMode === 'light' ? '#eef2f9' : (darkThemeColors[theme] || '#05070f'));
+        const computedBg = root && window.getComputedStyle
+          ? window.getComputedStyle(root).getPropertyValue('--bg').trim()
+          : '';
+        themeColorMeta.setAttribute('content', computedBg || (resolvedMode === 'light' ? '#f5f3ee' : '#08090b'));
       }
 
       THEME_IDS.forEach(t => {
@@ -384,7 +386,7 @@
         const schemeQuery = window.matchMedia('(prefers-color-scheme: dark)');
         const onChange = () => {
           if (appState.themeMode === 'system') {
-            applyThemeUI(appState.activeTheme || 'navy-purple');
+            applyThemeUI(appState.activeTheme || 'graphite');
           }
         };
         if (schemeQuery.addEventListener) schemeQuery.addEventListener('change', onChange);
@@ -395,7 +397,7 @@
     }
 
     // Apply saved appearance immediately (avoids a flash of the wrong theme)
-    applyThemeUI(appState.activeTheme || 'navy-purple');
+    applyThemeUI(appState.activeTheme || 'graphite');
     initSystemThemeListener();
 
     // 5. MATHEMATICAL FORMULAS FOR 75% ATTENDANCE CRITERIA
@@ -442,6 +444,16 @@
       };
     }
 
+    function statusPillIcon(kind) {
+      if (kind === 'safe') {
+        return '<svg class="pill-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>';
+      }
+      if (kind === 'short') {
+        return '<svg class="pill-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5"></path><path d="M12 16.5h.01"></path></svg>';
+      }
+      return '<span class="pill-dot dot-green"></span>';
+    }
+
     // 6. MAIN RENDER ORCHESTRATOR
     function renderApp() {
       const target = appState.globalTarget || 75;
@@ -453,7 +465,7 @@
       // Update personalized brand greeting
       const brandTitle = document.getElementById('topBrandTitle');
       if (brandTitle) {
-        brandTitle.textContent = appState.studentName ? `Hi, ${appState.studentName} 👋` : 'Attendify';
+        brandTitle.textContent = appState.studentName ? `Hi, ${appState.studentName}` : 'Attendify';
       }
 
       // Update Settings cloud details
@@ -520,10 +532,10 @@
         pillWrap.innerHTML = `<span class="criteria-pill pill-neutral"><span class="pill-dot dot-green"></span> Ready</span>`;
       } else if (isOverallShort) {
         const gap = (target - overallPctNum).toFixed(1);
-        pillWrap.innerHTML = `<span class="criteria-pill pill-short"><span class="pill-dot dot-red"></span> Short by ${gap}%</span>`;
+        pillWrap.innerHTML = `<span class="criteria-pill pill-short">${statusPillIcon('short')} Short by ${gap}%</span>`;
       } else {
         const lead = (overallPctNum - target).toFixed(1);
-        pillWrap.innerHTML = `<span class="criteria-pill pill-safe"><span class="pill-dot dot-green"></span> +${lead}% Above Target</span>`;
+        pillWrap.innerHTML = `<span class="criteria-pill pill-safe">${statusPillIcon('safe')} On track · +${lead}%</span>`;
       }
 
       // Attendance Health Indicator & Action Advice
@@ -540,10 +552,9 @@
         alertBar.className = 'shortage-banner banner-safe';
         alertBar.style.display = 'flex';
         alertBar.innerHTML = `
-          <span>👋</span>
           <div>
-            <strong>Welcome to Attendify!</strong> How many subjects do you have this semester?
-            <button type="button" class="btn-primary" style="margin-top:8px; padding:6px 14px; font-size:12px;" data-action="openSetupModal">⚡ Setup My Subjects Now</button>
+            <strong>Welcome to Attendify.</strong> How many subjects do you have this semester?
+            <button type="button" class="btn-primary" style="margin-top:8px; padding:6px 14px; font-size:12px;" data-action="openSetupModal">Set Up My Subjects</button>
           </div>
         `;
         return;
@@ -564,28 +575,28 @@
       }
 
       if (isOverallShort) {
-        const needed = Math.ceil(((target * totalConducted) - (100 * totalAtt)) / (100 - target));
-        adviceEl.innerHTML = `You are below criteria. Attend next <strong class="privacy-blur" style="color:var(--danger-text);">${Math.max(1, needed)} lectures</strong> consecutively to recover.`;
+        const needed = Math.max(1, Math.ceil(((target * totalConducted) - (100 * totalAtt)) / (100 - target)));
+        const neededLabel = `${needed} ${needed === 1 ? 'class' : 'classes'}`;
+        adviceEl.innerHTML = `Below criteria. Attend the next <strong class="privacy-blur" style="color:var(--danger-text);">${neededLabel}</strong> in a row to recover.`;
         alertBar.className = 'shortage-banner banner-danger';
         alertBar.style.display = 'flex';
         alertBar.innerHTML = `
-          <span>⚠️</span>
           <div>
-            <strong>75% Shortage Alert:</strong> You are currently short of criteria by <span class="privacy-blur">${(target - overallPctNum).toFixed(1)}%</span>.
-            Attend <span class="privacy-blur">${needed}</span> consecutive classes without absence to safely clear the threshold.
+            <strong>Below ${target}%:</strong> You're <span class="privacy-blur">${(target - overallPctNum).toFixed(1)}%</span> short.
+            Attend <span class="privacy-blur">${neededLabel}</span> consecutively to get back on track.
           </div>
         `;
       } else {
         const allowedTot = Math.floor((100 * totalAtt) / target);
         const bunks = Math.max(0, allowedTot - totalConducted);
-        adviceEl.innerHTML = `Safe attendance zone. You can safely miss up to <strong class="privacy-blur" style="color:var(--success-text);">${bunks} classes</strong>.`;
+        const bunkLabel = `${bunks} ${bunks === 1 ? 'class' : 'classes'}`;
+        adviceEl.innerHTML = `On track. You can miss up to <strong class="privacy-blur" style="color:var(--success-text);">${bunkLabel}</strong>.`;
         alertBar.className = 'shortage-banner banner-safe';
         alertBar.style.display = 'flex';
         alertBar.innerHTML = `
-          <span>✓</span>
           <div>
-            <strong>Healthy Attendance:</strong> You have a buffer of <span class="privacy-blur">${(overallPctNum - target).toFixed(1)}%</span> over the ${target}% target.
-            You can afford to miss <span class="privacy-blur">${bunks} classes</span> safely.
+            <strong>You're on track.</strong> <span class="privacy-blur">${(overallPctNum - target).toFixed(1)}%</span> above the ${target}% mark.
+            You can miss up to <span class="privacy-blur">${bunkLabel}</span> and stay safe.
           </div>
         `;
       }
@@ -599,7 +610,7 @@
         { id: 'theory', label: 'Theory' },
         { id: 'lab', label: 'Labs' },
         { id: 'elective', label: 'Electives' },
-        { id: 'shortage', label: '⚠️ Below 75%' }
+        { id: 'shortage', label: 'Below 75%' }
       ];
 
       row.innerHTML = cats.map(c => `
@@ -651,11 +662,11 @@
                   <span class="cat-tag cat-${safeCat}">${safeCat.toUpperCase()}</span>
                   ${stats.isShort ? `
                     <span class="criteria-pill pill-short">
-                      <span class="pill-dot dot-red"></span> Short by ${stats.shortagePct}%
+                      ${statusPillIcon('short')} Short by ${stats.shortagePct}%
                     </span>
                   ` : `
                     <span class="criteria-pill pill-safe">
-                      <span class="pill-dot dot-green"></span> +${stats.surplusPct}% Safe
+                      ${statusPillIcon('safe')} On track · +${stats.surplusPct}%
                     </span>
                   `}
                 </div>
@@ -703,7 +714,7 @@
                 — Off
               </button>
               <button type="button" class="act-btn act-hist" data-action="openSubjectHistoryDrawer" data-subid="${safeSubId}" title="View attendance history">
-                📜 History
+                History
               </button>
               <button type="button" class="act-btn act-more" data-action="openSingleEditModal" data-subid="${safeSubId}" title="Edit subject">
                 ⋮
@@ -886,7 +897,7 @@
       const isHoliday = dayData.isHoliday;
 
       holidayBanner.style.display = isHoliday ? 'block' : 'none';
-      holidayBtn.innerHTML = isHoliday ? '<span>🎉</span> Unmark Holiday' : '<span>🎉</span> Holiday';
+      holidayBtn.innerHTML = isHoliday ? 'Unmark Holiday' : 'Holiday';
 
       if (appState.subjects.length === 0) {
         listEl.innerHTML = `<div style="text-align:center; padding:12px; color:var(--text-dim);">No subjects configured.</div>`;
@@ -1190,7 +1201,7 @@
       closeSetupModal();
       saveState();
 
-      alert(`🎉 Semester Setup Saved!
+      alert(`Semester Setup Saved.
 Created ${newSubjects.length} customized subjects for you.`);
     }
 
@@ -1333,10 +1344,10 @@ Created ${newSubjects.length} customized subjects for you.`);
       numEl.style.color = pctNum < target ? 'var(--danger)' : 'var(--success)';
 
       if (pctNum < target) {
-        pillWrap.innerHTML = `<span class="criteria-pill pill-short"><span class="pill-dot dot-red"></span> Short by ${(target - pctNum).toFixed(1)}%</span>`;
+        pillWrap.innerHTML = `<span class="criteria-pill pill-short">${statusPillIcon('short')} Short by ${(target - pctNum).toFixed(1)}%</span>`;
         resText.innerHTML = `Projected: <strong>${newAtt}/${newTot}</strong> classes. Still below ${target}% criteria.`;
       } else {
-        pillWrap.innerHTML = `<span class="criteria-pill pill-safe"><span class="pill-dot dot-green"></span> Above Target (+${(pctNum - target).toFixed(1)}%)</span>`;
+        pillWrap.innerHTML = `<span class="criteria-pill pill-safe">${statusPillIcon('safe')} On track · +${(pctNum - target).toFixed(1)}%</span>`;
         resText.innerHTML = `Projected: <strong>${newAtt}/${newTot}</strong> classes. Safely clears ${target}% criteria.`;
       }
     }
@@ -1399,7 +1410,7 @@ Created ${newSubjects.length} customized subjects for you.`);
         const stats = calcStats(sub);
         const nameEscaped = `"${sub.name.replace(/"/g, '""')}"`;
         const catEscaped = `"${sub.category || 'theory'}"`;
-        const status = stats.isShort ? `Short by ${stats.shortagePct}%` : `Safe (+${stats.surplusPct}%)`;
+        const status = stats.isShort ? `Short by ${stats.shortagePct}%` : `On track (+${stats.surplusPct}%)`;
         const needed = stats.isShort ? `${stats.minNeededToReach75} in a row` : '0';
         const bunks = stats.maxCanMiss;
 
@@ -1433,13 +1444,13 @@ Created ${newSubjects.length} customized subjects for you.`);
           const validated = validateAndSanitizeState(rawParsed);
 
           appState = validated;
-          applyThemeUI(appState.activeTheme || 'navy-purple');
+          applyThemeUI(appState.activeTheme || 'graphite');
           applyPrivacyModeUI();
           saveState();
 
-          alert(`✓ Backup verified and loaded safely!\n• ${appState.subjects.length} subjects imported.\n• ${appState.history.length} logged sessions verified.`);
+          alert(`Backup verified and loaded safely.\n• ${appState.subjects.length} subjects imported.\n• ${appState.history.length} logged sessions verified.`);
         } catch (err) {
-          alert('❌ Security Validation Error:\n' + (err.message || 'Invalid or corrupted JSON backup file.'));
+          alert('Security Validation Error:\n' + (err.message || 'Invalid or corrupted JSON backup file.'));
         }
         e.target.value = '';
       };
@@ -1520,7 +1531,7 @@ Created ${newSubjects.length} customized subjects for you.`);
       appState.calendar = {};
       appState.history = [];
 
-      applyThemeUI('navy-purple');
+      applyThemeUI('graphite');
       applyPrivacyModeUI();
       saveStateOnly();
 
@@ -1533,11 +1544,11 @@ Created ${newSubjects.length} customized subjects for you.`);
 
       // 3. User feedback
       if (cloudDeleteResult === 'deleted') {
-        alert('✓ Attendify has been reset.\n\n• Local attendance records erased.\n• Cloud backup permanently deleted.');
+        alert('Attendify has been reset.\n\n• Local attendance records erased.\n• Cloud backup permanently deleted.');
       } else if (cloudDeleteResult === 'not_found' || cloudDeleteResult === 'skipped') {
-        alert('✓ Attendify has been reset.\n\n• Local attendance records erased.');
+        alert('Attendify has been reset.\n\n• Local attendance records erased.');
       } else {
-        alert('⚠️ Local attendance records erased.\n\nNote: Could not reach cloud server to delete remote backup. Please reconnect and wipe your cloud record if needed.');
+        alert('Local attendance records erased.\n\nNote: Could not reach cloud server to delete remote backup. Please reconnect and wipe your cloud record if needed.');
       }
 
       openSetupModal();
@@ -1550,7 +1561,7 @@ Created ${newSubjects.length} customized subjects for you.`);
       }
 
       const confirmed = confirm(
-        `⚠️ Permanently delete cloud backup for sync code "${appState.syncCode}"?\n\nThis will remove your stored attendance data from the cloud server.\n\nYour local data on this phone will NOT be deleted.`
+        `Permanently delete cloud backup for sync code "${appState.syncCode}"?\n\nThis will remove your stored attendance data from the cloud server.\n\nYour local data on this phone will NOT be deleted.`
       );
       if (!confirmed) return;
 
@@ -1558,11 +1569,11 @@ Created ${newSubjects.length} customized subjects for you.`);
       const originalText = wipeBtn ? wipeBtn.innerHTML : '';
       if (wipeBtn) {
         wipeBtn.disabled = true;
-        wipeBtn.innerHTML = '⏳ Deleting from cloud...';
+        wipeBtn.innerHTML = 'Deleting from cloud...';
       }
 
       const statusEl = document.getElementById('topCloudStatus');
-      if (statusEl) statusEl.innerHTML = '☁️ <span style="color:var(--danger-text);">Deleting...</span>';
+      if (statusEl) statusEl.innerHTML = '<span style="color:var(--danger-text);">Deleting...</span>';
 
       try {
         const response = await syncApiRequest('/delete', {
@@ -1579,20 +1590,20 @@ Created ${newSubjects.length} customized subjects for you.`);
         appState.lastSyncedAt = null;
         saveStateOnly();
 
-        if (statusEl) statusEl.innerHTML = '☁️ <span style="color:var(--text-dim);">Wiped</span>';
+        if (statusEl) statusEl.innerHTML = '<span style="color:var(--text-dim);">Wiped</span>';
         const lastSyncEl = document.getElementById('settingsLastSyncTime');
         if (lastSyncEl) lastSyncEl.textContent = 'Deleted from server';
 
         if (resData.status === 'deleted') {
-          alert('✅ Cloud backup has been permanently deleted from the server.');
+          alert('Cloud backup has been permanently deleted from the server.');
         } else if (resData.status === 'not_found') {
-          alert('ℹ️ No backup was found in the cloud for this sync code. Nothing to delete.');
+          alert('No backup was found in the cloud for this sync code. Nothing to delete.');
         } else {
-          alert('✅ Cloud deletion completed successfully.');
+          alert('Cloud deletion completed successfully.');
         }
       } catch (err) {
-        alert('❌ Error deleting cloud backup: ' + err.message);
-        if (statusEl) statusEl.innerHTML = '☁️ <span style="color:var(--danger-text);">Error</span>';
+        alert('Error deleting cloud backup: ' + err.message);
+        if (statusEl) statusEl.innerHTML = '<span style="color:var(--danger-text);">Error</span>';
       } finally {
         if (wipeBtn) {
           wipeBtn.disabled = false;
@@ -1664,7 +1675,7 @@ Created ${newSubjects.length} customized subjects for you.`);
 
       const statusEl = document.getElementById('topCloudStatus');
       const headerBtn = document.getElementById('headerCloudSyncBtn');
-      if (statusEl) statusEl.innerHTML = '☁️ <span style="color:var(--warning-text);">Syncing...</span>';
+      if (statusEl) statusEl.innerHTML = '<span style="color:var(--warning-text);">Syncing...</span>';
       if (headerBtn) headerBtn.style.opacity = '0.6';
 
       const payload = {
@@ -1676,7 +1687,7 @@ Created ${newSubjects.length} customized subjects for you.`);
           calendar: appState.calendar || {},
           history: appState.history || [],
           globalTarget: appState.globalTarget || 75,
-          activeTheme: appState.activeTheme || 'navy-purple',
+          activeTheme: appState.activeTheme || 'graphite',
           themeMode: appState.themeMode || 'dark',
           privacyMode: appState.privacyMode || false,
           lastUpdated: new Date().toISOString()
@@ -1688,16 +1699,16 @@ Created ${newSubjects.length} customized subjects for you.`);
 
         if (response.ok) {
           appState.lastSyncedAt = Date.now();
-          if (statusEl) statusEl.innerHTML = '☁️ <span style="color:var(--success-text);">Synced</span>';
+          if (statusEl) statusEl.innerHTML = '<span style="color:var(--success-text);">Synced</span>';
           const lastSyncEl = document.getElementById('settingsLastSyncTime');
           if (lastSyncEl) lastSyncEl.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         } else {
           console.warn('Cloud sync response error:', response.status);
-          if (statusEl) statusEl.innerHTML = '☁️ <span style="color:var(--text-dim);">Local</span>';
+          if (statusEl) statusEl.innerHTML = '<span style="color:var(--text-dim);">Local</span>';
         }
       } catch (err) {
         console.warn('Offline or network error syncing to cloud:', err);
-        if (statusEl) statusEl.innerHTML = '☁️ <span style="color:var(--text-dim);">Offline</span>';
+        if (statusEl) statusEl.innerHTML = '<span style="color:var(--text-dim);">Offline</span>';
       } finally {
         if (headerBtn) headerBtn.style.opacity = '1';
       }
@@ -1710,7 +1721,7 @@ Created ${newSubjects.length} customized subjects for you.`);
       setTimeout(() => {
         if (headerBtn) headerBtn.classList.remove('active');
       }, 600);
-      alert(`☁️ Cloud Storage Synced!
+      alert(`Cloud Storage Synced!
 Your attendance records are backed up securely under Code: ${appState.syncCode}`);
     }
 
@@ -1723,10 +1734,10 @@ Your attendance records are backed up securely under Code: ${appState.syncCode}`
       if (!keyEl) return;
       if (isKeyVisible) {
         keyEl.textContent = appState.syncAuthKey || 'No Key';
-        if (btn) btn.textContent = '🔒 Hide';
+        if (btn) btn.textContent = 'Hide';
       } else {
         keyEl.textContent = '••••••••••••••••';
-        if (btn) btn.textContent = '👁️ Show';
+        if (btn) btn.textContent = 'Show';
       }
     }
 
@@ -1734,7 +1745,7 @@ Your attendance records are backed up securely under Code: ${appState.syncCode}`
       if (!appState.syncAuthKey) return;
       if (navigator.clipboard) {
         navigator.clipboard.writeText(appState.syncAuthKey).then(() => {
-          alert('✓ Private Secret Key copied to clipboard! Keep this safe.');
+          alert('Private Secret Key copied to clipboard! Keep this safe.');
         }).catch(() => {
           prompt('Copy your Private Secret Key:', appState.syncAuthKey);
         });
@@ -1748,7 +1759,7 @@ Your attendance records are backed up securely under Code: ${appState.syncCode}`
       const combo = `${appState.syncCode}:${appState.syncAuthKey}`;
       if (navigator.clipboard) {
         navigator.clipboard.writeText(combo).then(() => {
-          alert('✓ Full Pairing Token copied (Code:Key)!\nPaste this into Attendify on your other device for instant 1-tap restore.');
+          alert('Full Pairing Token copied (Code:Key)!\nPaste this into Attendify on your other device for instant 1-tap restore.');
         }).catch(() => {
           prompt('Copy Pairing Token (Code:Key):', combo);
         });
@@ -1760,7 +1771,7 @@ Your attendance records are backed up securely under Code: ${appState.syncCode}`
     function copySyncCode() {
       if (!appState.syncCode) return;
       navigator.clipboard.writeText(appState.syncCode).then(() => {
-        alert(`📋 Copied Cloud Sync Code: ${appState.syncCode}
+        alert(`Copied Cloud Sync Code: ${appState.syncCode}
 Save this code to restore your courses on another phone or computer!`);
       }).catch(() => {
         prompt('Copy your Cloud Sync Code:', appState.syncCode);
@@ -1807,11 +1818,11 @@ Save this code to restore your courses on another phone or computer!`);
           const errData = await response.json().catch(() => ({}));
           const errMsg = errData.error || errData.message || '';
           if (response.status === 401 || errMsg.includes('Authorization failed')) {
-            alert('❌ Authorization Failed: The secret key does not match this Sync Code.');
+            alert('Authorization Failed: The secret key does not match this Sync Code.');
           } else if (response.status === 404 || response.status === 400 || errMsg.includes('Record not found')) {
-            alert('❌ Sync code not found in Cloud Storage. Please check for typos.');
+            alert('Sync code not found in Cloud Storage. Please check for typos.');
           } else {
-            alert('❌ Cloud Restore Error: ' + (errMsg || `HTTP ${response.status}`));
+            alert('Cloud Restore Error: ' + (errMsg || `HTTP ${response.status}`));
           }
           return;
         }
@@ -1829,14 +1840,14 @@ Save this code to restore your courses on another phone or computer!`);
         appState.isSetupCompleted = true;
         appState.studentName = sanitizeText(cloudData.studentName || '');
 
-        applyThemeUI(appState.activeTheme || 'navy-purple');
+        applyThemeUI(appState.activeTheme || 'graphite');
         applyPrivacyModeUI();
         saveState();
         closeRestoreCloudModal();
 
-        alert(`🎉 Cloud Restore Successful!\nWelcome back, ${appState.studentName || 'Student'}!\nRestored ${appState.subjects.length} subjects from secure cloud storage.`);
+        alert(`Cloud Restore Successful.\nWelcome back, ${appState.studentName || 'Student'}!\nRestored ${appState.subjects.length} subjects from secure cloud storage.`);
       } catch (err) {
-        alert('❌ Error connecting to Cloud Storage: ' + err.message);
+        alert('Error connecting to Cloud Storage: ' + err.message);
       }
     }
 
@@ -2101,7 +2112,7 @@ Save this code to restore your courses on another phone or computer!`);
     // Initialize application on DOM ready
     document.addEventListener('DOMContentLoaded', () => {
       initDate();
-      applyThemeUI(appState.activeTheme || 'navy-purple');
+      applyThemeUI(appState.activeTheme || 'graphite');
       applyPrivacyModeUI();
       renderApp();
       initServiceWorker();

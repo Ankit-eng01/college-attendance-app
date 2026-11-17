@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="navy-purple" data-mode="dark">
+<html lang="en" data-theme="graphite" data-mode="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="color-scheme" content="dark light">
-  <meta name="theme-color" content="#05070f">
+  <meta name="theme-color" content="#08090b">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="referrer" content="no-referrer">
@@ -25,72 +25,78 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
 
   <style>
-    /* THEME 1: ELEGANT NAVY & PURPLE (DEFAULT DARK) */
-    :root, [data-theme="navy-purple"] {
+    /* THEME 1: GRAPHITE (DEFAULT DARK) */
+    :root, [data-theme="graphite"] {
       color-scheme: dark;
 
-      --bg: #05070f;
-      --bg-surface: #0a0f1f;
-      --bg-card: #0e1529;
-      --bg-card-hover: #141d38;
-      --bg-elevated: #1a2550;
-      --border: #232e55;
-      --border-subtle: rgba(148, 163, 184, 0.12);
-      --border-accent: rgba(139, 92, 246, 0.42);
+      --bg: #08090b;
+      --bg-surface: #0d0f12;
+      --bg-card: #121418;
+      --bg-card-hover: #181b20;
+      --bg-elevated: #1e2229;
+      --border: #262a31;
+      --border-subtle: rgba(255, 255, 255, 0.06);
+      --border-accent: rgba(217, 188, 140, 0.24);
 
-      --text: #f7f9fc;
-      --text-muted: #a5b2c7;
-      --text-dim: #71809a;
-      --text-strong: #ffffff;
+      --text: #f3f1ec;
+      --text-muted: #a7a49c;
+      --text-dim: #78766f;
+      --text-strong: #fdfcf9;
 
-      --brand: #8b5cf6;               /* Royal Purple */
-      --brand-gradient: linear-gradient(135deg, #4f46e5 0%, #8b5cf6 48%, #d946ef 100%);
-      --brand-glow: rgba(139, 92, 246, 0.38);
-      --brand-text-gradient: linear-gradient(135deg, #ffffff 30%, #c4b5fd 100%);
-      --navy: #3b82f6;                /* Elegant Navy Blue */
-      --purple: #a855f7;              /* Electric Purple */
-      --purple-glow: rgba(168, 85, 247, 0.32);
+      --brand: #d9bc8c;               /* Champagne */
+      --brand-gradient: linear-gradient(135deg, #efdcb8 0%, #d9bc8c 52%, #b9975f 100%);
+      --brand-glow: rgba(217, 188, 140, 0.2);
+      --brand-text-gradient: linear-gradient(135deg, #ffffff 25%, #e3cfa9 100%);
+      --on-brand: #17130c;
+      --brand-soft: rgba(217, 188, 140, 0.12);
+      --brand-soft-strong: rgba(217, 188, 140, 0.2);
+      --lab-text: #a9b8c6;
+      --lab-bg: rgba(148, 163, 184, 0.14);
 
-      --success: #10b981;
-      --success-text: #34d399;
-      --success-glow: rgba(16, 185, 129, 0.3);
-      --warning: #f59e0b;
-      --warning-text: #fbbf24;
-      --warning-glow: rgba(245, 158, 11, 0.3);
-      --danger: #ef4444;
-      --danger-text: #f87171;
-      --danger-glow: rgba(239, 68, 68, 0.35);
-      --info-text: #60a5fa;
+      --success: #3fae86;
+      --success-text: #63c9a1;
+      --success-glow: rgba(63, 174, 134, 0.26);
+      --success-soft: rgba(63, 174, 134, 0.14);
+      --success-soft-strong: rgba(63, 174, 134, 0.24);
+      --warning: #c2944a;
+      --warning-text: #ddb772;
+      --warning-glow: rgba(194, 148, 74, 0.24);
+      --danger: #cf615f;
+      --danger-text: #e78d8b;
+      --danger-glow: rgba(207, 97, 95, 0.28);
+      --danger-soft: rgba(207, 97, 95, 0.16);
+      --danger-soft-strong: rgba(207, 97, 95, 0.26);
+      --info-text: #8fb2d2;
 
-      /* Premium glass surfaces */
-      --hairline: rgba(255, 255, 255, 0.075);
-      --hairline-strong: rgba(255, 255, 255, 0.14);
-      --inset-highlight: rgba(255, 255, 255, 0.08);
-      --glass-1: rgba(21, 30, 58, 0.72);
-      --glass-2: rgba(8, 13, 26, 0.88);
-      --glass-hover: rgba(26, 37, 72, 0.9);
-      --surface-translucent: rgba(11, 17, 33, 0.62);
-      --surface-strong: rgba(13, 20, 38, 0.86);
-      --nav-bg: rgba(8, 12, 24, 0.84);
-      --modal-backdrop: rgba(2, 4, 10, 0.72);
-      --shadow-card: 0 26px 60px -22px rgba(0, 0, 0, 0.9);
-      --shadow-soft: 0 14px 34px -18px rgba(0, 0, 0, 0.75);
-      --shadow-sheet: 0 -18px 60px -16px rgba(0, 0, 0, 0.75);
-      --progress-track: rgba(255, 255, 255, 0.08);
-      --progress-marker: rgba(255, 255, 255, 0.85);
-      --swatch-border: rgba(255, 255, 255, 0.22);
-      --card-sheen: rgba(139, 92, 246, 0.16);
+      /* Premium surfaces */
+      --hairline: rgba(255, 255, 255, 0.07);
+      --hairline-strong: rgba(255, 255, 255, 0.13);
+      --inset-highlight: rgba(255, 255, 255, 0.06);
+      --glass-1: rgba(19, 21, 25, 0.78);
+      --glass-2: rgba(9, 10, 13, 0.9);
+      --glass-hover: rgba(28, 31, 37, 0.92);
+      --surface-translucent: rgba(15, 17, 21, 0.6);
+      --surface-strong: rgba(17, 19, 23, 0.88);
+      --nav-bg: rgba(10, 11, 14, 0.88);
+      --modal-backdrop: rgba(3, 4, 6, 0.74);
+      --shadow-card: 0 30px 70px -30px rgba(0, 0, 0, 0.95);
+      --shadow-soft: 0 16px 40px -24px rgba(0, 0, 0, 0.8);
+      --shadow-sheet: 0 -20px 60px -20px rgba(0, 0, 0, 0.8);
+      --progress-track: rgba(255, 255, 255, 0.07);
+      --progress-marker: rgba(255, 255, 255, 0.55);
+      --swatch-border: rgba(255, 255, 255, 0.2);
+      --card-sheen: rgba(255, 255, 255, 0.045);
 
       /* Ambient backdrop */
-      --ambient-top: rgba(99, 102, 241, 0.22);
-      --ambient-a: rgba(59, 130, 246, 0.17);
-      --ambient-b: rgba(168, 85, 247, 0.18);
-      --ambient-c: rgba(14, 165, 233, 0.1);
-      --ambient-warm: rgba(251, 191, 36, 0.08);
-      --grid-color: rgba(148, 163, 184, 0.055);
-      --noise-opacity: 0.05;
-      --vignette: rgba(2, 4, 10, 0.55);
-      --orb-opacity: 0.95;
+      --ambient-top: rgba(217, 188, 140, 0.1);
+      --ambient-a: rgba(120, 146, 170, 0.1);
+      --ambient-b: rgba(217, 188, 140, 0.07);
+      --ambient-c: rgba(88, 108, 128, 0.06);
+      --ambient-warm: rgba(217, 188, 140, 0.05);
+      --grid-color: rgba(255, 255, 255, 0.03);
+      --noise-opacity: 0.035;
+      --vignette: rgba(2, 3, 5, 0.62);
+      --orb-opacity: 0.7;
 
       --radius-sm: 8px;
       --radius-md: 14px;
@@ -104,134 +110,186 @@
       --safe-bottom: env(safe-area-inset-bottom, 0px);
     }
 
-    /* THEME 2: CYBER VIOLET AMETHYST */
-    [data-theme="violet"] {
-      --bg: #070310;
-      --bg-surface: #0f0722;
-      --bg-card: #160a2e;
-      --bg-card-hover: #1f0f40;
-      --bg-elevated: #2a1157;
-      --border: #331c63;
-      --border-subtle: rgba(217, 70, 239, 0.16);
-      --border-accent: rgba(217, 70, 239, 0.44);
-      --brand: #c026d3;
-      --brand-gradient: linear-gradient(135deg, #7c3aed 0%, #c026d3 50%, #f472b6 100%);
-      --brand-glow: rgba(192, 38, 211, 0.4);
-      --brand-text-gradient: linear-gradient(135deg, #ffffff 30%, #f0abfc 100%);
-      --glass-1: rgba(35, 18, 66, 0.72);
-      --glass-2: rgba(10, 5, 22, 0.9);
-      --glass-hover: rgba(46, 24, 88, 0.9);
-      --surface-translucent: rgba(16, 8, 34, 0.64);
-      --surface-strong: rgba(20, 10, 42, 0.88);
-      --nav-bg: rgba(10, 5, 22, 0.85);
-      --card-sheen: rgba(217, 70, 239, 0.15);
-      --ambient-top: rgba(192, 38, 211, 0.22);
-      --ambient-a: rgba(147, 51, 234, 0.17);
-      --ambient-b: rgba(236, 72, 153, 0.15);
-      --ambient-c: rgba(99, 102, 241, 0.12);
-      --ambient-warm: rgba(251, 146, 60, 0.09);
+    /* THEME 2: SAPPHIRE */
+    [data-theme="sapphire"] {
+      --bg: #05080f;
+      --bg-surface: #0a1019;
+      --bg-card: #0f1621;
+      --bg-card-hover: #141d2b;
+      --bg-elevated: #1a2537;
+      --border: #212d3f;
+      --border-subtle: rgba(148, 178, 214, 0.12);
+      --border-accent: rgba(126, 168, 214, 0.28);
+      --text: #f1f5fa;
+      --text-muted: #a2b0c2;
+      --text-dim: #74839a;
+      --text-strong: #ffffff;
+      --brand: #7ea8d6;
+      --brand-gradient: linear-gradient(135deg, #a9c9e9 0%, #7ea8d6 52%, #5a82ad 100%);
+      --brand-glow: rgba(126, 168, 214, 0.2);
+      --brand-text-gradient: linear-gradient(135deg, #ffffff 25%, #cfe2f5 100%);
+      --on-brand: #07111d;
+      --brand-soft: rgba(126, 168, 214, 0.12);
+      --brand-soft-strong: rgba(126, 168, 214, 0.2);
+      --lab-text: #a9c0d6;
+      --lab-bg: rgba(126, 168, 214, 0.14);
+      --glass-1: rgba(17, 25, 37, 0.78);
+      --glass-2: rgba(6, 10, 17, 0.9);
+      --glass-hover: rgba(24, 35, 50, 0.92);
+      --surface-translucent: rgba(11, 17, 26, 0.6);
+      --surface-strong: rgba(13, 20, 30, 0.88);
+      --nav-bg: rgba(7, 12, 20, 0.88);
+      --card-sheen: rgba(126, 168, 214, 0.05);
+      --ambient-top: rgba(126, 168, 214, 0.12);
+      --ambient-a: rgba(90, 130, 173, 0.12);
+      --ambient-b: rgba(126, 168, 214, 0.08);
+      --ambient-c: rgba(70, 110, 150, 0.08);
+      --ambient-warm: rgba(126, 168, 214, 0.04);
+      --grid-color: rgba(148, 178, 214, 0.035);
     }
 
-    /* THEME 3: PURE MIDNIGHT AMOLED */
-    [data-theme="amoled"] {
+    /* THEME 3: OBSIDIAN (PURE BLACK / PLATINUM) */
+    [data-theme="obsidian"] {
       --bg: #000000;
-      --bg-surface: #070708;
-      --bg-card: #0c0c10;
-      --bg-card-hover: #121218;
-      --bg-elevated: #191922;
-      --border: #25252e;
+      --bg-surface: #08080a;
+      --bg-card: #0d0d10;
+      --bg-card-hover: #141418;
+      --bg-elevated: #1b1b20;
+      --border: #26262c;
       --border-subtle: rgba(255, 255, 255, 0.07);
-      --border-accent: rgba(129, 140, 248, 0.38);
-      --brand: #818cf8;
-      --brand-gradient: linear-gradient(135deg, #4f46e5 0%, #6366f1 58%, #a855f7 100%);
-      --brand-glow: rgba(99, 102, 241, 0.35);
-      --brand-text-gradient: linear-gradient(135deg, #ffffff 35%, #c7d2fe 100%);
-      --glass-1: rgba(18, 18, 24, 0.8);
-      --glass-2: rgba(4, 4, 6, 0.92);
-      --surface-translucent: rgba(10, 10, 14, 0.7);
-      --surface-strong: rgba(13, 13, 18, 0.9);
-      --nav-bg: rgba(5, 5, 8, 0.88);
-      --card-sheen: rgba(129, 140, 248, 0.12);
-      --ambient-top: rgba(99, 102, 241, 0.16);
-      --ambient-a: rgba(59, 130, 246, 0.11);
-      --ambient-b: rgba(168, 85, 247, 0.12);
-      --ambient-c: rgba(14, 165, 233, 0.07);
-      --ambient-warm: rgba(251, 191, 36, 0.05);
-      --grid-color: rgba(255, 255, 255, 0.04);
+      --border-accent: rgba(231, 229, 222, 0.2);
+      --text: #f4f3ef;
+      --text-muted: #a6a39b;
+      --text-dim: #767369;
+      --text-strong: #ffffff;
+      --brand: #e6e2d8;
+      --brand-gradient: linear-gradient(135deg, #ffffff 0%, #e6e2d8 55%, #c6bfae 100%);
+      --brand-glow: rgba(230, 226, 216, 0.12);
+      --brand-text-gradient: linear-gradient(135deg, #ffffff 25%, #d8d2c4 100%);
+      --on-brand: #0b0b0c;
+      --brand-soft: rgba(230, 226, 216, 0.1);
+      --brand-soft-strong: rgba(230, 226, 216, 0.17);
+      --lab-text: #b3b0a7;
+      --lab-bg: rgba(230, 226, 216, 0.12);
+      --glass-1: rgba(15, 15, 18, 0.82);
+      --glass-2: rgba(4, 4, 5, 0.92);
+      --glass-hover: rgba(23, 23, 27, 0.94);
+      --surface-translucent: rgba(10, 10, 12, 0.68);
+      --surface-strong: rgba(12, 12, 15, 0.9);
+      --nav-bg: rgba(5, 5, 6, 0.9);
+      --card-sheen: rgba(255, 255, 255, 0.035);
+      --ambient-top: rgba(230, 226, 216, 0.06);
+      --ambient-a: rgba(150, 150, 150, 0.06);
+      --ambient-b: rgba(230, 226, 216, 0.04);
+      --ambient-c: rgba(120, 120, 120, 0.04);
+      --ambient-warm: rgba(230, 226, 216, 0.03);
+      --grid-color: rgba(255, 255, 255, 0.028);
     }
 
     /* APPEARANCE MODE: LIGHT (overrides dark surfaces, keeps accent themes) */
     [data-mode="light"] {
       color-scheme: light;
 
-      --bg: #eef2f9;
-      --bg-surface: #f4f6fc;
+      --bg: #f5f3ee;
+      --bg-surface: #faf9f5;
       --bg-card: #ffffff;
-      --bg-card-hover: #f5f7fd;
-      --bg-elevated: #e9edf7;
-      --border: #dde4f2;
-      --border-subtle: rgba(15, 23, 42, 0.08);
-      --border-accent: rgba(79, 70, 229, 0.32);
+      --bg-card-hover: #f7f5f0;
+      --bg-elevated: #eeece5;
+      --border: #e3ded4;
+      --border-subtle: rgba(23, 24, 26, 0.08);
+      --border-accent: rgba(138, 104, 54, 0.26);
 
-      --text: #101828;
-      --text-muted: #526079;
-      --text-dim: #6e7c92;
-      --text-strong: #0b1220;
+      --text: #17181a;
+      --text-muted: #5c5f63;
+      --text-dim: #787a7e;
+      --text-strong: #0d0e10;
 
-      --brand: #6d28d9;
-      --brand-gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #a21caf 100%);
-      --brand-glow: rgba(109, 40, 217, 0.22);
-      --brand-text-gradient: linear-gradient(135deg, #0b1220 25%, #6d28d9 100%);
-      --purple: #7e22ce;
-      --purple-glow: rgba(126, 34, 206, 0.18);
+      --brand: #8a6836;
+      --brand-gradient: linear-gradient(135deg, #b58f52 0%, #8a6836 55%, #6d5028 100%);
+      --brand-glow: rgba(138, 104, 54, 0.16);
+      --brand-text-gradient: linear-gradient(135deg, #0d0e10 25%, #8a6836 100%);
+      --on-brand: #fffdf7;
+      --brand-soft: rgba(138, 104, 54, 0.1);
+      --brand-soft-strong: rgba(138, 104, 54, 0.16);
+      --lab-text: #5d6b78;
+      --lab-bg: rgba(93, 107, 120, 0.1);
 
-      --success-text: #047857;
-      --warning-text: #b45309;
-      --danger-text: #b91c1c;
-      --info-text: #1d4ed8;
+      --success-text: #157a58;
+      --success-soft: rgba(21, 122, 88, 0.1);
+      --success-soft-strong: rgba(21, 122, 88, 0.16);
+      --warning-text: #8a5a12;
+      --danger-text: #a83a3a;
+      --danger-soft: rgba(168, 58, 58, 0.1);
+      --danger-soft-strong: rgba(168, 58, 58, 0.16);
+      --info-text: #2c5687;
 
-      --hairline: rgba(15, 23, 42, 0.075);
-      --hairline-strong: rgba(15, 23, 42, 0.12);
+      --hairline: rgba(23, 24, 26, 0.08);
+      --hairline-strong: rgba(23, 24, 26, 0.13);
       --inset-highlight: rgba(255, 255, 255, 0.95);
-      --glass-1: rgba(255, 255, 255, 0.9);
-      --glass-2: rgba(247, 249, 255, 0.94);
+      --glass-1: rgba(255, 255, 255, 0.92);
+      --glass-2: rgba(249, 248, 243, 0.96);
       --glass-hover: #ffffff;
-      --surface-translucent: rgba(255, 255, 255, 0.76);
-      --surface-strong: rgba(255, 255, 255, 0.9);
-      --nav-bg: rgba(255, 255, 255, 0.86);
-      --modal-backdrop: rgba(15, 23, 42, 0.42);
-      --shadow-card: 0 28px 60px -28px rgba(30, 41, 59, 0.4);
-      --shadow-soft: 0 16px 36px -20px rgba(30, 41, 59, 0.28);
-      --shadow-sheet: 0 -24px 60px -28px rgba(15, 23, 42, 0.35);
-      --progress-track: rgba(15, 23, 42, 0.08);
-      --progress-marker: rgba(15, 23, 42, 0.7);
-      --swatch-border: rgba(15, 23, 42, 0.14);
-      --card-sheen: rgba(109, 40, 217, 0.07);
+      --surface-translucent: rgba(255, 255, 255, 0.72);
+      --surface-strong: rgba(255, 255, 255, 0.92);
+      --nav-bg: rgba(252, 251, 247, 0.9);
+      --modal-backdrop: rgba(24, 22, 18, 0.4);
+      --shadow-card: 0 30px 60px -32px rgba(41, 36, 28, 0.35);
+      --shadow-soft: 0 18px 40px -26px rgba(41, 36, 28, 0.28);
+      --shadow-sheet: 0 -24px 60px -30px rgba(41, 36, 28, 0.3);
+      --progress-track: rgba(23, 24, 26, 0.08);
+      --progress-marker: rgba(23, 24, 26, 0.55);
+      --swatch-border: rgba(23, 24, 26, 0.14);
+      --card-sheen: rgba(255, 255, 255, 0.5);
 
-      --ambient-top: rgba(99, 102, 241, 0.19);
-      --ambient-a: rgba(56, 189, 248, 0.18);
-      --ambient-b: rgba(168, 85, 247, 0.16);
-      --ambient-c: rgba(14, 165, 233, 0.1);
-      --ambient-warm: rgba(251, 146, 60, 0.14);
-      --grid-color: rgba(15, 23, 42, 0.04);
-      --noise-opacity: 0.028;
-      --vignette: rgba(203, 213, 225, 0.38);
-      --orb-opacity: 0.85;
+      --ambient-top: rgba(138, 104, 54, 0.1);
+      --ambient-a: rgba(120, 146, 170, 0.1);
+      --ambient-b: rgba(217, 188, 140, 0.12);
+      --ambient-c: rgba(88, 108, 128, 0.06);
+      --ambient-warm: rgba(194, 148, 74, 0.1);
+      --grid-color: rgba(23, 24, 26, 0.035);
+      --noise-opacity: 0.025;
+      --vignette: rgba(214, 208, 196, 0.4);
+      --orb-opacity: 0.6;
     }
 
-    [data-mode="light"][data-theme="violet"] {
-      --brand: #a21caf;
-      --brand-gradient: linear-gradient(135deg, #7c3aed 0%, #c026d3 50%, #db2777 100%);
-      --brand-glow: rgba(162, 28, 175, 0.22);
-      --brand-text-gradient: linear-gradient(135deg, #0b1220 25%, #a21caf 100%);
-      --ambient-b: rgba(236, 72, 153, 0.15);
+    [data-mode="light"][data-theme="sapphire"] {
+      --bg: #eef2f7;
+      --bg-surface: #f6f8fb;
+      --bg-card: #ffffff;
+      --bg-card-hover: #f2f6fa;
+      --bg-elevated: #e7edf4;
+      --border: #dbe3ee;
+      --border-accent: rgba(47, 95, 158, 0.24);
+      --brand: #2f5f9e;
+      --brand-gradient: linear-gradient(135deg, #4f7db8 0%, #2f5f9e 55%, #234a7d 100%);
+      --brand-glow: rgba(47, 95, 158, 0.15);
+      --brand-text-gradient: linear-gradient(135deg, #0d1622 25%, #2f5f9e 100%);
+      --on-brand: #ffffff;
+      --brand-soft: rgba(47, 95, 158, 0.1);
+      --brand-soft-strong: rgba(47, 95, 158, 0.16);
+      --ambient-top: rgba(47, 95, 158, 0.1);
+      --ambient-b: rgba(90, 130, 173, 0.1);
+      --vignette: rgba(205, 216, 229, 0.42);
     }
 
-    [data-mode="light"][data-theme="amoled"] {
-      --brand: #4338ca;
-      --brand-gradient: linear-gradient(135deg, #4f46e5 0%, #6366f1 55%, #7c3aed 100%);
-      --brand-glow: rgba(67, 56, 202, 0.2);
-      --brand-text-gradient: linear-gradient(135deg, #0b1220 30%, #4338ca 100%);
+    [data-mode="light"][data-theme="obsidian"] {
+      --bg: #f2f1ee;
+      --bg-surface: #f9f8f6;
+      --bg-card: #ffffff;
+      --bg-card-hover: #f4f3f0;
+      --bg-elevated: #ebeae6;
+      --border: #dedcd6;
+      --border-accent: rgba(53, 54, 58, 0.2);
+      --brand: #35363a;
+      --brand-gradient: linear-gradient(135deg, #55575c 0%, #35363a 55%, #232427 100%);
+      --brand-glow: rgba(53, 54, 58, 0.14);
+      --brand-text-gradient: linear-gradient(135deg, #0b0b0c 25%, #35363a 100%);
+      --on-brand: #ffffff;
+      --brand-soft: rgba(53, 54, 58, 0.08);
+      --brand-soft-strong: rgba(53, 54, 58, 0.14);
+      --ambient-top: rgba(53, 54, 58, 0.06);
+      --ambient-b: rgba(120, 118, 110, 0.08);
+      --vignette: rgba(206, 203, 196, 0.4);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -406,21 +464,20 @@
       width: 40px;
       height: 40px;
       border-radius: 12px;
-      background: var(--brand-gradient);
+      background: linear-gradient(155deg, #1d2025 0%, #0b0c0e 100%);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--brand);
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 4px 16px var(--brand-glow);
+      box-shadow: 0 6px 18px -8px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.08);
       flex-shrink: 0;
     }
     .brand-title {
       font-size: 19px;
       font-weight: 800;
-      letter-spacing: -0.02em;
-      background: var(--brand-text-gradient);
-      -webkit-background-clip: text;
-      background-clip: text;
-      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.025em;
+      color: var(--text-strong);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -461,9 +518,14 @@
       transform: translateY(-1px);
     }
     .icon-btn.active {
-      background: rgba(139, 92, 246, 0.18);
+      background: var(--brand-soft-strong);
       border-color: var(--brand);
       color: var(--text-strong);
+    }
+    .icon-btn svg {
+      width: 15px;
+      height: 15px;
+      flex-shrink: 0;
     }
 
     /* Header light / dark quick toggle */
@@ -514,19 +576,24 @@
       letter-spacing: 0.02em;
     }
     .pill-safe {
-      background: rgba(16, 185, 129, 0.14);
-      border: 1px solid rgba(16, 185, 129, 0.35);
+      background: var(--success-soft);
+      border: 1px solid var(--success-soft-strong);
       color: var(--success-text);
     }
     .pill-short {
-      background: rgba(239, 68, 68, 0.16);
-      border: 1px solid rgba(239, 68, 68, 0.4);
+      background: var(--danger-soft);
+      border: 1px solid var(--danger-soft-strong);
       color: var(--danger-text);
     }
     .pill-neutral {
       background: rgba(148, 163, 184, 0.12);
       border: 1px solid rgba(148, 163, 184, 0.25);
       color: var(--text-muted);
+    }
+    .pill-ico {
+      width: 11px;
+      height: 11px;
+      flex: 0 0 11px;
     }
     .pill-dot {
       width: 6px;
@@ -543,15 +610,14 @@
         linear-gradient(155deg, var(--glass-1) 0%, var(--glass-2) 100%);
       backdrop-filter: blur(24px);
       -webkit-backdrop-filter: blur(24px);
-      border: 1px solid var(--border-accent);
+      border: 1px solid var(--border);
       border-radius: 22px;
-      padding: 20px 18px;
+      padding: 22px 20px;
       display: flex;
       flex-direction: column;
       gap: 18px;
-      box-shadow: 
+      box-shadow:
         var(--shadow-card),
-        0 0 36px -14px var(--brand-glow),
         inset 0 1px 0 var(--inset-highlight);
       position: relative;
       overflow: hidden;
@@ -559,13 +625,11 @@
     .dashboard-card::before {
       content: '';
       position: absolute;
-      top: -60px;
-      right: -60px;
-      width: 140px;
-      height: 140px;
-      background: var(--brand-glow);
-      filter: blur(50px);
-      border-radius: 50%;
+      top: 0;
+      left: 18px;
+      right: 18px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent 0%, var(--hairline-strong) 50%, transparent 100%);
       pointer-events: none;
     }
     .dash-top {
@@ -590,7 +654,7 @@
       inset: -14px;
       border-radius: 50%;
       background: radial-gradient(circle, var(--brand-glow) 0%, transparent 68%);
-      opacity: 0.55;
+      opacity: 0.3;
       pointer-events: none;
     }
     .gauge-wrap svg {
@@ -609,10 +673,11 @@
       align-items: center;
     }
     .gauge-pct {
-      font-size: 20px;
+      font-size: 21px;
       font-weight: 800;
       color: var(--text-strong);
-      font-family: var(--font-mono);
+      font-family: var(--font);
+      font-variant-numeric: tabular-nums;
       letter-spacing: -0.03em;
     }
     .gauge-lbl {
@@ -655,34 +720,39 @@
       50% { box-shadow: 0 0 12px 2px rgba(239, 68, 68, 0.35); }
     }
 
-    /* Total Attended vs Missed 4-Column Grid */
+    /* Total Attended vs Missed Unified Metric Strip */
     .stat-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 8px;
-    }
-    .stat-box {
       background: var(--surface-translucent);
       border: 1px solid var(--hairline);
       border-radius: 14px;
+      overflow: hidden;
+    }
+    .stat-box {
       display: flex;
       flex-direction: column;
       align-items: center;
       text-align: center;
-      padding: 10px 6px;
-      box-shadow: inset 0 1px 0 var(--inset-highlight);
-      transition: all 0.18s ease;
+      padding: 12px 6px;
+      position: relative;
     }
-    .stat-box:hover {
-      background: var(--glass-hover);
-      border-color: var(--border-accent);
-      transform: translateY(-1px);
+    .stat-box + .stat-box::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 22%;
+      bottom: 22%;
+      width: 1px;
+      background: var(--hairline);
     }
     .stat-val {
-      font-size: 16px;
+      font-size: 16.5px;
       font-weight: 800;
       color: var(--text-strong);
-      font-family: var(--font-mono);
+      font-family: var(--font);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.02em;
     }
     .stat-lbl {
       font-size: 9.5px;
@@ -744,9 +814,9 @@
     .filter-chip:hover { color: var(--text-strong); border-color: var(--border-accent); }
     .filter-chip.active {
       background: var(--brand-gradient);
-      color: #ffffff;
+      color: var(--on-brand);
       border-color: transparent;
-      box-shadow: 0 2px 10px var(--brand-glow);
+      box-shadow: 0 4px 12px -6px rgba(0, 0, 0, 0.55);
     }
 
     /* 2. SUBJECT-WISE ANALYTICS CARDS */
@@ -774,7 +844,7 @@
     .subject-card:hover {
       border-color: var(--border-accent);
       transform: translateY(-2px);
-      box-shadow: var(--shadow-card), 0 0 24px -6px var(--brand-glow);
+      box-shadow: var(--shadow-card);
     }
     .subject-card.is-short {
       border-color: rgba(239, 68, 68, 0.38);
@@ -802,7 +872,7 @@
       letter-spacing: 0.05em;
     }
     .cat-theory { background: rgba(59, 130, 246, 0.2); color: var(--info-text); }
-    .cat-lab { background: rgba(168, 85, 247, 0.2); color: var(--purple); }
+    .cat-lab { background: var(--lab-bg); color: var(--lab-text); }
     .cat-elective { background: rgba(245, 158, 11, 0.2); color: var(--warning-text); }
     .cat-tutorial { background: rgba(20, 184, 166, 0.2); color: var(--success-text); }
     .card-title {
@@ -818,9 +888,11 @@
       align-items: flex-end;
     }
     .score-pct {
-      font-size: 22px;
+      font-size: 21px;
       font-weight: 800;
-      font-family: var(--font-mono);
+      font-family: var(--font);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.03em;
       line-height: 1;
     }
     .score-ratio {
@@ -922,31 +994,29 @@
       background: rgba(16, 185, 129, 0.12);
       border-color: rgba(16, 185, 129, 0.35);
     }
-    .act-present:hover { 
-      background: rgba(16, 185, 129, 0.24); 
-      box-shadow: 0 0 14px rgba(16, 185, 129, 0.3);
+    .act-present:hover {
+      background: rgba(63, 174, 134, 0.22);
     }
     .act-absent {
       color: var(--danger-text);
       background: rgba(239, 68, 68, 0.12);
       border-color: rgba(239, 68, 68, 0.35);
     }
-    .act-absent:hover { 
-      background: rgba(239, 68, 68, 0.24); 
-      box-shadow: 0 0 14px rgba(239, 68, 68, 0.3);
+    .act-absent:hover {
+      background: rgba(207, 97, 95, 0.22);
     }
     .act-off {
       color: var(--text-muted);
     }
     .act-hist {
       flex: 1.1;
-      background: rgba(139, 92, 246, 0.14);
-      border-color: rgba(139, 92, 246, 0.35);
+      background: var(--brand-soft);
+      border-color: var(--border-accent);
       color: var(--brand);
     }
-    .act-hist:hover { 
-      background: rgba(139, 92, 246, 0.26); 
-      box-shadow: 0 0 14px rgba(139, 92, 246, 0.35);
+    .act-hist:hover {
+      background: var(--brand-soft-strong);
+      border-color: var(--brand);
     }
     .act-more {
       width: 36px;
@@ -1034,9 +1104,9 @@
     }
     .cal-cell.is-selected {
       background: var(--brand-gradient);
-      color: #ffffff;
+      color: var(--on-brand);
       border-color: transparent;
-      box-shadow: 0 4px 12px var(--brand-glow);
+      box-shadow: 0 6px 14px -8px rgba(0, 0, 0, 0.6);
     }
     .cal-cell.empty-cell {
       background: transparent;
@@ -1135,6 +1205,20 @@
     }
 
     /* Appearance Settings */
+    .empty-emblem {
+      width: 54px;
+      height: 54px;
+      margin: 0 auto 14px;
+      border-radius: 16px;
+      background: linear-gradient(155deg, #1d2025 0%, #0b0c0e 100%);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--brand);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    }
+
     .appearance-head {
       display: flex;
       justify-content: space-between;
@@ -1174,11 +1258,17 @@
       color: var(--text-strong);
       background: var(--bg-card);
       border-color: var(--border-accent);
-      box-shadow: 0 4px 14px -6px var(--brand-glow), inset 0 1px 0 var(--inset-highlight);
+      box-shadow: 0 4px 12px -8px rgba(0, 0, 0, 0.6), inset 0 1px 0 var(--inset-highlight);
     }
     .appearance-mode-btn .mode-ico {
       font-size: 13px;
       line-height: 1;
+      display: inline-flex;
+      align-items: center;
+    }
+    .appearance-mode-btn .mode-ico svg {
+      width: 13px;
+      height: 13px;
     }
     .theme-picker-label {
       display: flex;
@@ -1228,9 +1318,9 @@
     }
     .theme-card.active {
       border-color: var(--brand);
-      background: rgba(139, 92, 246, 0.12);
+      background: var(--brand-soft);
       color: var(--text-strong);
-      box-shadow: 0 0 14px -2px var(--brand-glow);
+      box-shadow: none;
     }
     .theme-swatch {
       width: 28px;
@@ -1251,12 +1341,11 @@
       background: var(--nav-bg);
       backdrop-filter: blur(28px) saturate(1.25);
       -webkit-backdrop-filter: blur(28px) saturate(1.25);
-      border: 1px solid var(--border-accent);
+      border: 1px solid var(--border);
       border-radius: 26px;
       padding: 6px 8px calc(6px + var(--safe-bottom));
-      box-shadow: 
+      box-shadow:
         var(--shadow-card),
-        0 0 26px -8px var(--brand-glow),
         inset 0 1px 0 var(--inset-highlight);
       z-index: 100;
     }
@@ -1290,12 +1379,11 @@
     .nav-item:active { transform: scale(0.92); }
     .nav-item.active {
       color: var(--text-strong);
-      background: rgba(139, 92, 246, 0.15);
+      background: var(--brand-soft);
     }
     .nav-item.active svg {
       transform: translateY(-2px);
       color: var(--brand);
-      filter: drop-shadow(0 0 8px var(--brand-glow));
     }
 
     /* Views */
@@ -1325,7 +1413,7 @@
     }
     .modal-sheet {
       background: linear-gradient(180deg, var(--bg-card) 0%, var(--bg-surface) 100%);
-      border: 1px solid var(--border-accent);
+      border: 1px solid var(--border);
       border-radius: 24px 24px 0 0;
       width: 100%;
       max-width: 520px;
@@ -1426,9 +1514,11 @@
     }
     .step-btn:hover { background: var(--bg-card-hover); border-color: var(--brand); }
     .step-count {
-      font-size: 36px;
+      font-size: 34px;
       font-weight: 800;
-      font-family: var(--font-mono);
+      font-family: var(--font);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.03em;
       color: var(--brand);
       min-width: 60px;
       text-align: center;
@@ -1485,7 +1575,7 @@
     .btn-primary {
       background: var(--brand-gradient);
       border: none;
-      color: #ffffff;
+      color: var(--on-brand);
       font-weight: 800;
       font-size: 14px;
       padding: 12px 18px;
@@ -1495,7 +1585,7 @@
       align-items: center;
       justify-content: center;
       gap: 8px;
-      box-shadow: 0 4px 16px var(--brand-glow);
+      box-shadow: 0 10px 24px -14px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.28);
       transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     }
     .btn-primary:active { transform: scale(0.98); }
@@ -1525,9 +1615,11 @@
       gap: 6px;
     }
     .calc-big-num {
-      font-size: 34px;
+      font-size: 32px;
       font-weight: 800;
-      font-family: var(--font-mono);
+      font-family: var(--font);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.035em;
       color: var(--text-strong);
     }
   </style>
@@ -1548,21 +1640,25 @@
     <header class="header">
       <div class="brand-row">
         <div class="brand-icon">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M22 10v6M2 10l10-5 10 5-10 5z"></path>
-            <path d="M6 12v5c3 3 9 3 12 0v-5"></path>
+          <!-- Lucide graduation-cap glyph (ISC License) -->
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"></path>
+            <path d="M22 10v6"></path>
+            <path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"></path>
           </svg>
         </div>
         <div>
           <h1 class="brand-title" id="topBrandTitle">Attendify</h1>
-          <p class="brand-subtitle" id="topDateStr">College Tracker • <span id="topCloudStatus">☁️ Cloud</span></p>
+          <p class="brand-subtitle"><span id="topDateStr">College Tracker</span> · <span id="topCloudStatus">Cloud</span></p>
         </div>
       </div>
 
       <div class="header-actions">
         <!-- CLOUD STORAGE SYNC BUTTON -->
-        <button type="button" class="icon-btn" id="headerCloudSyncBtn" data-action="triggerManualSync" title="Sync to Cloud Storage">
-          <span>☁️</span>
+        <button type="button" class="icon-btn" id="headerCloudSyncBtn" data-action="triggerManualSync" title="Sync to Cloud Storage" aria-label="Sync to cloud storage">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path>
+          </svg>
         </button>
         <!-- DARK / LIGHT THEME QUICK TOGGLE -->
         <button type="button" class="icon-btn theme-toggle-btn" id="themeModeToggleBtn" data-action="toggleThemeMode" title="Switch to light theme" aria-label="Switch to light theme">
@@ -1579,14 +1675,25 @@
           </span>
         </button>
         <!-- DISCREET PRIVACY MODE TOGGLE -->
-        <button type="button" class="icon-btn" id="privacyToggleBtn" data-action="togglePrivacyMode" title="Discreet Screen Mode (Anti-Shoulder Surfing)">
-          <span>👁️</span>
+        <button type="button" class="icon-btn" id="privacyToggleBtn" data-action="togglePrivacyMode" title="Discreet Screen Mode (Anti-Shoulder Surfing)" aria-label="Toggle discreet screen mode">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+          </svg>
         </button>
-        <button type="button" class="icon-btn" data-action="openSetupModal" title="Setup or Reconfigure Semester">
-          <span>⚡</span> <span class="btn-label">Setup</span>
+        <button type="button" class="icon-btn" data-action="openSetupModal" title="Setup or Reconfigure Semester" aria-label="Semester setup">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"></path>
+          </svg>
+          <span class="btn-label">Setup</span>
         </button>
-        <button type="button" class="icon-btn" data-action="openTargetModal" title="Set Criteria Target">
-          <span>🎯</span> <span id="topTargetVal">75%</span>
+        <button type="button" class="icon-btn" data-action="openTargetModal" title="Set Criteria Target" aria-label="Set attendance target">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="9"></circle>
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v3M12 19v3M2 12h3M19 12h3"></path>
+          </svg>
+          <span id="topTargetVal">75%</span>
         </button>
       </div>
     </header>
@@ -1665,14 +1772,20 @@
       <!-- 2. SUBJECT-WISE ANALYTICS LIST -->
       <div id="subjectsList" class="subjects-list"></div>
 
-      <div id="emptyState" style="display:none; text-align:center; padding:36px 18px; background:var(--bg-card); border:1px solid var(--border-accent); border-radius:var(--radius-lg); margin-top:8px;">
-        <div style="font-size:40px; margin-bottom:8px;">🎓</div>
+      <div id="emptyState" style="display:none; text-align:center; padding:36px 18px; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-lg); margin-top:8px;">
+        <div class="empty-emblem" aria-hidden="true">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"></path>
+            <path d="M22 10v6"></path>
+            <path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"></path>
+          </svg>
+        </div>
         <p style="font-size:17px; font-weight:800; color:var(--text-strong); margin-bottom:6px;">No Subjects Configured Yet</p>
         <p style="font-size:13px; color:var(--text-muted); max-width:340px; margin:0 auto 16px; line-height:1.45;">
           Tell Attendify how many courses you have this semester and name them to start calculating your 75% attendance criteria.
         </p>
         <button type="button" class="btn-primary" style="margin:0 auto; padding:12px 24px;" data-action="openSetupModal">
-          ⚡ Start Semester Setup (30 sec)
+          Start Semester Setup
         </button>
       </div>
 
@@ -1715,12 +1828,12 @@
             <div class="day-detail-date" id="calSelectedDateText">--</div>
           </div>
           <button type="button" class="icon-btn" id="calToggleHolidayBtn" data-action="toggleHolidayForSelectedDate">
-            <span>🎉</span> Holiday
+            Holiday
           </button>
         </div>
 
         <div id="calSelectedDateHolidayBanner" class="shortage-banner banner-safe" style="display:none;">
-          🎉 <strong>Official Holiday / Off Day:</strong> No classes conducted on this date.
+          <strong>Official Holiday / Off Day:</strong> No classes conducted on this date.
         </div>
 
         <div style="font-size:12px; color:var(--text-dim); font-weight:700;">Subject Attendance on this Day:</div>
@@ -1780,32 +1893,38 @@
 
         <div class="appearance-mode-grid" role="group" aria-label="Appearance mode">
           <button type="button" class="appearance-mode-btn active" id="modeBtn_dark" data-action="setThemeMode" data-mode="dark" aria-pressed="true">
-            <span class="mode-ico">🌙</span> Dark
+            <span class="mode-ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+            </span> Dark
           </button>
           <button type="button" class="appearance-mode-btn" id="modeBtn_light" data-action="setThemeMode" data-mode="light" aria-pressed="false">
-            <span class="mode-ico">☀️</span> Light
+            <span class="mode-ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path></svg>
+            </span> Light
           </button>
           <button type="button" class="appearance-mode-btn" id="modeBtn_system" data-action="setThemeMode" data-mode="system" aria-pressed="false">
-            <span class="mode-ico">🖥️</span> System
+            <span class="mode-ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"></rect><path d="M8 21h8M12 17v4"></path></svg>
+            </span> System
           </button>
         </div>
 
         <div class="theme-picker-label">Accent palette</div>
 
         <div class="theme-picker-grid">
-          <div class="theme-card active" id="themeBtn_navy-purple" data-action="setAppTheme" data-accent="navy-purple">
-            <div class="theme-swatch" style="background: linear-gradient(135deg, #0a0f1f 35%, #4f46e5 70%, #d946ef 100%);"></div>
-            <span>Elegant Navy &amp; Purple</span>
+          <div class="theme-card active" id="themeBtn_graphite" data-action="setAppTheme" data-accent="graphite">
+            <div class="theme-swatch" style="background: linear-gradient(135deg, #0b0c0e 38%, #d9bc8c 100%);"></div>
+            <span>Graphite</span>
           </div>
 
-          <div class="theme-card" id="themeBtn_violet" data-action="setAppTheme" data-accent="violet">
-            <div class="theme-swatch" style="background: linear-gradient(135deg, #0f0722 35%, #c026d3 70%, #f472b6 100%);"></div>
-            <span>Cyber Violet</span>
+          <div class="theme-card" id="themeBtn_sapphire" data-action="setAppTheme" data-accent="sapphire">
+            <div class="theme-swatch" style="background: linear-gradient(135deg, #05080f 38%, #7ea8d6 100%);"></div>
+            <span>Sapphire</span>
           </div>
 
-          <div class="theme-card" id="themeBtn_amoled" data-action="setAppTheme" data-accent="amoled">
-            <div class="theme-swatch" style="background: linear-gradient(135deg, #000000 35%, #4f46e5 70%, #a855f7 100%);"></div>
-            <span>Midnight AMOLED</span>
+          <div class="theme-card" id="themeBtn_obsidian" data-action="setAppTheme" data-accent="obsidian">
+            <div class="theme-swatch" style="background: linear-gradient(135deg, #000000 38%, #e6e2d8 100%);"></div>
+            <span>Obsidian</span>
           </div>
         </div>
       </div>
@@ -1813,7 +1932,7 @@
       <!-- CLOUD STORAGE & SYNC CARD -->
       <div class="calc-card">
         <div style="display:flex; justify-content:space-between; align-items:center;">
-          <h2 style="font-size:17px; font-weight:800; color:var(--text-strong);">☁️ Cloud Storage &amp; Sync</h2>
+          <h2 style="font-size:17px; font-weight:800; color:var(--text-strong);">Cloud Storage &amp; Sync</h2>
           <span class="criteria-pill pill-safe" id="cloudConnectionBadge"><span class="pill-dot dot-green"></span> Cloud Connected</span>
         </div>
         <p style="font-size:12.5px; color:var(--text-muted);">
@@ -1827,7 +1946,7 @@
               <div id="settingsStudentNameDisplay" style="font-size:14px; font-weight:800; color:var(--text-strong);">--</div>
             </div>
             <button type="button" class="icon-btn" style="padding:4px 9px; font-size:11px;" data-action="openEditNameModal">
-              ✏️ Edit Name
+              Edit Name
             </button>
           </div>
 
@@ -1837,7 +1956,7 @@
               <div id="settingsSyncCodeDisplay" style="font-size:13px; font-weight:800; font-family:var(--font-mono); color:var(--brand);">--</div>
             </div>
             <button type="button" class="icon-btn" style="padding:4px 9px; font-size:11px;" data-action="copySyncCode">
-              📋 Copy Code
+              Copy Code
             </button>
           </div>
 
@@ -1848,17 +1967,17 @@
             </div>
             <div style="display:flex; gap:6px;">
               <button type="button" class="icon-btn" id="toggleKeyVisibilityBtn" style="padding:4px 8px; font-size:11px;" data-action="toggleKeyVisibility">
-                👁️ Show
+                Show
               </button>
               <button type="button" class="icon-btn" style="padding:4px 8px; font-size:11px;" data-action="copySyncKey">
-                📋 Key
+                Key
               </button>
             </div>
           </div>
 
           <div style="border-top:1px solid var(--hairline); padding-top:8px; display:flex; justify-content:space-between; align-items:center;">
             <button type="button" class="icon-btn" style="width:100%; justify-content:center; padding:7px; font-size:11.5px; font-weight:700;" data-action="copyPairingCredentials">
-              🔑 Copy Full Pairing Credentials (Code:Key)
+              Copy Full Pairing Credentials (Code:Key)
             </button>
           </div>
 
@@ -1870,16 +1989,16 @@
 
         <div style="display:flex; gap:8px;">
           <button type="button" class="btn-primary" style="flex:1; height:42px; font-size:12.5px;" data-action="triggerManualSync">
-            🔄 Sync to Cloud Now
+            Sync to Cloud Now
           </button>
           <button type="button" class="icon-btn" style="flex:1; justify-content:center; height:42px; font-size:12px;" data-action="openRestoreCloudModal">
-            📥 Restore from Cloud
+            Restore from Cloud
           </button>
         </div>
 
         <div style="margin-top:8px;">
           <button type="button" class="act-btn act-absent" style="width:100%; height:38px; justify-content:center; font-size:11.5px; font-weight:700;" data-action="wipeCloudBackupOnly" title="Erase your cloud backup record from the server">
-            🗑️ Wipe Cloud Backup from Server
+            Wipe Cloud Backup from Server
           </button>
         </div>
       </div>
@@ -1908,25 +2027,21 @@
         <!-- Security Status Checklist -->
         <div class="security-status-grid">
           <div class="security-check-row">
-            <span class="sec-icon">🔒</span>
             <div><strong>Zero Secret Keys / Passwords in Frontend:</strong> Runs entirely client-side without embedded API keys or credentials.</div>
           </div>
           <div class="security-check-row">
-            <span class="sec-icon">🛡️</span>
             <div><strong>Content Security Policy (CSP):</strong> Restricts script execution to sanitized sources.</div>
           </div>
           <div class="security-check-row">
-            <span class="sec-icon">📝</span>
             <div><strong>Strict JSON Schema Validator:</strong> Checks all uploaded files to stop malicious payload injection.</div>
           </div>
           <div class="security-check-row">
-            <span class="sec-icon">🌐</span>
             <div><strong>Local-Only Storage:</strong> Your records stay in your device's isolated storage sandbox. 0% telemetry.</div>
           </div>
         </div>
 
         <button type="button" class="icon-btn" style="justify-content:center; height:40px;" data-action="openPrivacyModal">
-          <span>📜</span> Read Full Privacy &amp; Security Policy
+          Read Full Privacy &amp; Security Policy
         </button>
       </div>
 
@@ -1936,37 +2051,37 @@
 
         <div style="display:flex; flex-direction:column; gap:10px;">
           <button type="button" class="icon-btn" style="justify-content:space-between; height:44px;" data-action="openSetupModal">
-            <span>⚡ Re-run Semester Setup Wizard</span>
-            <span>➔</span>
+            <span>Re-run Semester Setup Wizard</span>
+            <span>›</span>
           </button>
           
           <button type="button" class="icon-btn" style="justify-content:space-between; height:44px;" data-action="openTargetModal">
-            <span>🎯 Change Criteria Target (<span id="settingsTargetLabel">75%</span>)</span>
-            <span>✏️</span>
+            <span>Change Criteria Target (<span id="settingsTargetLabel">75%</span>)</span>
+            <span>›</span>
           </button>
 
           <!-- Safe Timestamped JSON Export -->
           <button type="button" class="icon-btn" style="justify-content:space-between; height:44px;" data-action="exportData">
-            <span>💾 Export Attendance Backup (JSON)</span>
-            <span>⬇</span>
+            <span>Export Attendance Backup (JSON)</span>
+            <span>›</span>
           </button>
 
           <!-- Clean CSV Report Export -->
           <button type="button" class="icon-btn" style="justify-content:space-between; height:44px;" data-action="exportCSVReport">
-            <span>📊 Export Attendance Report (CSV / Sheets)</span>
-            <span>⬇</span>
+            <span>Export Attendance Report (CSV / Sheets)</span>
+            <span>›</span>
           </button>
 
           <!-- Validated Import -->
           <label class="icon-btn" style="justify-content:space-between; height:44px; cursor:pointer;">
-            <span>📂 Import &amp; Validate Backup</span>
-            <span>⬆</span>
+            <span>Import &amp; Validate Backup</span>
+            <span>›</span>
             <input type="file" id="importFileInput" accept=".json" style="display:none;">
           </label>
 
           <!-- Safe Multi-Step Deletion Option -->
           <button type="button" class="act-btn act-absent" style="height:44px; margin-top:8px;" data-action="openDeleteModal">
-            🗑️ Clear All Subjects &amp; Data Deletion Options
+            Clear All Subjects &amp; Data Deletion Options
           </button>
         </div>
       </div>
@@ -2020,14 +2135,14 @@
     <div class="modal-sheet">
       <div class="sheet-handle"></div>
       <div class="sheet-title">
-        <span>🎓 Semester Setup Wizard</span>
+        <span>Semester Setup Wizard</span>
         <button type="button" class="close-btn" data-action="closeSetupModal">✕</button>
       </div>
 
       <!-- Step 1: Student Name & Number of Subjects -->
       <div id="setupStep1">
         <div style="text-align:center; margin-bottom:14px;">
-          <h3 style="font-size:17px; font-weight:800; color:var(--text-strong);">Welcome to Attendify 🎓</h3>
+          <h3 style="font-size:17px; font-weight:800; color:var(--text-strong);">Welcome to Attendify</h3>
           <p style="font-size:12.5px; color:var(--text-muted); margin-top:4px;">
             Set up your name and subjects to sync with cloud storage:
           </p>
@@ -2080,7 +2195,7 @@
             ← Back
           </button>
           <button type="button" class="btn-primary" style="flex:2; height:44px;" data-action="finishSetup">
-            ✓ Save &amp; Start Tracking 🚀
+            Save &amp; Start Tracking
           </button>
         </div>
       </div>
@@ -2142,7 +2257,7 @@
     <div class="modal-sheet">
       <div class="sheet-handle"></div>
       <div class="sheet-title">
-        <span>🎯 Attendance Criteria Target</span>
+        <span>Attendance Criteria Target</span>
         <button type="button" class="close-btn" data-action="closeTargetModal">✕</button>
       </div>
 
@@ -2205,7 +2320,7 @@
     <div class="modal-sheet">
       <div class="sheet-handle"></div>
       <div class="sheet-title">
-        <span>🛡️ Privacy &amp; Security Policy</span>
+        <span>Privacy &amp; Security Policy</span>
         <button type="button" class="close-btn" data-action="closePrivacyModal">✕</button>
       </div>
 
@@ -2252,7 +2367,7 @@
     <div class="modal-sheet">
       <div class="sheet-handle"></div>
       <div class="sheet-title">
-        <span style="color:var(--danger-text);">⚠️ Confirm Permanent Data Deletion</span>
+        <span style="color:var(--danger-text);">Confirm Permanent Data Deletion</span>
         <button type="button" class="close-btn" data-action="closeDeleteModal">✕</button>
       </div>
 
@@ -2265,15 +2380,15 @@
       </div>
 
       <p style="font-size:12px; color:var(--text-dim);">
-        💡 We recommend exporting a JSON or CSV backup before wiping your data.
+        We recommend exporting a JSON or CSV backup before wiping your data.
       </p>
 
       <div style="display:flex; flex-direction:column; gap:8px; margin-top:4px;">
         <button type="button" class="icon-btn" style="justify-content:center; height:42px;" data-action="exportData">
-          <span>⬇</span> Download Backup First
+          Download Backup First
         </button>
         <button type="button" class="act-btn act-absent" style="height:44px; font-weight:800;" data-action="confirmPermanentDelete">
-          🗑️ Erase Local Data &amp; Wipe Cloud Backup
+          Erase Local Data &amp; Wipe Cloud Backup
         </button>
         <button type="button" class="icon-btn" style="justify-content:center; height:40px;" data-action="closeDeleteModal">
           Cancel
@@ -2289,7 +2404,7 @@
     <div class="modal-sheet">
       <div class="sheet-handle"></div>
       <div class="sheet-title">
-        <span>☁️ Restore from Cloud Storage</span>
+        <span>Restore from Cloud Storage</span>
         <button type="button" class="close-btn" data-action="closeRestoreCloudModal">✕</button>
       </div>
 
@@ -2313,7 +2428,7 @@
           Cancel
         </button>
         <button type="button" class="btn-primary" style="flex:2; height:44px;" data-action="confirmRestoreFromCloud">
-          📥 Fetch &amp; Restore
+          Fetch &amp; Restore
         </button>
       </div>
     </div>
@@ -2324,7 +2439,7 @@
     <div class="modal-sheet">
       <div class="sheet-handle"></div>
       <div class="sheet-title">
-        <span>✏️ Edit Your Name</span>
+        <span>Edit Your Name</span>
         <button type="button" class="close-btn" data-action="closeEditNameModal">✕</button>
       </div>
 

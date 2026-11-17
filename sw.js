@@ -7,7 +7,7 @@
 // 4. Non-GET requests: Direct bypass
 // ==========================================================================
 
-const CACHE_NAME = 'attendify-v9-neon';
+const CACHE_NAME = 'attendify-v12-polish';
 
 // Critical core assets to precache on install
 const PRECACHE_ASSETS = [
