@@ -7,13 +7,13 @@
 // 4. Non-GET requests: Direct bypass
 // ==========================================================================
 
-const CACHE_NAME = 'attendify-v15-account-modal';
+const CACHE_NAME = 'attendify-v16-auth-gate';
 
 // Critical core assets to precache on install
 const PRECACHE_ASSETS = [
   './',
   './index.html',
-  './app.js?v=20261121',
+  './app.js?v=20261121gate',
   './app.js',
   './manifest.json',
   './icon.svg',

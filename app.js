@@ -38,6 +38,7 @@
         syncCode: generateSyncCode(),
         syncAuthKey: generateAuthToken(),
         accountEmail: '',
+        authChoice: '',
         cloudSyncEnabled: true,
         lastSyncedAt: null,
         subjects: [],
@@ -73,11 +74,12 @@
       renderApp();
       initServiceWorker();
 
-      // Automatically launch onboarding setup wizard for new users
-      if (!appState.isSetupCompleted || !appState.subjects || appState.subjects.length === 0) {
-        setTimeout(() => {
-          openSetupModal();
-        }, 150);
+      // First launch requires an explicit choice: account or guest.
+      // The setup wizard only opens after that choice has been made.
+      if (needsAuthGate()) {
+        setTimeout(openAuthGate, 150);
+      } else {
+        openSetupIfNeeded();
       }
     });
 
@@ -249,6 +251,11 @@
         accountEmail = raw.accountEmail.trim().toLowerCase().substring(0, 254);
       }
 
+      // First-run account choice: '' (must choose), 'guest', or 'account'
+      const authChoice = raw.authChoice === 'guest' || raw.authChoice === 'account'
+        ? raw.authChoice
+        : '';
+
       // Cloud Sync Preference
       const cloudSyncEnabled = raw.cloudSyncEnabled !== false;
 
@@ -264,6 +271,7 @@
         syncCode,
         syncAuthKey,
         accountEmail,
+        authChoice,
         cloudSyncEnabled,
         lastSyncedAt,
         subjects: sanitizedSubjects,
@@ -1451,8 +1459,16 @@ Created ${newSubjects.length} customized subjects for you.`);
           const rawParsed = JSON.parse(event.target.result);
           // Run rigorous schema validation
           const validated = validateAndSanitizeState(rawParsed);
+          const previousAccountEmail = appState.accountEmail;
+          const previousAuthChoice = appState.authChoice;
 
           appState = validated;
+          if (!appState.accountEmail && previousAccountEmail) {
+            appState.accountEmail = previousAccountEmail;
+            appState.authChoice = 'account';
+          } else if (!appState.accountEmail && previousAuthChoice === 'guest') {
+            appState.authChoice = 'guest';
+          }
           applyThemeUI(appState.activeTheme || 'graphite');
           applyPrivacyModeUI();
           saveState();
@@ -1543,6 +1559,7 @@ Created ${newSubjects.length} customized subjects for you.`);
       applyThemeUI('graphite');
       applyPrivacyModeUI();
       saveStateOnly();
+      setTimeout(openAuthGate, 150);
 
       if (deleteBtn) {
         deleteBtn.disabled = false;
@@ -1846,8 +1863,12 @@ Save this code to restore your courses on another phone or computer!`);
 
         const validated = validateAndSanitizeState(cloudData);
         const existingAccountEmail = appState.accountEmail || '';
+        const existingAuthChoice = appState.authChoice || '';
         appState = validated;
         appState.accountEmail = cloudData.accountEmail || existingAccountEmail;
+        appState.authChoice = appState.accountEmail
+          ? (validated.authChoice || 'account')
+          : (existingAuthChoice || 'guest');
         appState.syncCode = code;
         appState.syncAuthKey = key;
         appState.isSetupCompleted = true;
@@ -1867,6 +1888,42 @@ Save this code to restore your courses on another phone or computer!`);
     // -------------------------------------------------------------
     // EMAIL / PASSWORD ACCOUNTS
     // -------------------------------------------------------------
+    // -------------------------------------------------------------
+    // FIRST-RUN ACCOUNT GATE — a choice is required before using the app
+    // -------------------------------------------------------------
+    function needsAuthGate() {
+      return !appState.accountEmail && appState.authChoice !== 'guest';
+    }
+
+    function openSetupIfNeeded() {
+      if (!appState.isSetupCompleted || !appState.subjects || appState.subjects.length === 0) {
+        setTimeout(() => openSetupModal(), 150);
+      }
+    }
+
+    function openAuthGate() {
+      const modal = document.getElementById('authGateModal');
+      if (modal) modal.classList.add('open');
+    }
+
+    function closeAuthGate() {
+      const modal = document.getElementById('authGateModal');
+      if (modal) modal.classList.remove('open');
+    }
+
+    function continueAsGuest() {
+      appState.authChoice = 'guest';
+      saveStateOnly();
+      closeAuthGate();
+      renderApp();
+      openSetupIfNeeded();
+    }
+
+    function openAccountFromGate() {
+      closeAuthGate();
+      openAccountModal();
+    }
+
     const ACCOUNT_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
     function setAccountMessage(text, kind) {
@@ -1884,7 +1941,7 @@ Save this code to restore your courses on another phone or computer!`);
       const signedIn = Boolean(appState.accountEmail);
       const badge = document.getElementById('accountStatusBadge');
       if (badge) {
-        badge.textContent = signedIn ? 'Signed in' : 'Not signed in';
+        badge.textContent = signedIn ? 'Signed in' : (appState.authChoice === 'guest' ? 'Guest' : 'Not signed in');
         badge.className = 'criteria-pill ' + (signedIn ? 'pill-safe' : 'pill-neutral');
       }
       [
@@ -1899,7 +1956,11 @@ Save this code to restore your courses on another phone or computer!`);
         if (display) display.textContent = appState.accountEmail || '--';
       });
       const headerBtn = document.getElementById('headerAccountBtn');
-      if (headerBtn) headerBtn.title = signedIn ? `Signed in as ${appState.accountEmail}` : 'Sign up or sign in';
+      if (headerBtn) {
+        headerBtn.title = signedIn
+          ? `Signed in as ${appState.accountEmail}`
+          : (appState.authChoice === 'guest' ? 'Guest mode — tap to create an account' : 'Sign up or sign in');
+      }
     }
 
     function openAccountModal() {
@@ -1917,6 +1978,7 @@ Save this code to restore your courses on another phone or computer!`);
     function closeAccountModal() {
       const modal = document.getElementById('accountModal');
       if (modal) modal.classList.remove('open');
+      if (needsAuthGate()) setTimeout(openAuthGate, 100);
     }
 
     function readAccountForm(requireStrongPassword, modal) {
@@ -1960,6 +2022,8 @@ Save this code to restore your courses on another phone or computer!`);
 
     async function adoptAccountSession(data, restoreCloud) {
       appState.accountEmail = data.email || '';
+      appState.authChoice = 'account';
+      closeAuthGate();
       appState.syncCode = data.sync_code;
       appState.syncAuthKey = data.auth_token;
       if (data.student_name && !appState.studentName) {
@@ -1980,6 +2044,7 @@ Save this code to restore your courses on another phone or computer!`);
               restored.accountEmail = appState.accountEmail;
               restored.syncCode = appState.syncCode;
               restored.syncAuthKey = appState.syncAuthKey;
+              restored.authChoice = 'account';
               restored.isSetupCompleted = true;
               appState = restored;
               applyThemeUI(appState.activeTheme || 'graphite');
@@ -2046,11 +2111,13 @@ Save this code to restore your courses on another phone or computer!`);
     function signOut() {
       if (!confirm('Sign out of your Attendify account? Your records stay on this device.')) return;
       appState.accountEmail = '';
+      appState.authChoice = '';
       appState.syncCode = generateSyncCode();
       appState.syncAuthKey = generateAuthToken();
       saveStateOnly();
       renderApp();
-      setAccountMessage('Signed out. This device is now local-only.', 'success');
+      setAccountMessage('Signed out. Choose how to continue.', 'success');
+      setTimeout(openAuthGate, 150);
     }
 
     function openEditNameModal() {
@@ -2074,7 +2141,7 @@ Save this code to restore your courses on another phone or computer!`);
 
     function initServiceWorker() {
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js?v=20261121', { updateViaCache: 'none' }).catch(() => {});
+        navigator.serviceWorker.register('./sw.js?v=20261121gate', { updateViaCache: 'none' }).catch(() => {});
       }
     }
   
@@ -2087,7 +2154,7 @@ Save this code to restore your courses on another phone or computer!`);
     document.addEventListener('click', (e) => {
       // Backdrop click closes open modal
       if (e.target.classList.contains('modal-backdrop')) {
-        e.target.classList.remove('open');
+        if (e.target.getAttribute('data-locked') !== 'true') e.target.classList.remove('open');
         return;
       }
 
@@ -2211,6 +2278,13 @@ Save this code to restore your courses on another phone or computer!`);
         case 'saveEditedName':
           saveEditedName();
           break;
+        case 'gateCreateAccount':
+        case 'gateSignIn':
+          openAccountFromGate();
+          break;
+        case 'continueAsGuest':
+          continueAsGuest();
+          break;
         case 'openAccountModal':
           openAccountModal();
           break;
@@ -2329,7 +2403,9 @@ Save this code to restore your courses on another phone or computer!`);
     // Accessibility: Close modals with Escape key
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
-        document.querySelectorAll('.modal-backdrop.open').forEach(m => m.classList.remove('open'));
+        document.querySelectorAll('.modal-backdrop.open').forEach((m) => {
+          if (m.getAttribute('data-locked') !== 'true') m.classList.remove('open');
+        });
       }
     });
 

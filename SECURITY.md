@@ -52,7 +52,7 @@ This document details the security model, cryptographic controls, cloud access a
 - No master database keys or passwords exist in the client distribution.
 
 ### F. Multi-Tier Cache & Offline Reliability
-- **Service Worker (`attendify-v14-accounts`)**:
+- **Service Worker (`attendify-v16-auth-gate`)**:
   - **Navigation (`index.html`)**: Network-First ensures returning users always receive the newest deployed version when connected to the internet. If offline, the cached app shell loads immediately.
   - **Static Assets (`app.js`, icons, fonts)**: Stale-While-Revalidate allows near-instant local boot while asynchronously refreshing cached assets.
   - **API Requests**: Cloud sync API calls bypass static caching, preventing cached or stale student data.
@@ -65,7 +65,8 @@ This document details the security model, cryptographic controls, cloud access a
   `5A:E4:A9:D0:42:FB:4D:87:26:E8:A2:A5:47:C4:5C:E0:74:3E:16:FB:6A:64:FA:CA:40:DC:B9:B9:7A:8D:8A:7A`
 
 ### H. Email/Password Account Authentication
-- Accounts are optional and additive: the original Cloud Sync Code + Private Secret Key flow continues to work unchanged.
+- First launch requires an explicit choice: create an email account, sign in, or continue as guest. Guest mode is local-only and persistent; signing out reopens the choice gate.
+- Registered accounts are additive: the original Cloud Sync Code + Private Secret Key flow continues to work unchanged.
 - The browser never stores or transmits a reusable account password to the database. `POST /auth/register` hashes it server-side with **salted scrypt** (16-byte random salt, 64-byte derived key). Plaintext passwords are never persisted.
 - `POST /auth/login` verifies the hash with a constant-time comparison. Unknown emails run an equally expensive dummy scrypt verification plus a short random delay, so timing cannot enumerate registered users. All credential failures return the same generic message.
 - Successful registration/login returns the existing `sync_code` + `auth_token`, so account data is protected by the same per-record `SHA-256` token check on every `/push` and `/pull`.
