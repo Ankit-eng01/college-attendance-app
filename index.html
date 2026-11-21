@@ -87,16 +87,16 @@
       --swatch-border: rgba(255, 255, 255, 0.2);
       --card-sheen: rgba(255, 255, 255, 0.045);
 
-      /* Ambient backdrop */
-      --ambient-top: rgba(217, 188, 140, 0.1);
-      --ambient-a: rgba(120, 146, 170, 0.1);
-      --ambient-b: rgba(217, 188, 140, 0.07);
-      --ambient-c: rgba(88, 108, 128, 0.06);
-      --ambient-warm: rgba(217, 188, 140, 0.05);
-      --grid-color: rgba(255, 255, 255, 0.03);
-      --noise-opacity: 0.035;
-      --vignette: rgba(2, 3, 5, 0.62);
-      --orb-opacity: 0.7;
+      /* Premium ambient backdrop */
+      --ambient-top: rgba(217, 188, 140, 0.18);
+      --ambient-a: rgba(138, 164, 188, 0.16);
+      --ambient-b: rgba(217, 188, 140, 0.13);
+      --ambient-c: rgba(92, 114, 136, 0.11);
+      --ambient-warm: rgba(217, 188, 140, 0.1);
+      --grid-color: rgba(255, 255, 255, 0.045);
+      --noise-opacity: 0.05;
+      --vignette: rgba(2, 3, 5, 0.46);
+      --orb-opacity: 0.88;
 
       --radius-sm: 8px;
       --radius-md: 14px;
@@ -241,15 +241,15 @@
       --swatch-border: rgba(23, 24, 26, 0.14);
       --card-sheen: rgba(255, 255, 255, 0.5);
 
-      --ambient-top: rgba(138, 104, 54, 0.1);
-      --ambient-a: rgba(120, 146, 170, 0.1);
-      --ambient-b: rgba(217, 188, 140, 0.12);
-      --ambient-c: rgba(88, 108, 128, 0.06);
-      --ambient-warm: rgba(194, 148, 74, 0.1);
-      --grid-color: rgba(23, 24, 26, 0.035);
-      --noise-opacity: 0.025;
-      --vignette: rgba(214, 208, 196, 0.4);
-      --orb-opacity: 0.6;
+      --ambient-top: rgba(138, 104, 54, 0.13);
+      --ambient-a: rgba(120, 146, 170, 0.12);
+      --ambient-b: rgba(217, 188, 140, 0.15);
+      --ambient-c: rgba(88, 108, 128, 0.08);
+      --ambient-warm: rgba(194, 148, 74, 0.12);
+      --grid-color: rgba(23, 24, 26, 0.045);
+      --noise-opacity: 0.03;
+      --vignette: rgba(214, 208, 196, 0.36);
+      --orb-opacity: 0.7;
     }
 
     [data-mode="light"][data-theme="sapphire"] {
@@ -322,8 +322,13 @@
       z-index: -1;
       overflow: hidden;
       pointer-events: none;
-      background: var(--bg);
-      transition: background-color 0.35s ease;
+      background:
+        radial-gradient(ellipse 82% 58% at 8% -12%, var(--ambient-top) 0%, transparent 68%),
+        radial-gradient(ellipse 66% 52% at 104% 4%, var(--ambient-b) 0%, transparent 64%),
+        radial-gradient(ellipse 72% 48% at 50% 112%, var(--ambient-c) 0%, transparent 70%),
+        linear-gradient(180deg, var(--hairline) 0%, transparent 16%, transparent 82%, var(--vignette) 130%),
+        var(--bg);
+      transition: background 0.35s ease;
     }
     .bg-canvas::before {
       content: '';
@@ -331,24 +336,44 @@
       inset: 0;
       background-image:
         linear-gradient(var(--grid-color) 1px, transparent 1px),
-        linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
-      background-size: 64px 64px;
-      -webkit-mask-image: radial-gradient(ellipse 95% 65% at 50% 0%, #000 0%, transparent 72%);
-      mask-image: radial-gradient(ellipse 95% 65% at 50% 0%, #000 0%, transparent 72%);
-      opacity: 0.9;
+        linear-gradient(90deg, var(--grid-color) 1px, transparent 1px),
+        repeating-linear-gradient(116deg, transparent 0 7px, var(--border-subtle) 7px 8px);
+      background-size: 56px 56px, 56px 56px, 100% 100%;
+      -webkit-mask-image: radial-gradient(ellipse 115% 82% at 50% 0%, #000 0%, rgba(0, 0, 0, 0.45) 46%, transparent 82%);
+      mask-image: radial-gradient(ellipse 115% 82% at 50% 0%, #000 0%, rgba(0, 0, 0, 0.45) 46%, transparent 82%);
+      opacity: 0.95;
     }
     .bg-canvas::after {
       content: '';
       position: absolute;
       inset: 0;
-      background: radial-gradient(ellipse 85% 65% at 50% 38%, transparent 30%, var(--vignette) 100%);
+      background:
+        radial-gradient(ellipse 78% 58% at 50% 34%, transparent 22%, var(--vignette) 100%),
+        linear-gradient(180deg, transparent 58%, var(--hairline) 100%);
+    }
+    .bg-sheen {
+      position: absolute;
+      inset: -30%;
+      background: linear-gradient(112deg, transparent 36%, var(--brand-soft) 48%, transparent 60%);
+      opacity: 0.8;
+      transform: rotate(-7deg) translateY(-6%);
+      filter: blur(26px);
+      mix-blend-mode: screen;
+    }
+    [data-mode="light"] .bg-sheen {
+      mix-blend-mode: multiply;
+      opacity: 0.45;
     }
     .bg-orb {
       position: absolute;
       border-radius: 50%;
       background: radial-gradient(circle, var(--orb-color) 0%, transparent 68%);
       opacity: var(--orb-opacity);
+      mix-blend-mode: screen;
       will-change: transform;
+    }
+    [data-mode="light"] .bg-orb {
+      mix-blend-mode: multiply;
     }
     .bg-orb-a {
       width: 78vmax;
@@ -433,6 +458,7 @@
     }
 
     .app-container {
+      position: relative;
       max-width: 520px;
       width: 100%;
       margin: 0 auto;
@@ -440,6 +466,19 @@
       display: flex;
       flex-direction: column;
       gap: 16px;
+    }
+    .app-container::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 50%;
+      width: min(100%, 520px);
+      height: 1px;
+      transform: translateX(-50%);
+      background: linear-gradient(90deg, transparent 0%, var(--border-accent) 48%, transparent 100%);
+      opacity: 0.8;
+      pointer-events: none;
+      z-index: 1;
     }
 
     /* Top Bar */
@@ -1631,6 +1670,7 @@
     <span class="bg-orb bg-orb-b"></span>
     <span class="bg-orb bg-orb-c"></span>
     <span class="bg-orb bg-orb-d"></span>
+    <span class="bg-sheen"></span>
     <span class="bg-grain"></span>
   </div>
 
@@ -2594,6 +2634,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=20261121gate" defer></script>
+  <script src="app.js?v=20261121premium" defer></script>
 </body>
 </html>

@@ -7,13 +7,13 @@
 // 4. Non-GET requests: Direct bypass
 // ==========================================================================
 
-const CACHE_NAME = 'attendify-v16-auth-gate';
+const CACHE_NAME = 'attendify-v17-premium-bg';
 
 // Critical core assets to precache on install
 const PRECACHE_ASSETS = [
   './',
   './index.html',
-  './app.js?v=20261121gate',
+  './app.js?v=20261121premium',
   './app.js',
   './manifest.json',
   './icon.svg',

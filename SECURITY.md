@@ -52,7 +52,7 @@ This document details the security model, cryptographic controls, cloud access a
 - No master database keys or passwords exist in the client distribution.
 
 ### F. Multi-Tier Cache & Offline Reliability
-- **Service Worker (`attendify-v16-auth-gate`)**:
+- **Service Worker (`attendify-v17-premium-bg`)**:
   - **Navigation (`index.html`)**: Network-First ensures returning users always receive the newest deployed version when connected to the internet. If offline, the cached app shell loads immediately.
   - **Static Assets (`app.js`, icons, fonts)**: Stale-While-Revalidate allows near-instant local boot while asynchronously refreshing cached assets.
   - **API Requests**: Cloud sync API calls bypass static caching, preventing cached or stale student data.
