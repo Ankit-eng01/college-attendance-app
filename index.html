@@ -1654,6 +1654,14 @@
       </div>
 
       <div class="header-actions">
+        <!-- ACCOUNT SIGN UP / SIGN IN -->
+        <button type="button" class="icon-btn" id="headerAccountBtn" data-action="openAccountModal" title="Sign up or sign in" aria-label="Sign up or sign in">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+          <span class="btn-label">Account</span>
+        </button>
         <!-- CLOUD STORAGE SYNC BUTTON -->
         <button type="button" class="icon-btn" id="headerCloudSyncBtn" data-action="triggerManualSync" title="Sync to Cloud Storage" aria-label="Sync to cloud storage">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -2443,6 +2451,53 @@
 
   
 
+  <!-- ACCOUNT SIGN UP / SIGN IN MODAL -->
+  <div id="accountModal" class="modal-backdrop">
+    <div class="modal-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-title">
+        <span>Your Account</span>
+        <button type="button" class="close-btn" data-action="closeAccountModal">✕</button>
+      </div>
+      <p style="font-size:13px; color:var(--text-muted); line-height:1.45;">
+        Create an account with email and password, or sign in to restore your attendance from the cloud.
+      </p>
+
+      <div id="accountModalSignedOut">
+        <div class="form-group">
+          <label class="form-lbl" for="accountModalEmail">Email address</label>
+          <input type="email" id="accountModalEmail" class="form-inp" placeholder="you@example.com" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false">
+        </div>
+        <div class="form-group">
+          <label class="form-lbl" for="accountModalPassword">Password</label>
+          <input type="password" id="accountModalPassword" class="form-inp" placeholder="8+ characters, letter &amp; number" autocomplete="current-password">
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="btn-primary" id="createAccountModalBtn" style="flex:1; height:44px; font-size:13px;" data-action="createAccountModal">
+            Create Account
+          </button>
+          <button type="button" class="icon-btn" id="signInModalBtn" style="flex:1; height:44px; justify-content:center; font-size:13px;" data-action="signInModal">
+            Sign In
+          </button>
+        </div>
+      </div>
+
+      <div id="accountModalSignedIn" style="display:none;">
+        <div style="background:var(--bg-surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:12px; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <span style="font-size:10px; color:var(--text-dim); text-transform:uppercase; font-weight:700;">Signed in as</span>
+            <div id="accountModalEmailDisplay" style="font-size:13.5px; font-weight:800; color:var(--text-strong); overflow-wrap:anywhere;">--</div>
+          </div>
+          <button type="button" class="icon-btn" style="padding:6px 12px; font-size:11.5px;" data-action="signOutModal">
+            Sign Out
+          </button>
+        </div>
+      </div>
+
+      <div id="accountModalMessage" style="font-size:12px; color:var(--text-muted); margin-top:10px; min-height:16px;" role="status" aria-live="polite"></div>
+    </div>
+  </div>
+
   <!-- RESTORE FROM CLOUD STORAGE MODAL -->
   <div id="restoreCloudModal" class="modal-backdrop" >
     <div class="modal-sheet">
@@ -2503,6 +2558,6 @@
     </div>
   </div>
 
-  <script src="app.js" defer></script>
+  <script src="app.js?v=20261121" defer></script>
 </body>
 </html>

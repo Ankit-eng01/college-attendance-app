@@ -1870,11 +1870,14 @@ Save this code to restore your courses on another phone or computer!`);
     const ACCOUNT_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
     function setAccountMessage(text, kind) {
-      const el = document.getElementById('accountMessage');
-      if (!el) return;
-      el.textContent = text || '';
-      el.style.color = kind === 'error' ? 'var(--danger)' :
-                       kind === 'success' ? 'var(--success-text)' : 'var(--text-muted)';
+      const color = kind === 'error' ? 'var(--danger)' :
+                    kind === 'success' ? 'var(--success-text)' : 'var(--text-muted)';
+      ['accountMessage', 'accountModalMessage'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.textContent = text || '';
+        el.style.color = color;
+      });
     }
 
     function updateAccountUI() {
@@ -1884,17 +1887,43 @@ Save this code to restore your courses on another phone or computer!`);
         badge.textContent = signedIn ? 'Signed in' : 'Not signed in';
         badge.className = 'criteria-pill ' + (signedIn ? 'pill-safe' : 'pill-neutral');
       }
-      const signedOutPanel = document.getElementById('accountSignedOutPanel');
-      const signedInPanel = document.getElementById('accountSignedInPanel');
-      if (signedOutPanel) signedOutPanel.style.display = signedIn ? 'none' : '';
-      if (signedInPanel) signedInPanel.style.display = signedIn ? '' : 'none';
-      const emailDisplay = document.getElementById('accountEmailDisplay');
-      if (emailDisplay) emailDisplay.textContent = appState.accountEmail || '--';
+      [
+        ['accountSignedOutPanel', 'accountSignedInPanel', 'accountEmailDisplay'],
+        ['accountModalSignedOut', 'accountModalSignedIn', 'accountModalEmailDisplay']
+      ].forEach(([outId, inId, displayId]) => {
+        const out = document.getElementById(outId);
+        const inn = document.getElementById(inId);
+        if (out) out.style.display = signedIn ? 'none' : '';
+        if (inn) inn.style.display = signedIn ? '' : 'none';
+        const display = document.getElementById(displayId);
+        if (display) display.textContent = appState.accountEmail || '--';
+      });
+      const headerBtn = document.getElementById('headerAccountBtn');
+      if (headerBtn) headerBtn.title = signedIn ? `Signed in as ${appState.accountEmail}` : 'Sign up or sign in';
     }
 
-    function readAccountForm(requireStrongPassword) {
-      const emailEl = document.getElementById('accountEmailInput');
-      const pwEl = document.getElementById('accountPasswordInput');
+    function openAccountModal() {
+      updateAccountUI();
+      const modal = document.getElementById('accountModal');
+      if (modal) modal.classList.add('open');
+      setTimeout(() => {
+        const target = appState.accountEmail
+          ? document.getElementById('accountModalSignedIn')
+          : document.getElementById('accountModalEmail');
+        if (target && target.focus) target.focus();
+      }, 100);
+    }
+
+    function closeAccountModal() {
+      const modal = document.getElementById('accountModal');
+      if (modal) modal.classList.remove('open');
+    }
+
+    function readAccountForm(requireStrongPassword, modal) {
+      const emailId = modal ? 'accountModalEmail' : 'accountEmailInput';
+      const pwId = modal ? 'accountModalPassword' : 'accountPasswordInput';
+      const emailEl = document.getElementById(emailId);
+      const pwEl = document.getElementById(pwId);
       const email = ((emailEl && emailEl.value) || '').trim().toLowerCase();
       const password = (pwEl && pwEl.value) || '';
       if (!ACCOUNT_EMAIL_RE.test(email)) {
@@ -1914,7 +1943,7 @@ Save this code to restore your courses on another phone or computer!`);
     }
 
     function setAccountBusy(busy) {
-      ['createAccountBtn', 'signInBtn'].forEach((id) => {
+      ['createAccountBtn', 'signInBtn', 'createAccountModalBtn', 'signInModalBtn'].forEach((id) => {
         const btn = document.getElementById(id);
         if (btn) btn.disabled = busy;
       });
@@ -1968,13 +1997,15 @@ Save this code to restore your courses on another phone or computer!`);
         restoreCloud ? 'Signed in successfully.' : 'Account created. Your data is syncing.',
         'success'
       );
-      const pwEl = document.getElementById('accountPasswordInput');
-      if (pwEl) pwEl.value = '';
+      ['accountPasswordInput', 'accountModalPassword'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
       await syncToCloudStorage();
     }
 
-    async function createAccount() {
-      const creds = readAccountForm(true);
+    async function createAccount(modal) {
+      const creds = readAccountForm(true, modal);
       if (!creds) return;
       setAccountBusy(true);
       setAccountMessage('Creating your account...');
@@ -1992,8 +2023,8 @@ Save this code to restore your courses on another phone or computer!`);
       }
     }
 
-    async function signIn() {
-      const creds = readAccountForm(false);
+    async function signIn(modal) {
+      const creds = readAccountForm(false, modal);
       if (!creds) return;
       setAccountBusy(true);
       setAccountMessage('Signing in...');
@@ -2043,7 +2074,7 @@ Save this code to restore your courses on another phone or computer!`);
 
     function initServiceWorker() {
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js').catch(() => {});
+        navigator.serviceWorker.register('./sw.js?v=20261121', { updateViaCache: 'none' }).catch(() => {});
       }
     }
   
@@ -2180,13 +2211,26 @@ Save this code to restore your courses on another phone or computer!`);
         case 'saveEditedName':
           saveEditedName();
           break;
+        case 'openAccountModal':
+          openAccountModal();
+          break;
+        case 'closeAccountModal':
+          closeAccountModal();
+          break;
         case 'createAccount':
-          createAccount();
+          createAccount(false);
           break;
         case 'signIn':
-          signIn();
+          signIn(false);
+          break;
+        case 'createAccountModal':
+          createAccount(true);
+          break;
+        case 'signInModal':
+          signIn(true);
           break;
         case 'signOut':
+        case 'signOutModal':
           signOut();
           break;
         case 'copySyncCode':
