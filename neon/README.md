@@ -71,8 +71,12 @@ All routes are `POST` with a JSON body, except `/health`.
 
 `data.device` is written by the app on every cloud sync with a compact profile:
 `label`, `type`, `browser`, `os`, `model`, `screen`, `access`, `updatedAt`.
+Labels use friendly names such as `iPhone · Safari`, `iPad · Safari`,
+`Samsung Galaxy ... · Samsung Internet`, `Chromebook · Chrome`,
+`Windows PC · Edge`, and `MacBook / Mac · Safari`. A browser on macOS cannot
+distinguish a MacBook from a desktop Mac, so it is labelled `MacBook / Mac`.
 No full user-agent string is stored. Older backups without `data.device` display
-as `Unknown device` / `-` in the admin console.
+as `Sync pending` / `-` until the user opens the updated app once and syncs.
 | `/pull` | `{ sync_code, auth_token }` | `200 { status: "success", data }` | `400` · `401` bad token · `404` no record · `500` |
 | `/delete` | `{ sync_code, auth_token }` | `200 { status: "deleted", rows_deleted }` | `400` · `401` · `500` |
 | `/health` | — | `200 { status: "ok", service: "attendify-sync" }` | — |

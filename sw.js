@@ -7,13 +7,13 @@
 // 4. Non-GET requests: Direct bypass
 // ==========================================================================
 
-const CACHE_NAME = 'attendify-v18-device-admin';
+const CACHE_NAME = 'attendify-v19-device-labels';
 
 // Critical core assets to precache on install
 const PRECACHE_ASSETS = [
   './',
   './index.html',
-  './app.js?v=20261126device',
+  './app.js?v=20261126device2',
   './app.js',
   './manifest.json',
   './icon.svg',

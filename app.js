@@ -1660,26 +1660,34 @@ Created ${newSubjects.length} customized subjects for you.`);
 
     // Compact device fingerprint for the admin console. No full user-agent string
     // is stored: only a readable label and a few coarse classification fields.
+    // macOS cannot distinguish MacBook from desktop Mac in a browser, so it is
+    // intentionally labelled "MacBook / Mac" rather than guessing.
     function getDeviceProfile() {
-      const ua = String(navigator.userAgent || '');
-      const platform = String(navigator.platform || '');
+      const nav = navigator || {};
+      const ua = String(nav.userAgent || '');
+      const platform = String(nav.platform || '');
+      const maxTouchPoints = Number(nav.maxTouchPoints || 0);
       const android = /Android/i.test(ua);
-      const iOS = /iPhone|iPad|iPod/i.test(ua);
-      const tablet = /iPad|Tablet/i.test(ua);
+      const iPhone = /iPhone/i.test(ua);
+      const iPod = /iPod/i.test(ua);
+      // iPadOS 13+ reports a desktop Mac user-agent; touch points reveal the iPad.
+      const iPad = /iPad/i.test(ua) || (/Macintosh/i.test(ua) && /MacIntel/.test(platform) && maxTouchPoints > 1);
+      const iOS = iPhone || iPad || iPod;
+      const tablet = iPad || /Tablet/i.test(ua) || (android && !/Mobile/i.test(ua));
       const mobile = android || iOS || /Mobile/i.test(ua);
       const twa = android && /; wv\)/.test(ua);
+      const iosVersion = (ua.match(/OS\s+([\d_]+)/) || [])[1];
+      const androidVersion = (ua.match(/Android\s+([\d.]+)/) || [])[1];
 
       let os = 'Unknown OS';
-      if (/Windows NT 10\.0/.test(ua)) os = 'Windows 10/11';
+      if (iPad) os = 'iPadOS' + (iosVersion ? ' ' + iosVersion.replace(/_/g, '.') : '');
+      else if (iPhone || iPod) os = 'iOS' + (iosVersion ? ' ' + iosVersion.replace(/_/g, '.') : '');
+      else if (/Windows NT 10\.0/.test(ua)) os = 'Windows 10/11';
       else if (/Windows NT/.test(ua)) os = 'Windows';
-      else if (android) {
-        const m = ua.match(/Android\s+([\d.]+)/);
-        os = 'Android' + (m ? ' ' + m[1] : '');
-      } else if (iOS) {
-        const m = ua.match(/OS\s+([\d_]+)/);
-        os = 'iOS' + (m ? ' ' + m[1].replace(/_/g, '.') : '');
-      } else if (/Mac OS X|Macintosh/.test(ua)) os = 'macOS';
+      else if (android) os = 'Android' + (androidVersion ? ' ' + androidVersion : '');
       else if (/CrOS/.test(ua)) os = 'ChromeOS';
+      else if (/Mac OS X|Macintosh/.test(ua)) os = 'macOS';
+      else if (/Linux/.test(ua)) os = 'Linux';
       else if (platform) os = platform;
 
       let browser = 'Browser';
@@ -1691,16 +1699,24 @@ Created ${newSubjects.length} customized subjects for you.`);
       else if (/Safari\//i.test(ua)) browser = 'Safari';
 
       let model = '';
-      const androidModel = ua.match(/Android[^;]*;\s*([^;)]+)/);
-      if (androidModel) model = androidModel[1].trim();
-      else if (/iPhone/.test(ua)) model = 'iPhone';
-      else if (/iPad/.test(ua)) model = 'iPad';
-      else if (/Windows/.test(ua)) model = 'Desktop PC';
-      else if (/Macintosh/.test(ua)) model = 'Mac';
+      if (iPhone) model = 'iPhone';
+      else if (iPad) model = 'iPad';
+      else if (iPod) model = 'iPod touch';
+      else if (android) {
+        const androidModel = (ua.match(/Android[^;]*;\s*([^;)]+)/) || [])[1];
+        model = androidModel ? androidModel.trim().replace(/\s+Build\/.*$/, '') : 'Android device';
+        if (/^SM-/.test(model)) model = 'Samsung Galaxy ' + model.slice(3);
+        else if (/Pixel/i.test(model)) model = 'Google ' + model;
+      } else if (/CrOS/.test(ua)) model = 'Chromebook';
+      else if (/Windows/.test(ua)) model = 'Windows PC';
+      else if (/Macintosh|Mac OS X/.test(ua)) model = 'MacBook / Mac';
+      else if (/Linux/.test(ua)) model = 'Linux PC';
+      else if (platform) model = platform;
 
       const type = tablet ? 'Tablet' : (mobile ? 'Mobile' : 'Desktop');
       const access = twa ? 'Attendify APK (TWA)' : 'Browser / PWA';
-      const label = [model || type, browser].filter(Boolean).join(' · ');
+      const channel = twa ? 'Attendify APK' : browser;
+      const label = [model || type, channel].filter(Boolean).join(' · ');
       const clean = (v, max) => String(v || '').replace(/[<>]/g, '').trim().slice(0, max);
 
       return {
@@ -2199,7 +2215,7 @@ Save this code to restore your courses on another phone or computer!`);
 
     function initServiceWorker() {
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js?v=20261126device', { updateViaCache: 'none' }).catch(() => {});
+        navigator.serviceWorker.register('./sw.js?v=20261126device2', { updateViaCache: 'none' }).catch(() => {});
       }
     }
   

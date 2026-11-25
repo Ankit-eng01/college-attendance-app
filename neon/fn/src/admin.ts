@@ -71,7 +71,7 @@ const SUMMARY_CTE = `
     from public.attendify_sync
   ), agg as (
     select b.sync_code, b.data, b.created_at, b.updated_at, b.subjects, b.device,
-      coalesce(nullif(b.device->>'label',''), 'Unknown device') as device_label,
+      coalesce(nullif(b.device->>'label',''), 'Awaiting next sync') as device_label,
       coalesce(nullif(b.device->>'type',''), '-') as device_type,
       coalesce(nullif(b.device->>'browser',''), '-') as device_browser,
       coalesce(nullif(b.device->>'os',''), '-') as device_os,
@@ -149,7 +149,7 @@ app.get("/api/stats", async (c) => {
          count(*) filter (where updated_at >= now() - interval '24 hours')::int as active_24h,
          count(*) filter (where updated_at >= now() - interval '7 days')::int as active_7d,
          coalesce(sum(pg_column_size(data)), 0)::bigint as bytes,
-         count(distinct device_label)::int as devices,
+         count(distinct device_label) filter (where device_label <> 'Awaiting next sync')::int as devices,
          max(updated_at) as newest,
          min(created_at) as oldest
        from agg`
@@ -517,6 +517,8 @@ const ADMIN_HTML = String.raw`<!DOCTYPE html>
   .dev .devico{font-size:13px;flex:0 0 auto}
   .dev .devtxt{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .dev b{color:var(--text);font-weight:700}
+  .dev.pending{border-style:dashed;color:var(--warn)}
+  .dev.pending b{color:var(--warn)}
   details.raw{background:var(--panel);border:1px solid var(--line);border-radius:12px;margin-top:18px;overflow:hidden}
   details.raw summary{cursor:pointer;padding:11px 14px;font-size:12.5px;font-weight:700;color:var(--muted);list-style:none}
   details.raw summary::-webkit-details-marker{display:none}
@@ -561,7 +563,7 @@ const ADMIN_HTML = String.raw`<!DOCTYPE html>
 <div class="wrap">
   <div class="note">
     <span aria-hidden="true">&#128274;</span>
-    <span>Private student data. Values are shown read-only; only deletion changes anything. Auth keys are never exposed; device rows show compact labels only.</span>
+    <span>Private student data. Values are shown read-only; only deletion changes anything. Auth keys are never exposed; device rows show compact labels only. Older backups show "Sync pending" until the user opens the updated app once.</span>
   </div>
 
   <div class="cards" id="cards"></div>
@@ -745,6 +747,11 @@ const ADMIN_HTML = String.raw`<!DOCTYPE html>
           var pct = r.attendance_pct;
           var g = grade(pct, r.target);
           var name = r.student_name || 'Unnamed student';
+          var devicePending = r.device_label === 'Awaiting next sync';
+          var deviceTitle = devicePending
+            ? 'Open Attendify on this device once to report it'
+            : [r.device_label, r.device_browser, r.device_os, r.device_access].filter(function(x){ return x && x !== '-'; }).join(' | ');
+          var deviceIcon = devicePending ? '&#8987;' : (String(r.device_type || '').toLowerCase().indexOf('mobile') >= 0 ? '&#128241;' : String(r.device_type || '').toLowerCase().indexOf('tablet') >= 0 ? '&#128241;' : '&#128187;');
           return '<tr data-code="' + esc(r.sync_code) + '">' +
             '<td><div class="who"><div class="avatar">' + esc(initials(r.student_name)) + '</div>' +
               '<div><div class="nm">' + esc(name) + '</div><div class="mono muted">' + esc(r.sync_code) + '</div></div></div></td>' +
@@ -753,9 +760,9 @@ const ADMIN_HTML = String.raw`<!DOCTYPE html>
             '<td class="right hide-sm">' + r.attended + ' / ' + r.conducted + '</td>' +
             '<td class="right">' + r.subjects + '</td>' +
             '<td class="right hide-sm">' + r.history + '</td>' +
-            '<td class="hide-sm" title="' + esc([r.device_label, r.device_browser, r.device_os, r.device_access].filter(function(x){ return x && x !== '-'; }).join(' | ')) + '">' +
-              '<span class="dev"><span class="devico">' + (String(r.device_type || '').toLowerCase().indexOf('mobile') >= 0 ? '&#128241;' : String(r.device_type || '').toLowerCase().indexOf('tablet') >= 0 ? '&#128241;' : '&#128187;') + '</span>' +
-              '<span class="devtxt"><b>' + esc(r.device_label || 'Unknown device') + '</b> &middot; ' + esc(ago(r.device_seen_at || r.updated_at)) + '</span></span></td>' +
+            '<td class="hide-sm" title="' + esc(deviceTitle) + '">' +
+              '<span class="dev' + (devicePending ? ' pending' : '') + '"><span class="devico">' + deviceIcon + '</span>' +
+              '<span class="devtxt"><b>' + esc(devicePending ? 'Sync pending' : r.device_label) + '</b> &middot; ' + esc(devicePending ? 'not reported' : ago(r.device_seen_at || r.updated_at)) + '</span></span></td>' +
             '<td class="hide-sm muted" title="' + esc(fmtTime(r.updated_at)) + '">' + ago(r.updated_at) + '</td>' +
             '<td class="right"><button class="btn" data-open="' + esc(r.sync_code) + '">View</button></td>' +
           '</tr>';
@@ -806,6 +813,7 @@ const ADMIN_HTML = String.raw`<!DOCTYPE html>
     var history = Array.isArray(d.history) ? d.history : [];
     var target = n(d.globalTarget) || 75;
     var dev = (rec.device && typeof rec.device === 'object') ? rec.device : {};
+    var devPending = !dev.label;
     var nameMap = {};
     subjects.forEach(function(s){ nameMap[s && s.id] = (s && s.name) || 'Subject'; });
 
@@ -832,8 +840,10 @@ const ADMIN_HTML = String.raw`<!DOCTYPE html>
       '<div class="kpi"><div class="k">Entries logged</div><div class="v">' + history.length + '</div></div>' +
       '</div>';
 
-    html += '<h3 class="sec">Device &amp; session</h3><div class="chips">' +
-      '<span class="chip">Device <b>' + esc(dev.label || 'Not reported') + '</b></span>' +
+    html += '<h3 class="sec">Device &amp; session</h3>';
+    if(devPending) html += '<div class="note" style="margin-bottom:10px"><span aria-hidden="true">&#8987;</span><span>Open Attendify on the user\'s device once to report the device model.</span></div>';
+    html += '<div class="chips">' +
+      '<span class="chip">Device <b>' + esc(dev.label || 'Awaiting next sync') + '</b></span>' +
       '<span class="chip">Type <b>' + esc(dev.type || '-') + '</b></span>' +
       '<span class="chip">Browser <b>' + esc(dev.browser || '-') + '</b></span>' +
       '<span class="chip">OS <b>' + esc(dev.os || '-') + '</b></span>' +
