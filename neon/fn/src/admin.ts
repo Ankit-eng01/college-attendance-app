@@ -11,10 +11,10 @@
 //   GET    /health               - unauthenticated liveness
 //   GET    /api/stats            - totals, students, subject/attendance sums
 //   GET    /api/activity?days=14 - per-day creates/updates
-//   GET    /api/records          - paged student summaries (?search=&sort=&limit=&offset=)
-//   GET    /api/records/:code    - one record incl. full `data`
+//   GET    /api/records          - paged student summaries incl. last device (?search=&sort=&limit=&offset=)
+//   GET    /api/records/:code    - one record incl. full `data` and derived `device`
 //   DELETE /api/records/:code    - delete one record
-//   GET    /api/export           - CSV of student summaries
+//   GET    /api/export           - CSV of student summaries incl. device columns
 //
 // auth_hash is never selected or returned.
 // =============================================================================
@@ -66,10 +66,17 @@ const TARGET_EXPR =
 const SUMMARY_CTE = `
   with base as (
     select sync_code, data, created_at, updated_at,
-      case when jsonb_typeof(data->'subjects') = 'array' then data->'subjects' else '[]'::jsonb end as subjects
+      case when jsonb_typeof(data->'subjects') = 'array' then data->'subjects' else '[]'::jsonb end as subjects,
+      case when jsonb_typeof(data->'device') = 'object' then data->'device' else '{}'::jsonb end as device
     from public.attendify_sync
   ), agg as (
-    select b.sync_code, b.data, b.created_at, b.updated_at, b.subjects,
+    select b.sync_code, b.data, b.created_at, b.updated_at, b.subjects, b.device,
+      coalesce(nullif(b.device->>'label',''), 'Unknown device') as device_label,
+      coalesce(nullif(b.device->>'type',''), '-') as device_type,
+      coalesce(nullif(b.device->>'browser',''), '-') as device_browser,
+      coalesce(nullif(b.device->>'os',''), '-') as device_os,
+      coalesce(nullif(b.device->>'access',''), '-') as device_access,
+      coalesce(b.device->>'updatedAt', b.updated_at::text) as device_seen_at,
       jsonb_array_length(b.subjects) as subject_count,
       coalesce((select sum(${numExpr("attended")}) from jsonb_array_elements(b.subjects) e), 0) as attended,
       coalesce((select sum(${numExpr("total")}) from jsonb_array_elements(b.subjects) e), 0) as conducted,
@@ -84,6 +91,7 @@ const SORTS: Record<string, string> = {
   attendance: "attendance_pct desc nulls last, updated_at desc",
   shortage: "attendance_pct asc nulls last, updated_at desc",
   subjects: "subject_count desc, updated_at desc",
+  device: "device_label asc nulls last, updated_at desc",
 };
 
 const app = new Hono();
@@ -141,6 +149,7 @@ app.get("/api/stats", async (c) => {
          count(*) filter (where updated_at >= now() - interval '24 hours')::int as active_24h,
          count(*) filter (where updated_at >= now() - interval '7 days')::int as active_7d,
          coalesce(sum(pg_column_size(data)), 0)::bigint as bytes,
+         count(distinct device_label)::int as devices,
          max(updated_at) as newest,
          min(created_at) as oldest
        from agg`
@@ -158,6 +167,7 @@ app.get("/api/stats", async (c) => {
       active_24h: r.active_24h,
       active_7d: r.active_7d,
       bytes: Number(r.bytes),
+      devices: r.devices,
       newest: r.newest,
       oldest: r.oldest,
       server_time: new Date().toISOString(),
@@ -209,6 +219,12 @@ app.get("/api/records", async (c) => {
          ${TARGET_EXPR} as target,
          history_count,
          pg_column_size(data) as bytes,
+         device_label,
+         device_type,
+         device_browser,
+         device_os,
+         device_access,
+         device_seen_at,
          created_at,
          updated_at,
          count(*) over() as total
@@ -216,6 +232,9 @@ app.get("/api/records", async (c) => {
        where ($1 = ''
          or sync_code ilike '%' || $1 || '%'
          or coalesce(data->>'studentName','') ilike '%' || $1 || '%'
+         or device_label ilike '%' || $1 || '%'
+         or coalesce(device_browser,'') ilike '%' || $1 || '%'
+         or coalesce(device_os,'') ilike '%' || $1 || '%'
          or exists (
            select 1 from jsonb_array_elements(subjects) e
            where coalesce(e->>'name','') ilike '%' || $1 || '%'
@@ -241,6 +260,12 @@ app.get("/api/records", async (c) => {
         target: r.target,
         history: r.history_count,
         bytes: Number(r.bytes),
+        device_label: r.device_label,
+        device_type: r.device_type,
+        device_browser: r.device_browser,
+        device_os: r.device_os,
+        device_access: r.device_access,
+        device_seen_at: r.device_seen_at,
         created_at: r.created_at,
         updated_at: r.updated_at,
       })),
@@ -265,6 +290,7 @@ app.get("/api/records/:code", async (c) => {
     return c.json({
       sync_code: r.sync_code,
       data: r.data,
+      device: (r.data && typeof r.data === "object" && r.data.device && typeof r.data.device === "object") ? r.data.device : null,
       bytes: Number(r.bytes),
       created_at: r.created_at,
       updated_at: r.updated_at,
@@ -301,12 +327,14 @@ app.get("/api/export", async (c) => {
          subject_count, attended, conducted,
          case when conducted > 0 then round(attended * 100.0 / conducted, 1) else null end as attendance_pct,
          ${TARGET_EXPR} as target,
-         history_count, pg_column_size(data) as bytes, created_at, updated_at
+         history_count, pg_column_size(data) as bytes,
+         device_label, device_type, device_browser, device_os, device_access, device_seen_at,
+         created_at, updated_at
        from agg order by updated_at desc`
     );
     const esc = (v: unknown) => '"' + String(v ?? "").replace(/"/g, '""') + '"';
     const lines = [
-      "sync_code,student_name,subjects,attended,conducted,attendance_pct,target,history_entries,bytes,created_at,updated_at",
+      "sync_code,student_name,subjects,attended,conducted,attendance_pct,target,history_entries,bytes,device_label,device_type,device_browser,device_os,device_access,device_seen_at,created_at,updated_at",
     ];
     for (const r of rows) {
       lines.push(
@@ -320,6 +348,12 @@ app.get("/api/export", async (c) => {
           r.target,
           r.history_count,
           r.bytes,
+          esc(r.device_label),
+          esc(r.device_type),
+          esc(r.device_browser),
+          esc(r.device_os),
+          esc(r.device_access),
+          esc(r.device_seen_at),
           esc(r.created_at),
           esc(r.updated_at),
         ].join(",")
@@ -479,6 +513,10 @@ const ADMIN_HTML = String.raw`<!DOCTYPE html>
   .chips{display:flex;flex-wrap:wrap;gap:8px}
   .chip{background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:5px 11px;font-size:12px;color:var(--muted)}
   .chip b{color:var(--text);font-weight:700}
+  .dev{display:inline-flex;align-items:center;gap:7px;max-width:210px;padding:4px 9px;border-radius:8px;background:var(--panel2);border:1px solid var(--line);font-size:11.5px;line-height:1.3;color:var(--muted)}
+  .dev .devico{font-size:13px;flex:0 0 auto}
+  .dev .devtxt{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .dev b{color:var(--text);font-weight:700}
   details.raw{background:var(--panel);border:1px solid var(--line);border-radius:12px;margin-top:18px;overflow:hidden}
   details.raw summary{cursor:pointer;padding:11px 14px;font-size:12.5px;font-weight:700;color:var(--muted);list-style:none}
   details.raw summary::-webkit-details-marker{display:none}
@@ -523,7 +561,7 @@ const ADMIN_HTML = String.raw`<!DOCTYPE html>
 <div class="wrap">
   <div class="note">
     <span aria-hidden="true">&#128274;</span>
-    <span>Private student data. Values are shown read-only; only deletion changes anything. Auth keys are never exposed.</span>
+    <span>Private student data. Values are shown read-only; only deletion changes anything. Auth keys are never exposed; device rows show compact labels only.</span>
   </div>
 
   <div class="cards" id="cards"></div>
@@ -537,7 +575,7 @@ const ADMIN_HTML = String.raw`<!DOCTYPE html>
       <div class="toolbar">
         <div class="search">
           <span class="ico" aria-hidden="true">&#128269;</span>
-          <input type="text" id="searchInput" placeholder="Search name, code or subject...">
+          <input type="text" id="searchInput" placeholder="Search name, code, subject or device...">
         </div>
         <select id="sortSelect">
           <option value="recent">Most recent</option>
@@ -545,6 +583,7 @@ const ADMIN_HTML = String.raw`<!DOCTYPE html>
           <option value="attendance">Attendance high to low</option>
           <option value="shortage">Attendance low to high</option>
           <option value="subjects">Most subjects</option>
+          <option value="device">Device A-Z</option>
         </select>
         <select id="limitSelect">
           <option value="25">25 / page</option>
@@ -562,6 +601,7 @@ const ADMIN_HTML = String.raw`<!DOCTYPE html>
             <th class="right hide-sm">Present</th>
             <th class="right">Subjects</th>
             <th class="right hide-sm">Entries</th>
+            <th class="hide-sm">Last device</th>
             <th class="hide-sm">Last synced</th>
             <th class="right"></th>
           </tr>
@@ -665,6 +705,7 @@ const ADMIN_HTML = String.raw`<!DOCTYPE html>
       var cards = [
         { k:'Students', v:s.students, s:s.total + ' cloud backup' + (s.total === 1 ? '' : 's') },
         { k:'Subjects tracked', v:s.subjects, s:'across all students' },
+        { k:'Distinct devices', v:s.devices || 0, s:'from latest sync labels' },
         { k:'Overall attendance', v:(s.attendance_pct === null ? '-' : fmtPct(s.attendance_pct)), s:s.attended + ' present of ' + s.conducted + ' classes' },
         { k:'Active today', v:s.active_24h, s:s.active_7d + ' in the last 7 days' },
         { k:'Last sync', v:(s.newest ? ago(s.newest) : '-'), s:s.newest ? fmtTime(s.newest) : 'no backups yet' },
@@ -696,7 +737,7 @@ const ADMIN_HTML = String.raw`<!DOCTYPE html>
     return api(q).then(function(d){
       state.total = d.total;
       if(d.records.length === 0){
-        $('rows').innerHTML = '<tr><td colspan="7"><div class="empty"><div class="big">&#128229;</div>' +
+        $('rows').innerHTML = '<tr><td colspan="8"><div class="empty"><div class="big">&#128229;</div>' +
           (state.search ? 'No students match "' + esc(state.search) + '".' : 'No cloud backups yet. Once a student finishes setup, their data appears here.') +
           '</div></td></tr>';
       } else {
@@ -712,6 +753,9 @@ const ADMIN_HTML = String.raw`<!DOCTYPE html>
             '<td class="right hide-sm">' + r.attended + ' / ' + r.conducted + '</td>' +
             '<td class="right">' + r.subjects + '</td>' +
             '<td class="right hide-sm">' + r.history + '</td>' +
+            '<td class="hide-sm" title="' + esc([r.device_label, r.device_browser, r.device_os, r.device_access].filter(function(x){ return x && x !== '-'; }).join(' | ')) + '">' +
+              '<span class="dev"><span class="devico">' + (String(r.device_type || '').toLowerCase().indexOf('mobile') >= 0 ? '&#128241;' : String(r.device_type || '').toLowerCase().indexOf('tablet') >= 0 ? '&#128241;' : '&#128187;') + '</span>' +
+              '<span class="devtxt"><b>' + esc(r.device_label || 'Unknown device') + '</b> &middot; ' + esc(ago(r.device_seen_at || r.updated_at)) + '</span></span></td>' +
             '<td class="hide-sm muted" title="' + esc(fmtTime(r.updated_at)) + '">' + ago(r.updated_at) + '</td>' +
             '<td class="right"><button class="btn" data-open="' + esc(r.sync_code) + '">View</button></td>' +
           '</tr>';
@@ -761,6 +805,7 @@ const ADMIN_HTML = String.raw`<!DOCTYPE html>
     var subjects = Array.isArray(d.subjects) ? d.subjects : [];
     var history = Array.isArray(d.history) ? d.history : [];
     var target = n(d.globalTarget) || 75;
+    var dev = (rec.device && typeof rec.device === 'object') ? rec.device : {};
     var nameMap = {};
     subjects.forEach(function(s){ nameMap[s && s.id] = (s && s.name) || 'Subject'; });
 
@@ -785,6 +830,16 @@ const ADMIN_HTML = String.raw`<!DOCTYPE html>
       '<div class="kpi"><div class="k">Subjects</div><div class="v">' + subjects.length + '</div></div>' +
       '<div class="kpi"><div class="k">Target</div><div class="v">' + target + '%</div></div>' +
       '<div class="kpi"><div class="k">Entries logged</div><div class="v">' + history.length + '</div></div>' +
+      '</div>';
+
+    html += '<h3 class="sec">Device &amp; session</h3><div class="chips">' +
+      '<span class="chip">Device <b>' + esc(dev.label || 'Not reported') + '</b></span>' +
+      '<span class="chip">Type <b>' + esc(dev.type || '-') + '</b></span>' +
+      '<span class="chip">Browser <b>' + esc(dev.browser || '-') + '</b></span>' +
+      '<span class="chip">OS <b>' + esc(dev.os || '-') + '</b></span>' +
+      '<span class="chip">Screen <b>' + esc(dev.screen || '-') + '</b></span>' +
+      '<span class="chip">Access <b>' + esc(dev.access || '-') + '</b></span>' +
+      '<span class="chip">Seen <b>' + esc(dev.updatedAt ? ago(dev.updatedAt) : '-') + '</b></span>' +
       '</div>';
 
     html += '<h3 class="sec">Subjects <span class="n">' + subjects.length + '</span></h3>';

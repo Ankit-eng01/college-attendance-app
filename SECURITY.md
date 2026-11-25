@@ -36,6 +36,7 @@ This document details the security model, cryptographic controls, cloud access a
 - **Factory Reset**: Executing a Factory Reset erases local storage and triggers the cloud delete endpoint to wipe the record in Neon.
 - **Standalone Cloud Deletion**: Students can erase their cloud backup at any time from Settings while keeping local device data intact.
 - Multi-device pairing and restoration verified end-to-end with token authentication.
+- Each cloud sync writes a compact `data.device` profile (`label`, `type`, `browser`, `os`, `model`, `screen`, `access`, `updatedAt`) so the token-gated admin console can show which device last synced a student. Full user-agent strings are never stored or displayed.
 
 ### D. Strict Content Security Policy (Anti-XSS)
 - CSP header enforced in `index.html`:
@@ -52,7 +53,7 @@ This document details the security model, cryptographic controls, cloud access a
 - No master database keys or passwords exist in the client distribution.
 
 ### F. Multi-Tier Cache & Offline Reliability
-- **Service Worker (`attendify-v17-premium-bg`)**:
+- **Service Worker (`attendify-v18-device-admin`)**:
   - **Navigation (`index.html`)**: Network-First ensures returning users always receive the newest deployed version when connected to the internet. If offline, the cached app shell loads immediately.
   - **Static Assets (`app.js`, icons, fonts)**: Stale-While-Revalidate allows near-instant local boot while asynchronously refreshing cached assets.
   - **API Requests**: Cloud sync API calls bypass static caching, preventing cached or stale student data.

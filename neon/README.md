@@ -36,12 +36,12 @@ Deployed as a separate function so the public sync API stays minimal.
 |---|---|---|
 | `GET /` | none (shell only) | Console UI |
 | `GET /health` | none | Liveness |
-| `GET /api/stats` | bearer | Students, subjects, attendance sums, 24h/7d activity, storage bytes |
+| `GET /api/stats` | bearer | Students, subjects, attendance sums, 24h/7d activity, storage bytes, distinct device labels |
 | `GET /api/activity?days=N` | bearer | Per-day creates/updates |
-| `GET /api/records?search=&sort=&limit=&offset=` | bearer | Paged student summaries (no payloads) |
-| `GET /api/records/:code` | bearer | One record incl. `data` |
+| `GET /api/records?search=&sort=&limit=&offset=` | bearer | Paged student summaries incl. last device label (`search` matches name/code/subject/device; `sort=device` supported; no raw payloads) |
+| `GET /api/records/:code` | bearer | One record incl. `data` and derived top-level `device` metadata |
 | `DELETE /api/records/:code` | bearer | Delete one backup |
-| `GET /api/export` | bearer | CSV of student summaries |
+| `GET /api/export` | bearer | CSV of student summaries incl. device columns |
 
 `sort` is one of `recent` (default), `name`, `attendance`, `shortage`,
 `subjects`. `search` matches the sync code, student name or any subject name.
@@ -68,6 +68,11 @@ All routes are `POST` with a JSON body, except `/health`.
 | `/auth/register` | `{ email, password, student_name? }` | `200 { status: "success", email, sync_code, auth_token, student_name }` | `400` invalid input · `409` email exists · `503` secret missing · `500` |
 | `/auth/login` | `{ email, password }` | `200 { status: "success", email, sync_code, auth_token, student_name }` | `400` · `401` invalid credentials · `503` · `500` |
 | `/push` | `{ sync_code, auth_token, data }` | `200 { status: "success", sync_code }` | `400` invalid input · `401` bad token · `500` |
+
+`data.device` is written by the app on every cloud sync with a compact profile:
+`label`, `type`, `browser`, `os`, `model`, `screen`, `access`, `updatedAt`.
+No full user-agent string is stored. Older backups without `data.device` display
+as `Unknown device` / `-` in the admin console.
 | `/pull` | `{ sync_code, auth_token }` | `200 { status: "success", data }` | `400` · `401` bad token · `404` no record · `500` |
 | `/delete` | `{ sync_code, auth_token }` | `200 { status: "deleted", rows_deleted }` | `400` · `401` · `500` |
 | `/health` | — | `200 { status: "ok", service: "attendify-sync" }` | — |

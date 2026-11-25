@@ -1658,6 +1658,63 @@ Created ${newSubjects.length} customized subjects for you.`);
     // -------------------------------------------------------------
     const SYNC_API_URL = 'https://br-fancy-block-azi8u9jd-sync.compute.c-3.ap-southeast-1.aws.neon.tech';
 
+    // Compact device fingerprint for the admin console. No full user-agent string
+    // is stored: only a readable label and a few coarse classification fields.
+    function getDeviceProfile() {
+      const ua = String(navigator.userAgent || '');
+      const platform = String(navigator.platform || '');
+      const android = /Android/i.test(ua);
+      const iOS = /iPhone|iPad|iPod/i.test(ua);
+      const tablet = /iPad|Tablet/i.test(ua);
+      const mobile = android || iOS || /Mobile/i.test(ua);
+      const twa = android && /; wv\)/.test(ua);
+
+      let os = 'Unknown OS';
+      if (/Windows NT 10\.0/.test(ua)) os = 'Windows 10/11';
+      else if (/Windows NT/.test(ua)) os = 'Windows';
+      else if (android) {
+        const m = ua.match(/Android\s+([\d.]+)/);
+        os = 'Android' + (m ? ' ' + m[1] : '');
+      } else if (iOS) {
+        const m = ua.match(/OS\s+([\d_]+)/);
+        os = 'iOS' + (m ? ' ' + m[1].replace(/_/g, '.') : '');
+      } else if (/Mac OS X|Macintosh/.test(ua)) os = 'macOS';
+      else if (/CrOS/.test(ua)) os = 'ChromeOS';
+      else if (platform) os = platform;
+
+      let browser = 'Browser';
+      if (/SamsungBrowser/i.test(ua)) browser = 'Samsung Internet';
+      else if (/EdgA?\//i.test(ua)) browser = 'Edge';
+      else if (/OPR\/|Opera/i.test(ua)) browser = 'Opera';
+      else if (/Firefox\/|FxiOS/i.test(ua)) browser = 'Firefox';
+      else if (/Chrome\/|CriOS/.test(ua)) browser = 'Chrome';
+      else if (/Safari\//i.test(ua)) browser = 'Safari';
+
+      let model = '';
+      const androidModel = ua.match(/Android[^;]*;\s*([^;)]+)/);
+      if (androidModel) model = androidModel[1].trim();
+      else if (/iPhone/.test(ua)) model = 'iPhone';
+      else if (/iPad/.test(ua)) model = 'iPad';
+      else if (/Windows/.test(ua)) model = 'Desktop PC';
+      else if (/Macintosh/.test(ua)) model = 'Mac';
+
+      const type = tablet ? 'Tablet' : (mobile ? 'Mobile' : 'Desktop');
+      const access = twa ? 'Attendify APK (TWA)' : 'Browser / PWA';
+      const label = [model || type, browser].filter(Boolean).join(' · ');
+      const clean = (v, max) => String(v || '').replace(/[<>]/g, '').trim().slice(0, max);
+
+      return {
+        label: clean(label, 80) || 'Unknown device',
+        type: clean(type, 20),
+        browser: clean(browser, 30),
+        os: clean(os, 40),
+        model: clean(model, 60),
+        screen: clean(window.innerWidth + 'x' + window.innerHeight, 20),
+        access: clean(access, 40),
+        updatedAt: new Date().toISOString()
+      };
+    }
+
     // Single entry point for the Attendify Sync API.
     // Endpoints: POST /auth/register, POST /auth/login, POST /push,
     //            POST /pull, POST /delete, GET /health
@@ -1718,6 +1775,7 @@ Created ${newSubjects.length} customized subjects for you.`);
           activeTheme: appState.activeTheme || 'graphite',
           themeMode: appState.themeMode || 'dark',
           privacyMode: appState.privacyMode || false,
+          device: getDeviceProfile(),
           lastUpdated: new Date().toISOString()
         }
       };
@@ -2141,7 +2199,7 @@ Save this code to restore your courses on another phone or computer!`);
 
     function initServiceWorker() {
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js?v=20261121premium', { updateViaCache: 'none' }).catch(() => {});
+        navigator.serviceWorker.register('./sw.js?v=20261126device', { updateViaCache: 'none' }).catch(() => {});
       }
     }
   
