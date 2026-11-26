@@ -1903,9 +1903,9 @@ Created ${newSubjects.length} customized subjects for you.`);
       if (!appState.syncAuthKey) appState.syncAuthKey = generateAuthToken();
 
       const statusEl = document.getElementById('topCloudStatus');
-      const headerBtn = document.getElementById('headerCloudSyncBtn');
+      const badgeEl = document.getElementById('cloudConnectionBadge');
       if (statusEl) statusEl.innerHTML = '<span style="color:var(--warning-text);">Syncing...</span>';
-      if (headerBtn) headerBtn.style.opacity = '0.6';
+      if (badgeEl) { badgeEl.className = 'criteria-pill pill-neutral'; badgeEl.textContent = 'Syncing...'; }
 
       const payload = {
         sync_code: appState.syncCode,
@@ -1931,15 +1931,21 @@ Created ${newSubjects.length} customized subjects for you.`);
         if (response.ok) {
           appState.lastSyncedAt = Date.now();
           if (statusEl) statusEl.innerHTML = '<span style="color:var(--success-text);">Synced</span>';
+          const badgeOk = document.getElementById('cloudConnectionBadge');
+          if (badgeOk) { badgeOk.className = 'criteria-pill pill-safe'; badgeOk.innerHTML = '<span class=\"pill-dot dot-green\"></span> Connected'; }
           const lastSyncEl = document.getElementById('settingsLastSyncTime');
           if (lastSyncEl) lastSyncEl.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         } else {
           console.warn('Cloud sync response error:', response.status);
           if (statusEl) statusEl.innerHTML = '<span style="color:var(--text-dim);">Local</span>';
+          const badgeLocal = document.getElementById('cloudConnectionBadge');
+          if (badgeLocal) { badgeLocal.className = 'criteria-pill pill-neutral'; badgeLocal.textContent = 'Local'; }
         }
       } catch (err) {
         console.warn('Offline or network error syncing to cloud:', err);
         if (statusEl) statusEl.innerHTML = '<span style="color:var(--text-dim);">Offline</span>';
+          const badgeOff = document.getElementById('cloudConnectionBadge');
+          if (badgeOff) { badgeOff.className = 'criteria-pill pill-neutral'; badgeOff.textContent = 'Offline'; }
       } finally {
         if (headerBtn) headerBtn.style.opacity = '1';
       }

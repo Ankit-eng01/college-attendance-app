@@ -2972,15 +2972,15 @@
 
       <div class="settings-grid">
 
-        <!-- ACCOUNT -->
+        <!-- ACCOUNT & CLOUD (merged) -->
         <div class="settings-card">
           <div class="settings-card-head">
             <div class="settings-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
             </div>
             <div class="settings-head-copy">
-              <h2>Account</h2>
-              <p>Sign in to keep attendance synced and recoverable.</p>
+              <h2>Account &amp; Cloud Sync</h2>
+              <p>Sign in for email recovery, or use the sync code to restore on another device.</p>
             </div>
             <span class="criteria-pill pill-neutral" id="accountStatusBadge">Not signed in</span>
           </div>
@@ -3017,19 +3017,10 @@
           </div>
 
           <div id="accountMessage" style="font-size:12px; color:var(--text-muted); min-height:16px;" role="status" aria-live="polite"></div>
-        </div>
 
-        <!-- CLOUD STORAGE & SYNC -->
-        <div class="settings-card">
-          <div class="settings-card-head">
-            <div class="settings-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path></svg>
-            </div>
-            <div class="settings-head-copy">
-              <h2>Cloud Storage &amp; Sync</h2>
-              <p>Automatic backup over HTTPS while cloud sync is enabled.</p>
-            </div>
-            <span class="criteria-pill pill-safe" id="cloudConnectionBadge"><span class="pill-dot dot-green"></span> Connected</span>
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+            <div class="theme-picker-label" style="margin:0; flex:1;">Cloud backup</div>
+            <span class="criteria-pill pill-neutral" id="cloudConnectionBadge">Ready</span>
           </div>
 
           <div class="settings-list">
