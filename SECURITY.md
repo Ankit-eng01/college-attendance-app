@@ -18,6 +18,13 @@ This document details the security model, cryptographic controls, cloud access a
 | **Actual Cloud Deletion (Factory Reset)** | Bug found | **✅ Resolved** | Factory Reset (`confirmPermanentDelete()`) and the dedicated "Wipe Cloud Backup" button invoke the cloud `attendify_sync_delete` procedure, permanently erasing the student's records from the Neon PostgreSQL database. |
 | **Service Worker Caching** | Needs improvement | **✅ Upgraded (v7-neon)** | Refactored `sw.js` with **Network-First** strategy for HTML document navigation (guaranteeing fresh app versions when online with instant offline fallback), **Stale-While-Revalidate** for static assets, explicit API bypass for cloud sync requests, and atomic cache eviction on activation. |
 
+## 1.5 Midnight Pro Redesign (UI/UX) — Cache & Privacy Notes
+- Service worker cache bumped to `attendify-v20-midnight-pro`; precaches `app.js?v=20261126nodata`.
+- Desktop sidebar + mobile bottom navigation; attendance no-data now renders `--` / "No Classes Yet" instead of `100%`.
+- Guest mode no longer claims local-only storage: cloud backup remains enabled by default so records can be restored with the sync code; guest records use the same HTTPS backup flow and can be restored with the sync code. Create an account for email-based recovery.
+- Account, cloud sync, security, and data management are consolidated in Settings; no secrets are embedded in the frontend.
+- Cloud backup stores attendance data as JSONB plus a compact device profile (`label`, `type`, `browser`, `os`, `model`, `screen`, `access`, `updatedAt`); full user-agent strings are never stored. Auth tokens are hashed at rest and encrypted in transit over HTTPS.
+
 ---
 
 ## 2. Core Security & Privacy Principles

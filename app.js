@@ -23,6 +23,53 @@
       return str.replace(/<[^>]*>?/gm, '').trim();
     }
 
+    // Non-blocking toast notifications (replaces native alert dialogs)
+    function showToast(message, type = 'info', timeout = 4200) {
+      const container = document.getElementById('toastContainer');
+      const text = String(message == null ? '' : message).trim();
+      if (!container || !text) return;
+
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
+
+      const dot = document.createElement('span');
+      dot.className = 'toast-dot';
+      dot.setAttribute('aria-hidden', 'true');
+
+      const copy = document.createElement('span');
+      copy.textContent = text;
+
+      toast.appendChild(dot);
+      toast.appendChild(copy);
+      container.appendChild(toast);
+
+      const remove = () => {
+        if (!toast.isConnected) return;
+        toast.classList.add('out');
+        setTimeout(() => toast.remove(), 220);
+      };
+      const timer = setTimeout(remove, timeout);
+      toast.addEventListener('click', () => {
+        clearTimeout(timer);
+        remove();
+      });
+    }
+
+    function notify(message) {
+      const text = String(message == null ? '' : message);
+      const lower = text.toLowerCase();
+      let type = 'info';
+      if (/error|failed|cannot|could not|invalid|denied|not found|no cloud|no backup|exceeds|mismatch|unable/.test(lower)) {
+        type = 'error';
+      } else if (/success|saved|copied|synced|verified|restored|deleted|erased|reset|welcome|complete|marked/.test(lower)) {
+        type = 'success';
+      } else if (/please|warning|check|keep this safe|note:|recommend/.test(lower)) {
+        type = 'warning';
+      }
+      showToast(text, type);
+    }
+
     function getTodayDateStr() {
       const now = new Date();
       const y = now.getFullYear();
@@ -423,9 +470,10 @@
       const target = Number(sub.target) || appState.globalTarget || 75;
       const missed = Math.max(0, t - a);
 
-      const percentage = t > 0 ? ((a / t) * 100).toFixed(1) : '100.0';
-      const pctNum = parseFloat(percentage);
-      const isShort = pctNum < target;
+      const hasData = t > 0;
+      const percentage = hasData ? ((a / t) * 100).toFixed(1) : '--';
+      const pctNum = hasData ? parseFloat(percentage) : 0;
+      const isShort = hasData && pctNum < target;
 
       let minNeededToReach75 = 0;
       let maxCanMiss = 0;
@@ -443,13 +491,14 @@
       }
 
       const shortagePct = isShort ? (target - pctNum).toFixed(1) : '0.0';
-      const surplusPct = !isShort ? (pctNum - target).toFixed(1) : '0.0';
+      const surplusPct = hasData && !isShort ? (pctNum - target).toFixed(1) : '0.0';
 
       return {
         attended: a,
         total: t,
         missed,
         target,
+        hasData,
         percentage,
         pctNum,
         isShort,
@@ -483,6 +532,32 @@
       if (brandTitle) {
         brandTitle.textContent = appState.studentName ? `Hi, ${appState.studentName}` : 'Attendify';
       }
+
+      // Dashboard greeting + semester snapshot
+      const firstName = (appState.studentName || '').trim().split(/\s+/)[0];
+      const greetingName = document.getElementById('dashGreetingName');
+      if (greetingName) greetingName.textContent = firstName || 'there';
+      const greetingPart = document.getElementById('dashGreetingPart');
+      if (greetingPart) {
+        const hour = new Date().getHours();
+        greetingPart.textContent = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
+      }
+      const sidebarName = document.getElementById('sidebarAccountName');
+      if (sidebarName) {
+        sidebarName.textContent = appState.accountEmail
+          ? appState.accountEmail.split('@')[0]
+          : (appState.studentName || (appState.authChoice === 'guest' ? 'Guest mode' : 'Not signed in'));
+      }
+      const sidebarSub = document.getElementById('sidebarAccountSub');
+      if (sidebarSub) sidebarSub.textContent = appState.accountEmail ? 'Synced account' : 'Local device only';
+      ['dashTargetVal', 'dashTargetValMirror'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = `${target}%`;
+      });
+      const subjectCount = document.getElementById('dashSubjectCount');
+      if (subjectCount) subjectCount.textContent = appState.subjects.length;
+      const subjectCountInline = document.getElementById('dashSubjectCountInline');
+      if (subjectCountInline) subjectCountInline.textContent = appState.subjects.length;
 
       // Update Settings cloud details
       const nameDisp = document.getElementById('settingsStudentNameDisplay');
@@ -524,24 +599,32 @@
       });
 
       const totalMissed = Math.max(0, totalConducted - totalAtt);
-      const overallPctNum = totalConducted > 0 ? (totalAtt / totalConducted) * 100 : 100.0;
-      const overallPct = overallPctNum.toFixed(1);
+      const hasOverallData = totalConducted > 0;
+      const overallPctNum = hasOverallData ? (totalAtt / totalConducted) * 100 : null;
+      const overallPct = hasOverallData ? overallPctNum.toFixed(1) : '--';
       const target = appState.globalTarget || 75;
-      const isOverallShort = overallPctNum < target;
+      const isOverallShort = hasOverallData && overallPctNum < target;
 
-      document.getElementById('dashOverallPct').textContent = `${overallPct}%`;
+      document.getElementById('dashOverallPct').textContent = hasOverallData ? `${overallPct}%` : '--%';
       document.getElementById('statAttended').textContent = totalAtt;
       document.getElementById('statMissed').textContent = totalMissed;
       document.getElementById('statTotalHeld').textContent = totalConducted;
       document.getElementById('statShortCount').textContent = shortCount;
 
+      const shortMirror = document.getElementById('dashShortCountMirror');
+      if (shortMirror) shortMirror.textContent = shortCount;
+      const conductedMirror = document.getElementById('dashConductedMirror');
+      if (conductedMirror) conductedMirror.textContent = totalConducted;
+
       // Circular gauge animation
       const circle = document.getElementById('dashGaugeCircle');
       const radius = 40;
       const circumference = 2 * Math.PI * radius; // 251.2
-      const offset = circumference - (Math.min(100, Math.max(0, overallPctNum)) / 100) * circumference;
+      const offset = hasOverallData
+        ? circumference - (Math.min(100, Math.max(0, overallPctNum)) / 100) * circumference
+        : circumference;
       circle.style.strokeDashoffset = offset;
-      circle.style.stroke = isOverallShort ? 'var(--danger)' : 'var(--brand)';
+      circle.style.stroke = hasOverallData ? (isOverallShort ? 'var(--danger)' : 'var(--brand)') : 'var(--border)';
 
       // Overall criteria pill
       const pillWrap = document.getElementById('dashCriteriaPillWrap');
@@ -565,13 +648,28 @@
         circle.style.strokeDashoffset = circumference;
         healthTag.textContent = '● Setup Required';
         healthTag.className = 'health-tag health-warning';
-        adviceEl.innerHTML = `Tap <strong>Setup</strong> in the top bar to enter your subjects and start tracking.`;
+        adviceEl.innerHTML = `Open <strong>Settings</strong> or use the button below to add your subjects and start tracking.`;
         alertBar.className = 'shortage-banner banner-safe';
         alertBar.style.display = 'flex';
         alertBar.innerHTML = `
           <div>
             <strong>Welcome to Attendify.</strong> How many subjects do you have this semester?
             <button type="button" class="btn-primary" style="margin-top:8px; padding:6px 14px; font-size:12px;" data-action="openSetupModal">Set Up My Subjects</button>
+          </div>
+        `;
+        return;
+      }
+
+      if (!hasOverallData) {
+        healthTag.textContent = '● No Classes Yet';
+        healthTag.className = 'health-tag health-warning';
+        adviceEl.innerHTML = 'Mark your first class as Present or Absent to start tracking attendance.';
+        alertBar.className = 'shortage-banner banner-safe';
+        alertBar.style.display = 'flex';
+        alertBar.innerHTML = `
+          <div>
+            <strong>No classes logged yet.</strong> Attendance stays blank until you mark a class.
+            <button type="button" class="btn-primary" style="margin-top:8px; padding:6px 14px; font-size:12px;" data-action="openSetupModal">Edit Subjects</button>
           </div>
         `;
         return;
@@ -657,6 +755,17 @@
       if (filtered.length === 0) {
         list.innerHTML = '';
         empty.style.display = 'block';
+        const hasAny = appState.subjects.length > 0;
+        const title = document.getElementById('emptyStateTitle');
+        const copy = document.getElementById('emptyStateText');
+        const cta = document.getElementById('emptyStateCta');
+        if (title) title.textContent = hasAny ? 'No subjects in this filter' : 'No subjects yet';
+        if (copy) {
+          copy.textContent = hasAny
+            ? 'Try another category or clear the filter to see all your courses.'
+            : 'Tell Attendify how many courses you have this semester and name them to start calculating your attendance.';
+        }
+        if (cta) cta.style.display = hasAny ? 'none' : '';
         return;
       }
 
@@ -666,7 +775,7 @@
       filtered.forEach(sub => {
         const stats = calcStats(sub);
         const cat = sub.category || 'theory';
-        const colorVar = stats.isShort ? 'var(--danger)' : 'var(--success)';
+        const colorVar = !stats.hasData ? 'var(--text-muted)' : (stats.isShort ? 'var(--danger)' : 'var(--success)');
         const safeSubName = escapeHtml(sub.name);
         const safeSubId = escapeHtml(sub.id);
         const safeCat = escapeHtml(cat);
@@ -677,7 +786,9 @@
               <div>
                 <div class="card-meta">
                   <span class="cat-tag cat-${safeCat}">${safeCat.toUpperCase()}</span>
-                  ${stats.isShort ? `
+                  ${!stats.hasData ? `
+                    <span class="criteria-pill pill-neutral">No classes yet</span>
+                  ` : stats.isShort ? `
                     <span class="criteria-pill pill-short">
                       ${statusPillIcon('short')} Short by ${stats.shortagePct}%
                     </span>
@@ -691,7 +802,7 @@
               </div>
 
               <div class="card-score">
-                <span class="score-pct privacy-blur" style="color:${colorVar}">${stats.percentage}%</span>
+                <span class="score-pct privacy-blur" style="color:${colorVar}">${stats.hasData ? `${stats.percentage}%` : '--'}</span>
                 <span class="score-ratio privacy-blur">${stats.attended} / ${stats.total} held (${stats.missed} missed)</span>
               </div>
             </div>
@@ -700,15 +811,15 @@
             <div class="card-analytics-row">
               <div class="analytic-chip ${stats.isShort ? 'alert-chip' : ''}">
                 <span class="analytic-lbl">Min to reach ${stats.target}%</span>
-                <span class="analytic-val ${stats.isShort ? 'text-danger' : 'text-success'} privacy-blur">
-                  ${stats.isShort ? `Attend ${stats.minNeededToReach75} in a row` : '0 (Already Safe)'}
+                <span class="analytic-val ${!stats.hasData ? 'text-muted' : (stats.isShort ? 'text-danger' : 'text-success')} privacy-blur">
+                  ${!stats.hasData ? 'Log a class first' : (stats.isShort ? `Attend ${stats.minNeededToReach75} in a row` : '0 (Already Safe)')}
                 </span>
               </div>
 
-              <div class="analytic-chip ${!stats.isShort ? 'safe-chip' : ''}">
+              <div class="analytic-chip ${stats.hasData && !stats.isShort ? 'safe-chip' : ''}">
                 <span class="analytic-lbl">Max classes you can miss</span>
-                <span class="analytic-val ${stats.maxCanMiss > 0 ? 'text-success' : 'text-danger'} privacy-blur">
-                  ${stats.maxCanMiss > 0 ? `${stats.maxCanMiss} classes` : '0 bunks left'}
+                <span class="analytic-val ${!stats.hasData ? 'text-muted' : (stats.maxCanMiss > 0 ? 'text-success' : 'text-danger')} privacy-blur">
+                  ${!stats.hasData ? 'No data yet' : (stats.maxCanMiss > 0 ? `${stats.maxCanMiss} classes` : '0 bunks left')}
                 </span>
               </div>
             </div>
@@ -716,7 +827,7 @@
             <!-- Progress bar with 75% target marker -->
             <div class="prog-wrapper">
               <div class="prog-marker-75" style="left:${stats.target}%;" title="${stats.target}% Target"></div>
-              <div class="prog-fill" style="width:${Math.min(100, stats.pctNum)}%; background:${colorVar};"></div>
+              <div class="prog-fill" style="width:${stats.hasData ? Math.min(100, stats.pctNum) : 0}%; background:${colorVar};"></div>
             </div>
 
             <!-- 1-Tap Attendance Actions + History Drawer Button -->
@@ -754,6 +865,10 @@
     function quickMarkToday(subId, status) {
       triggerHaptic(18);
       recordAttendanceEntry(getTodayDateStr(), subId, status);
+      const sub = appState.subjects.find(s => s.id === subId);
+      const label = sub ? sub.name : 'Subject';
+      const verb = status === 'present' ? 'present' : status === 'absent' ? 'absent' : 'off';
+      showToast(`${label}: marked ${verb} for today.`, status === 'present' ? 'success' : status === 'absent' ? 'error' : 'info', 2400);
     }
 
     function recordAttendanceEntry(dateStr, subId, status) {
@@ -992,11 +1107,14 @@
       if (!sub) return;
 
       const stats = calcStats(sub);
-      document.getElementById('histScorePct').textContent = `${stats.percentage}%`;
-      document.getElementById('histScorePct').style.color = stats.isShort ? 'var(--danger)' : 'var(--success)';
+      document.getElementById('histScorePct').textContent = stats.hasData ? `${stats.percentage}%` : '--';
+      document.getElementById('histScorePct').style.color = !stats.hasData ? 'var(--text-muted)' : (stats.isShort ? 'var(--danger)' : 'var(--success)');
       document.getElementById('histRatio').textContent = `${stats.attended}/${stats.total} Classes Held (${stats.missed} Missed)`;
 
-      if (stats.isShort) {
+      if (!stats.hasData) {
+        document.getElementById('histGoalText').textContent = 'No classes logged yet';
+        document.getElementById('histGoalText').style.color = 'var(--text-muted)';
+      } else if (stats.isShort) {
         document.getElementById('histGoalText').textContent = `Min to 75%: Attend ${stats.minNeededToReach75} in a row`;
         document.getElementById('histGoalText').style.color = 'var(--danger-text)';
       } else {
@@ -1112,7 +1230,7 @@
       const rawName = nameInp ? nameInp.value : '';
       const cleanName = sanitizeText(rawName);
       if (!cleanName) {
-        alert('Please enter your name to customize your attendance dashboard.');
+        notify('Please enter your name to customize your attendance dashboard.');
         if (nameInp) nameInp.focus();
         return;
       }
@@ -1218,7 +1336,7 @@
       closeSetupModal();
       saveState();
 
-      alert(`Semester Setup Saved.
+      notify(`Semester Setup Saved.
 Created ${newSubjects.length} customized subjects for you.`);
     }
 
@@ -1354,7 +1472,15 @@ Created ${newSubjects.length} customized subjects for you.`);
       const newTot = sub.total + addAtt + addBunk;
       const target = sub.target || appState.globalTarget || 75;
 
-      const pctNum = newTot > 0 ? (newAtt / newTot) * 100 : 100;
+      if (newTot === 0) {
+        numEl.textContent = '--%';
+        numEl.style.color = 'var(--text-muted)';
+        pillWrap.innerHTML = '';
+        resText.textContent = 'Add at least one class to run the simulation.';
+        return;
+      }
+
+      const pctNum = (newAtt / newTot) * 100;
       const pctStr = pctNum.toFixed(1);
 
       numEl.textContent = `${pctStr}%`;
@@ -1372,9 +1498,11 @@ Created ${newSubjects.length} customized subjects for you.`);
     // 16. TAB SWITCHER
     function switchTab(tab) {
       appState.activeTab = tab;
-      document.querySelectorAll('.nav-item').forEach((btn, idx) => {
-        const tabs = ['subjects', 'calendar', 'calculator', 'settings'];
-        btn.classList.toggle('active', tabs[idx] === tab);
+      document.querySelectorAll('.nav-item').forEach((btn) => {
+        const isActive = btn.getAttribute('data-tab') === tab;
+        btn.classList.toggle('active', isActive);
+        if (isActive) btn.setAttribute('aria-current', 'page');
+        else btn.removeAttribute('aria-current');
       });
 
       document.querySelectorAll('.view-content').forEach(view => view.classList.remove('active'));
@@ -1427,11 +1555,12 @@ Created ${newSubjects.length} customized subjects for you.`);
         const stats = calcStats(sub);
         const nameEscaped = `"${sub.name.replace(/"/g, '""')}"`;
         const catEscaped = `"${sub.category || 'theory'}"`;
-        const status = stats.isShort ? `Short by ${stats.shortagePct}%` : `On track (+${stats.surplusPct}%)`;
-        const needed = stats.isShort ? `${stats.minNeededToReach75} in a row` : '0';
-        const bunks = stats.maxCanMiss;
+        const status = !stats.hasData ? 'No classes yet' : (stats.isShort ? `Short by ${stats.shortagePct}%` : `On track (+${stats.surplusPct}%)`);
+        const needed = !stats.hasData ? '-' : (stats.isShort ? `${stats.minNeededToReach75} in a row` : '0');
+        const bunks = stats.hasData ? stats.maxCanMiss : '-';
+        const pctCell = stats.hasData ? `${stats.percentage}%` : '';
 
-        csv += `${nameEscaped},${catEscaped},${stats.attended},${stats.total},${stats.missed},${stats.percentage}%,${status},${needed},${bunks}\r\n`;
+        csv += `${nameEscaped},${catEscaped},${stats.attended},${stats.total},${stats.missed},${pctCell},${status},${needed},${bunks}\r\n`;
       });
 
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -1448,7 +1577,7 @@ Created ${newSubjects.length} customized subjects for you.`);
 
       // Check file size limit (max 5 MB for student records)
       if (file.size > 5 * 1024 * 1024) {
-        alert('Security check failed: File size exceeds 5MB limit.');
+        notify('Security check failed: File size exceeds 5MB limit.');
         e.target.value = '';
         return;
       }
@@ -1473,14 +1602,14 @@ Created ${newSubjects.length} customized subjects for you.`);
           applyPrivacyModeUI();
           saveState();
 
-          alert(`Backup verified and loaded safely.\n• ${appState.subjects.length} subjects imported.\n• ${appState.history.length} logged sessions verified.`);
+          notify(`Backup verified and loaded safely.\n• ${appState.subjects.length} subjects imported.\n• ${appState.history.length} logged sessions verified.`);
         } catch (err) {
-          alert('Security Validation Error:\n' + (err.message || 'Invalid or corrupted JSON backup file.'));
+          notify('Security Validation Error:\n' + (err.message || 'Invalid or corrupted JSON backup file.'));
         }
         e.target.value = '';
       };
       reader.onerror = () => {
-        alert('Failed to read file.');
+        notify('Failed to read file.');
         e.target.value = '';
       };
       reader.readAsText(file);
@@ -1570,11 +1699,11 @@ Created ${newSubjects.length} customized subjects for you.`);
 
       // 3. User feedback
       if (cloudDeleteResult === 'deleted') {
-        alert('Attendify has been reset.\n\n• Local attendance records erased.\n• Cloud backup permanently deleted.');
+        notify('Attendify has been reset.\n\n• Local attendance records erased.\n• Cloud backup permanently deleted.');
       } else if (cloudDeleteResult === 'not_found' || cloudDeleteResult === 'skipped') {
-        alert('Attendify has been reset.\n\n• Local attendance records erased.');
+        notify('Attendify has been reset.\n\n• Local attendance records erased.');
       } else {
-        alert('Local attendance records erased.\n\nNote: Could not reach cloud server to delete remote backup. Please reconnect and wipe your cloud record if needed.');
+        notify('Local attendance records erased.\n\nNote: Could not reach cloud server to delete remote backup. Please reconnect and wipe your cloud record if needed.');
       }
 
       openSetupModal();
@@ -1582,7 +1711,7 @@ Created ${newSubjects.length} customized subjects for you.`);
 
     async function wipeCloudBackupOnly() {
       if (!appState.syncCode || !appState.syncAuthKey) {
-        alert('No cloud backup credentials found on this device.');
+        notify('No cloud backup credentials found on this device.');
         return;
       }
 
@@ -1621,14 +1750,14 @@ Created ${newSubjects.length} customized subjects for you.`);
         if (lastSyncEl) lastSyncEl.textContent = 'Deleted from server';
 
         if (resData.status === 'deleted') {
-          alert('Cloud backup has been permanently deleted from the server.');
+          notify('Cloud backup has been permanently deleted from the server.');
         } else if (resData.status === 'not_found') {
-          alert('No backup was found in the cloud for this sync code. Nothing to delete.');
+          notify('No backup was found in the cloud for this sync code. Nothing to delete.');
         } else {
-          alert('Cloud deletion completed successfully.');
+          notify('Cloud deletion completed successfully.');
         }
       } catch (err) {
-        alert('Error deleting cloud backup: ' + err.message);
+        notify('Error deleting cloud backup: ' + err.message);
         if (statusEl) statusEl.innerHTML = '<span style="color:var(--danger-text);">Error</span>';
       } finally {
         if (wipeBtn) {
@@ -1823,7 +1952,7 @@ Created ${newSubjects.length} customized subjects for you.`);
       setTimeout(() => {
         if (headerBtn) headerBtn.classList.remove('active');
       }, 600);
-      alert(`Cloud Storage Synced!
+      notify(`Cloud Storage Synced!
 Your attendance records are backed up securely under Code: ${appState.syncCode}`);
     }
 
@@ -1847,7 +1976,7 @@ Your attendance records are backed up securely under Code: ${appState.syncCode}`
       if (!appState.syncAuthKey) return;
       if (navigator.clipboard) {
         navigator.clipboard.writeText(appState.syncAuthKey).then(() => {
-          alert('Private Secret Key copied to clipboard! Keep this safe.');
+          notify('Private Secret Key copied to clipboard! Keep this safe.');
         }).catch(() => {
           prompt('Copy your Private Secret Key:', appState.syncAuthKey);
         });
@@ -1861,7 +1990,7 @@ Your attendance records are backed up securely under Code: ${appState.syncCode}`
       const combo = `${appState.syncCode}:${appState.syncAuthKey}`;
       if (navigator.clipboard) {
         navigator.clipboard.writeText(combo).then(() => {
-          alert('Full Pairing Token copied (Code:Key)!\nPaste this into Attendify on your other device for instant 1-tap restore.');
+          notify('Full Pairing Token copied (Code:Key)!\nPaste this into Attendify on your other device for instant 1-tap restore.');
         }).catch(() => {
           prompt('Copy Pairing Token (Code:Key):', combo);
         });
@@ -1873,7 +2002,7 @@ Your attendance records are backed up securely under Code: ${appState.syncCode}`
     function copySyncCode() {
       if (!appState.syncCode) return;
       navigator.clipboard.writeText(appState.syncCode).then(() => {
-        alert(`Copied Cloud Sync Code: ${appState.syncCode}
+        notify(`Copied Cloud Sync Code: ${appState.syncCode}
 Save this code to restore your courses on another phone or computer!`);
       }).catch(() => {
         prompt('Copy your Cloud Sync Code:', appState.syncCode);
@@ -1902,11 +2031,11 @@ Save this code to restore your courses on another phone or computer!`);
       }
 
       if (!code) {
-        alert('Please enter your Cloud Sync Code.');
+        notify('Please enter your Cloud Sync Code.');
         return;
       }
       if (!key) {
-        alert('Please enter your Private Secret Key (Authorization) to restore this sync code.');
+        notify('Please enter your Private Secret Key (Authorization) to restore this sync code.');
         return;
       }
 
@@ -1920,11 +2049,11 @@ Save this code to restore your courses on another phone or computer!`);
           const errData = await response.json().catch(() => ({}));
           const errMsg = errData.error || errData.message || '';
           if (response.status === 401 || errMsg.includes('Authorization failed')) {
-            alert('Authorization Failed: The secret key does not match this Sync Code.');
+            notify('Authorization Failed: The secret key does not match this Sync Code.');
           } else if (response.status === 404 || response.status === 400 || errMsg.includes('Record not found')) {
-            alert('Sync code not found in Cloud Storage. Please check for typos.');
+            notify('Sync code not found in Cloud Storage. Please check for typos.');
           } else {
-            alert('Cloud Restore Error: ' + (errMsg || `HTTP ${response.status}`));
+            notify('Cloud Restore Error: ' + (errMsg || `HTTP ${response.status}`));
           }
           return;
         }
@@ -1953,9 +2082,9 @@ Save this code to restore your courses on another phone or computer!`);
         saveState();
         closeRestoreCloudModal();
 
-        alert(`Cloud Restore Successful.\nWelcome back, ${appState.studentName || 'Student'}!\nRestored ${appState.subjects.length} subjects from secure cloud storage.`);
+        notify(`Cloud Restore Successful.\nWelcome back, ${appState.studentName || 'Student'}!\nRestored ${appState.subjects.length} subjects from secure cloud storage.`);
       } catch (err) {
-        alert('Error connecting to Cloud Storage: ' + err.message);
+        notify('Error connecting to Cloud Storage: ' + err.message);
       }
     }
 
@@ -1990,7 +2119,12 @@ Save this code to restore your courses on another phone or computer!`);
       saveStateOnly();
       closeAuthGate();
       renderApp();
-      openSetupIfNeeded();
+      // Prompt for setup when there is no usable semester yet. This also catches
+      // older guest states that only contain empty 0/0 subjects.
+      const hasLoggedClasses = (appState.subjects || []).some(sub => Number(sub.total) > 0);
+      if (!appState.isSetupCompleted || !appState.subjects || appState.subjects.length === 0 || !hasLoggedClasses) {
+        setTimeout(() => openSetupModal(), 150);
+      }
     }
 
     function openAccountFromGate() {
@@ -2132,6 +2266,7 @@ Save this code to restore your courses on another phone or computer!`);
       }
 
       renderApp();
+      openSetupIfNeeded();
       setAccountMessage(
         restoreCloud ? 'Signed in successfully.' : 'Account created. Your data is syncing.',
         'success'
@@ -2215,7 +2350,7 @@ Save this code to restore your courses on another phone or computer!`);
 
     function initServiceWorker() {
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js?v=20261126device2', { updateViaCache: 'none' }).catch(() => {});
+        navigator.serviceWorker.register('./sw.js?v=20261126nodata', { updateViaCache: 'none' }).catch(() => {});
       }
     }
   
