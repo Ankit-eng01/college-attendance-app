@@ -516,6 +516,211 @@
   }
 
   // ---------------------------------------------------------------
+  // Advanced analytics: real-date windows, range reports and insights
+  // ---------------------------------------------------------------
+  /** Resolve a named or custom reporting window. All dates are local ISO strings. */
+  function reportWindow(preset, now, custom) {
+    const current = now instanceof Date ? now : new Date();
+    const anchor = todayISO(current);
+    const c = custom || {};
+    let from = '';
+    let to = '';
+    let label = '';
+
+    if (preset === 'week') {
+      from = startOfWeekISO(anchor);
+      to = addDaysISO(from, 6);
+      label = `Week of ${shortDateLabel(from)}`;
+    } else if (preset === 'month') {
+      from = `${monthKey(anchor)}-01`;
+      const [year, month] = monthKey(anchor).split('-').map(Number);
+      to = formatISO(new Date(year, month, 0));
+      label = monthLabel(monthKey(anchor));
+    } else if (preset === 'semester') {
+      const year = current.getFullYear();
+      const firstHalf = current.getMonth() < 6;
+      from = `${year}-${firstHalf ? '01' : '07'}-01`;
+      to = `${year}-${firstHalf ? '06' : '12'}-${firstHalf ? '30' : '31'}`;
+      label = `Semester ${firstHalf ? '1' : '2'} ${year}`;
+    } else {
+      from = isValidISODate(c.from) ? c.from : anchor;
+      to = isValidISODate(c.to) ? c.to : anchor;
+      if (from > to) {
+        const swap = from;
+        from = to;
+        to = swap;
+      }
+      label = `${shortDateLabel(from)} – ${shortDateLabel(to)}`;
+    }
+    return { from, to, label, preset: preset === 'custom' ? 'custom' : preset };
+  }
+
+  /**
+   * Aggregate only the classes actually recorded inside [from, to].
+   * "off" and timetable metadata never contribute to these numbers.
+   */
+  function rangeReport(state, from, to, globalTarget) {
+    const st = state || {};
+    const ledger = buildDailyLedger(st);
+    const names = {};
+    const targets = {};
+    (Array.isArray(st.subjects) ? st.subjects : []).forEach((s) => {
+      if (!s || !s.id) return;
+      names[s.id] = cleanText(s.name, 80) || 'Subject';
+      targets[s.id] = clampTarget(s.target, clampTarget(globalTarget));
+    });
+
+    const perSubject = {};
+    let present = 0;
+    let absent = 0;
+    let activeDays = 0;
+    let streak = 0;
+    let longestAbsentStreak = 0;
+    let previousAbsentDate = '';
+    const dates = Object.keys(ledger).sort();
+
+    dates.forEach((date) => {
+      if (from && date < from) return;
+      if (to && date > to) return;
+      const day = ledger[date];
+      present += day.present;
+      absent += day.absent;
+      if (day.present + day.absent > 0) activeDays++;
+      if (day.absent > 0) {
+        // Only consecutive calendar days count; gaps in the ledger break the run.
+        streak = previousAbsentDate && addDaysISO(previousAbsentDate, 1) === date ? streak + 1 : 1;
+        previousAbsentDate = date;
+        longestAbsentStreak = Math.max(longestAbsentStreak, streak);
+      } else {
+        streak = 0;
+        previousAbsentDate = '';
+      }
+      Object.keys(day.entries).forEach((subId) => {
+        if (!perSubject[subId]) perSubject[subId] = { present: 0, absent: 0 };
+        if (day.entries[subId] === 'present') perSubject[subId].present++;
+        else perSubject[subId].absent++;
+      });
+    });
+
+    const target = clampTarget(globalTarget);
+    const subjects = Object.keys(perSubject).map((subId) => {
+      const p = perSubject[subId].present;
+      const a = perSubject[subId].absent;
+      const total = p + a;
+      const pctNum = percentage(p, total);
+      const subTarget = targets[subId] === undefined ? target : targets[subId];
+      return {
+        id: subId,
+        name: names[subId] || 'Deleted subject',
+        present: p,
+        absent: a,
+        total,
+        pctNum,
+        percentage: pctNum === null ? '--' : pctNum.toFixed(1),
+        target: subTarget,
+        isShort: total > 0 && pctNum < subTarget,
+        classesNeeded: total > 0 && pctNum < subTarget ? classesNeeded(p, total, subTarget) : 0,
+        safeBunks: total > 0 && pctNum >= subTarget ? safeBunks(p, total, subTarget) : 0
+      };
+    }).sort((a, b) => a.pctNum - b.pctNum);
+
+    const total = present + absent;
+    const pctNum = percentage(present, total);
+    return {
+      from: from || '',
+      to: to || '',
+      present,
+      absent,
+      total,
+      pctNum,
+      percentage: pctNum === null ? '--' : pctNum.toFixed(1),
+      hasData: total > 0,
+      activeDays,
+      longestAbsentStreak,
+      target,
+      subjects
+    };
+  }
+
+  /** Plain-text insights derived exclusively from the supplied report. */
+  function reportInsights(report, globalTarget) {
+    const r = report || {};
+    if (!r.hasData) {
+      return [{
+        kind: 'empty',
+        tone: 'neutral',
+        title: 'No classes recorded in this period',
+        detail: 'Choose another date range or mark attendance in the calendar. Nothing is estimated.'
+      }];
+    }
+    const target = clampTarget(globalTarget === undefined ? r.target : globalTarget);
+    const out = [];
+    const rows = r.subjects || [];
+    if (rows.length) {
+      const worst = rows[0];
+      const best = rows[rows.length - 1];
+      out.push({
+        kind: 'weakest',
+        tone: worst.isShort ? 'danger' : 'neutral',
+        title: `Lowest: ${worst.name} · ${worst.percentage}%`,
+        detail: worst.isShort
+          ? `${worst.absent} missed of ${worst.total}; needs ${worst.classesNeeded} more present class${worst.classesNeeded === 1 ? '' : 'es'} to reach ${worst.target}%.`
+          : `${worst.present}/${worst.total} attended, above its ${worst.target}% target.`
+      });
+      if (rows.length > 1) {
+        out.push({
+          kind: 'best',
+          tone: 'success',
+          title: `Highest: ${best.name} · ${best.percentage}%`,
+          detail: `${best.present}/${best.total} attended in this period.`
+        });
+      }
+    }
+    if (r.pctNum !== null && r.pctNum < target) {
+      const needed = classesNeeded(r.present, r.total, target);
+      out.push({
+        kind: 'target',
+        tone: 'danger',
+        title: `Overall ${r.percentage}% is below ${target}%`,
+        detail: `${r.absent} classes missed. Attend the next ${needed} class${needed === 1 ? '' : 'es'} in this period to reach the target.`
+      });
+    } else {
+      out.push({
+        kind: 'target',
+        tone: 'success',
+        title: `Overall ${r.percentage}% meets ${target}%`,
+        detail: `${safeBunks(r.present, r.total, target)} further classes could be missed while staying on track.`
+      });
+    }
+    if (r.longestAbsentStreak >= 2) {
+      out.push({
+        kind: 'streak',
+        tone: 'warning',
+        title: `${r.longestAbsentStreak} consecutive days with absences`,
+        detail: 'Check the calendar for those dates before planning the next week.'
+      });
+    }
+    return out;
+  }
+
+  /** CSV for a real range report. No placeholder or derived sample rows. */
+  function reportToCSV(report) {
+    const r = report || {};
+    const quote = (value) => {
+      const text = String(value === null || value === undefined ? '' : value);
+      return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+    };
+    const rows = [
+      ['Subject', 'Present', 'Absent', 'Total', 'Percentage', 'Target'],
+      ...(Array.isArray(r.subjects) ? r.subjects : []).map((s) => [
+        s.name, s.present, s.absent, s.total, s.percentage, `${s.target}%`
+      ]),
+      ['TOTAL', r.present || 0, r.absent || 0, r.total || 0, r.percentage || '--', `${r.target || 75}%`]
+    ];
+    return rows.map((row) => row.map(quote).join(',')).join('\r\n');
+  }
+
+  // ---------------------------------------------------------------
   // Timetable helpers
   // ---------------------------------------------------------------
   const VALID_CLASS_TYPES = ['theory', 'lab', 'tutorial', 'other'];
@@ -1122,6 +1327,10 @@
     trend,
     subjectComparison,
     recentActivity,
+    reportWindow,
+    rangeReport,
+    reportInsights,
+    reportToCSV,
     normalizeTimetableEntry,
     timetableForDay,
     timetableOccurrenceKey,

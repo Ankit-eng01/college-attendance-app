@@ -3682,6 +3682,46 @@
       gap: 14px;
       margin: 14px 0;
     }
+    .ana-filter-bar { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 4px; }
+    .ana-custom { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)) auto; gap: 8px; align-items: end; margin-top: 8px; }
+    .ana-custom[hidden] { display: none !important; }
+    .ana-report-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+    .ana-insight {
+      display: flex;
+      gap: 9px;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 11.5px;
+    }
+    .ana-insight:last-child { border-bottom: 0; }
+    .ana-insight strong { display: block; color: var(--text-strong); font-size: 12px; margin-bottom: 2px; }
+    .ana-insight span { color: var(--text-muted); line-height: 1.5; }
+    .ana-insight-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--brand); flex: 0 0 auto; margin-top: 4px; }
+    .ana-insight-dot.tone-danger { background: var(--danger, #ef6b73); }
+    .ana-insight-dot.tone-warning { background: var(--warning, #f5a524); }
+    .ana-insight-dot.tone-success { background: var(--success, #3ecf8e); }
+    .print-report { display: none; }
+
+    @media print {
+      body > * { visibility: hidden !important; }
+      #anaPrintReport, #anaPrintReport * { visibility: visible !important; }
+      #anaPrintReport {
+        display: block !important;
+        position: absolute;
+        inset: 0 auto auto 0;
+        width: 100%;
+        color: #111 !important;
+        background: #fff !important;
+        font-family: Arial, sans-serif;
+        padding: 18px;
+      }
+      #anaPrintReport h1 { font-size: 20px; margin: 0 0 4px; }
+      #anaPrintReport h2 { font-size: 14px; margin: 18px 0 6px; }
+      #anaPrintReport table { width: 100%; border-collapse: collapse; font-size: 11px; }
+      #anaPrintReport th, #anaPrintReport td { border: 1px solid #bbb; padding: 5px 7px; text-align: left; }
+      #anaPrintReport th { background: #f0f0f0; }
+      #anaPrintReport p { font-size: 10px; color: #444; }
+    }
 
     /* Timetable */
     .tt-layout {
@@ -4445,8 +4485,30 @@
         <div>
           <p class="eyebrow">Analytics</p>
           <h2 class="page-title">Attendance analytics</h2>
-          <p class="page-sub">Weekly and monthly trends, subject comparison, and the semester report — all from your own records.</p>
+          <p class="page-sub">Weekly and monthly trends, subject comparison, and range reports — all from your own records.</p>
         </div>
+      </div>
+
+      <div class="insight-card">
+        <div class="insight-head"><h3>Report range</h3><span class="insight-meta" id="anaRangeLabel">This week</span></div>
+        <div class="ana-filter-bar" id="anaRangeChips" role="group" aria-label="Choose report range">
+          <button type="button" class="filter-chip active" data-action="anaRange" data-range="week">This week</button>
+          <button type="button" class="filter-chip" data-action="anaRange" data-range="month">This month</button>
+          <button type="button" class="filter-chip" data-action="anaRange" data-range="semester">This semester</button>
+          <button type="button" class="filter-chip" data-action="anaRange" data-range="custom">Custom</button>
+        </div>
+        <div class="ana-custom" id="anaCustomRange" hidden>
+          <div class="form-group">
+            <label class="form-lbl" for="anaFrom">From</label>
+            <input type="date" id="anaFrom" class="form-inp">
+          </div>
+          <div class="form-group">
+            <label class="form-lbl" for="anaTo">To</label>
+            <input type="date" id="anaTo" class="form-inp">
+          </div>
+          <button type="button" class="btn-primary" data-action="anaApplyCustom">Apply</button>
+        </div>
+        <p class="form-hint" id="anaRangeMsg" role="status" aria-live="polite"></p>
       </div>
 
       <div id="anaEmpty" class="subjects-empty-state" style="display:none;" role="region" aria-label="No analytics data yet">
@@ -4499,7 +4561,24 @@
           <div class="insight-head"><h3>Semester report</h3><span class="insight-meta">Live from your records</span></div>
           <div id="anaSemester"></div>
         </div>
+
+        <div class="insight-card" id="anaRangeReportCard">
+          <div class="insight-head">
+            <h3 id="anaReportTitle">Range report</h3>
+            <div class="ana-report-actions">
+              <button type="button" class="act-btn" data-action="anaExportCSV">Download CSV</button>
+              <button type="button" class="act-btn" data-action="anaPrintReport">Print / Save PDF</button>
+            </div>
+          </div>
+          <div class="semester-grid" id="anaRangeSummary"></div>
+          <h4 class="insight-subhead">Subjects in this range</h4>
+          <div id="anaRangeSubjects"></div>
+          <h4 class="insight-subhead">Insights from your records</h4>
+          <div id="anaInsights"></div>
+        </div>
       </div>
+
+      <div id="anaPrintReport" class="print-report" aria-hidden="true"></div>
 
     </section>
 

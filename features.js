@@ -201,6 +201,10 @@
   // ===============================================================
   // 3. Analytics
   // ===============================================================
+  let anaPreset = 'week';
+  let anaCustom = { from: '', to: '' };
+  let anaLastReport = null;
+
   function renderAnalytics() {
     const state = liveState();
     if (!state) return;
@@ -208,8 +212,9 @@
     const empty = $('anaEmpty');
     const weekly = C.attendanceBuckets(state, { mode: 'week', count: 8 });
     const monthly = C.attendanceBuckets(state, { mode: 'month', count: 6 });
-    const hasHistory = weekly.some((b) => b.total > 0) ||
-      (state.history || []).some((h) => h.status === 'present' || h.status === 'absent');
+    // Use the full ledger (not just the visible charts) so older records still
+    // make the range report available even if they fall outside 8 weeks.
+    const hasHistory = C.ledgerSummary(state).total > 0;
 
     if (host) host.hidden = !hasHistory;
     if (empty) empty.style.display = hasHistory ? 'none' : 'flex';
@@ -313,6 +318,135 @@
           <div><span class="mini-stat-lbl">Weakest subject</span><strong>${worst ? `${esc(worst.name)} · ${worst.percentage}%` : '—'}</strong></div>
         </div>`;
     }
+
+    renderRangeReport(state);
+  }
+
+  function currentReportWindow() {
+    return C.reportWindow(anaPreset, new Date(), anaCustom);
+  }
+
+  function setAnalyticsRange(preset) {
+    anaPreset = preset === 'custom' ? 'custom' : preset;
+    renderAnalytics();
+  }
+
+  function applyCustomAnalyticsRange() {
+    const from = ($('anaFrom') || {}).value || '';
+    const to = ($('anaTo') || {}).value || '';
+    if (!C.isValidISODate(from) || !C.isValidISODate(to)) {
+      toast('Choose both a valid start and end date.', 'error');
+      return;
+    }
+    anaCustom = { from, to };
+    anaPreset = 'custom';
+    renderAnalytics();
+    toast(`Showing ${from} to ${to}.`, 'info', 3000);
+  }
+
+  function renderRangeReport(state) {
+    const win = currentReportWindow();
+    const report = C.rangeReport(state, win.from, win.to, target());
+    anaLastReport = { window: win, report };
+
+    setText('anaRangeLabel', `${win.label} · ${win.from} to ${win.to}`);
+    document.querySelectorAll('[data-action="anaRange"]').forEach((btn) => {
+      btn.classList.toggle('active', btn.getAttribute('data-range') === anaPreset);
+    });
+    const custom = $('anaCustomRange');
+    if (custom) custom.hidden = anaPreset !== 'custom';
+    const fromInput = $('anaFrom');
+    const toInput = $('anaTo');
+    if (fromInput && !fromInput.value) fromInput.value = win.from;
+    if (toInput && !toInput.value) toInput.value = win.to;
+    const msg = $('anaRangeMsg');
+    if (msg) {
+      msg.textContent = report.hasData
+        ? `${report.total} recorded class${report.total === 1 ? '' : 'es'} across ${report.activeDays} day${report.activeDays === 1 ? '' : 's'}.`
+        : 'No classes were recorded in this range. Nothing is estimated.';
+    }
+
+    const summary = $('anaRangeSummary');
+    if (summary) {
+      summary.innerHTML = `
+        <div><span class="mini-stat-lbl">Attendance</span><strong>${report.hasData ? report.percentage + '%' : '—'}</strong></div>
+        <div><span class="mini-stat-lbl">Present / held</span><strong>${report.present} / ${report.total}</strong></div>
+        <div><span class="mini-stat-lbl">Missed</span><strong>${report.absent}</strong></div>
+        <div><span class="mini-stat-lbl">Active days</span><strong>${report.activeDays}</strong></div>
+        <div><span class="mini-stat-lbl">Subjects with classes</span><strong>${report.subjects.length}</strong></div>
+        <div><span class="mini-stat-lbl">Longest absence run</span><strong>${report.longestAbsentStreak} day${report.longestAbsentStreak === 1 ? '' : 's'}</strong></div>`;
+    }
+
+    const subjectsHost = $('anaRangeSubjects');
+    if (subjectsHost) {
+      subjectsHost.innerHTML = report.subjects.length ? report.subjects.map((row) => `
+        <div class="recent-row">
+          <div class="recent-copy">
+            <span class="risk-name">${esc(row.name)}</span>
+            <span class="risk-meta">${row.present}/${row.total} attended · ${row.percentage}% · target ${row.target}%</span>
+          </div>
+          <span class="risk-pct ${row.isShort ? 'risk-danger' : 'risk-safe'}">${row.percentage}%</span>
+        </div>`).join('') : '<p class="empty-inline">No subject has a recorded class in this range.</p>';
+    }
+
+    const insights = $('anaInsights');
+    if (insights) {
+      insights.innerHTML = C.reportInsights(report, target()).map((item) => `
+        <div class="ana-insight">
+          <span class="ana-insight-dot tone-${esc(item.tone)}" aria-hidden="true"></span>
+          <div><strong>${esc(item.title)}</strong><span>${esc(item.detail)}</span></div>
+        </div>`).join('');
+    }
+
+    const reportTitle = $('anaReportTitle');
+    if (reportTitle) reportTitle.textContent = `${win.label} report`;
+    renderPrintReport(win, report, state);
+  }
+
+  function renderPrintReport(win, report, state) {
+    const host = $('anaPrintReport');
+    if (!host) return;
+    const student = (state && state.studentName) ? esc(state.studentName) : 'Guest';
+    const rows = report.subjects.map((row) => `
+      <tr><td>${esc(row.name)}</td><td>${row.present}</td><td>${row.absent}</td><td>${row.total}</td><td>${row.percentage}%</td><td>${row.target}%</td></tr>
+    `).join('');
+    const insights = C.reportInsights(report, target()).map((item) =>
+      `<li><strong>${esc(item.title)}</strong> — ${esc(item.detail)}</li>`).join('');
+    host.innerHTML = `
+      <h1>Attendify attendance report</h1>
+      <p>${student} · ${esc(win.label)} · ${esc(win.from)} to ${esc(win.to)} · generated ${esc(C.todayISO())}</p>
+      <h2>Summary</h2>
+      <table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>
+        <tr><td>Attendance</td><td>${report.hasData ? report.percentage + '%' : '—'}</td></tr>
+        <tr><td>Present / held</td><td>${report.present} / ${report.total}</td></tr>
+        <tr><td>Missed</td><td>${report.absent}</td></tr>
+        <tr><td>Active days</td><td>${report.activeDays}</td></tr>
+        <tr><td>Target</td><td>${report.target}%</td></tr>
+      </tbody></table>
+      <h2>Subjects</h2>
+      <table><thead><tr><th>Subject</th><th>Present</th><th>Absent</th><th>Total</th><th>Attendance</th><th>Target</th></tr></thead>
+        <tbody>${rows || '<tr><td colspan="6">No recorded classes in this range.</td></tr>'}</tbody></table>
+      <h2>Insights</h2><ul>${insights}</ul>
+      <p>Calculated only from attendance records stored in this app. Use your browser's Print dialog to save as PDF.</p>`;
+  }
+
+  function exportAnalyticsCSV() {
+    if (!anaLastReport) return;
+    const csv = C.reportToCSV(anaLastReport.report);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `attendify_report_${anaLastReport.window.from}_${anaLastReport.window.to}.csv`;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+    toast('Range report CSV downloaded.', 'success');
+  }
+
+  function printAnalyticsReport() {
+    if (!anaLastReport) return;
+    renderRangeReport(liveState());
+    window.print();
+    toast('Open the print dialog and choose “Save as PDF” if you want a PDF copy.', 'info', 6000);
   }
 
   function barChart(buckets, targetPct) {
@@ -1462,6 +1596,10 @@
     if (!el) return;
     const action = el.getAttribute('data-action');
     switch (action) {
+      case 'anaRange': setAnalyticsRange(el.getAttribute('data-range')); break;
+      case 'anaApplyCustom': applyCustomAnalyticsRange(); break;
+      case 'anaExportCSV': exportAnalyticsCSV(); break;
+      case 'anaPrintReport': printAnalyticsReport(); break;
       case 'ttEdit': editTimetableEntry(el.getAttribute('data-id')); break;
       case 'ttDelete': deleteTimetableEntry(el.getAttribute('data-id')); break;
       case 'ttDuplicate': duplicateTimetableEntry(el.getAttribute('data-id')); break;
