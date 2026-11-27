@@ -491,8 +491,9 @@
       const missed = Math.max(0, t - a);
 
       const hasData = t > 0;
-      const percentage = hasData ? ((a / t) * 100).toFixed(1) : '--';
-      const pctNum = hasData ? parseFloat(percentage) : 0;
+      // Keep the raw value for every comparison. Rounding is display-only.
+      const pctNum = hasData ? (a / t) * 100 : 0;
+      const percentage = hasData ? pctNum.toFixed(1) : '--';
       const isShort = hasData && pctNum < target;
 
       let minNeededToReach75 = 0;
@@ -513,8 +514,10 @@
         }
       }
 
-      const shortagePct = isShort ? (target - pctNum).toFixed(1) : '0.0';
-      const surplusPct = hasData && !isShort ? (pctNum - target).toFixed(1) : '0.0';
+      const shortagePct = isShort ? Math.round((target - pctNum) * 10) / 10 : 0;
+      const surplusPct = hasData && !isShort ? Math.round((pctNum - target) * 10) / 10 : 0;
+      const shortageLabel = shortagePct.toFixed(1);
+      const surplusLabel = surplusPct.toFixed(1);
 
       return {
         attended: a,
@@ -527,8 +530,11 @@
         isShort,
         minNeededToReach75,
         maxCanMiss,
-        shortagePct,
-        surplusPct
+        shortagePct: shortageLabel,
+        surplusPct: surplusLabel,
+        exactPct: hasData ? pctNum : null,
+        safeBunks: maxCanMiss,
+        classesNeeded: minNeededToReach75
       };
     }
 

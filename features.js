@@ -223,7 +223,7 @@
       kpis.innerHTML = [
         { label: 'Overall attendance', value: agg.hasData ? `${agg.percentage}%` : '—', tone: agg.hasData && agg.isShort ? 'danger' : agg.hasData ? 'success' : 'neutral', subtitle: `${agg.attended} / ${agg.conducted}` },
         { label: 'Classes attended', value: `${agg.attended}/${agg.conducted}`, tone: 'neutral', subtitle: `of ${agg.conducted} total` },
-        { label: `${trend.window ? trend.window * 2 : 4}-week trend`, value: trend.direction === 'unknown' ? '—' : `${trend.delta > 0 ? '+' : ''}${trend.delta}%`, tone: trend.direction === 'down' ? 'danger' : trend.direction === 'up' ? 'success' : 'neutral', subtitle: `(${trend.current}% vs ${trend.previous}% prior)` },
+        { label: `${trend.window ? trend.window * 2 : 4}-week trend`, value: trend.direction === 'unknown' ? '—' : `${trend.delta > 0 ? '+' : ''}${C.round1(trend.delta)}%`, tone: trend.direction === 'down' ? 'danger' : trend.direction === 'up' ? 'success' : 'neutral', subtitle: `(${C.round1(trend.current)}% vs ${C.round1(trend.previous)}% prior)` },
         { label: 'Subjects at risk', value: String(agg.atRisk), tone: agg.atRisk ? 'danger' : 'success' }
       ].map((k) => `
         <div class="mini-stat">
@@ -273,7 +273,7 @@
             <span class="trend-arrow" aria-hidden="true">${trend.direction === 'up' ? '↑' : trend.direction === 'down' ? '↓' : '→'}</span>
             <div>
               <strong>Attendance is ${word}</strong>
-              <p>Last ${trend.window} weeks ${trend.current}% vs the previous ${trend.window} weeks ${trend.previous}% (${trend.delta > 0 ? '+' : ''}${trend.delta} points).</p>
+              <p>Last ${trend.window} weeks ${C.round1(trend.current)}% vs the previous ${trend.window} weeks ${C.round1(trend.previous)}% (${trend.delta > 0 ? '+' : ''}${C.round1(trend.delta)} points).</p>
             </div>
           </div>`;
       }
@@ -852,8 +852,9 @@
         if (summary.total > 0) {
           p.lastWeeklyISO = weekStart;
           persist();
-          toast(`This week: ${summary.present} present, ${summary.absent} absent (${summary.pctNum}%).`, 'info', 6000);
-          pushNotification('Weekly attendance summary', `${summary.present} present · ${summary.absent} absent · ${summary.pctNum}%.`);
+          const weekPct = summary.pctNum === null ? '—' : C.round1(summary.pctNum);
+          toast(`This week: ${summary.present} present, ${summary.absent} absent (${weekPct}%).`, 'info', 6000);
+          pushNotification('Weekly attendance summary', `${summary.present} present · ${summary.absent} absent · ${weekPct}%.`);
         }
       }
     }

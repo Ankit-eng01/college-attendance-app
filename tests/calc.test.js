@@ -415,3 +415,29 @@ test('trend and comparison only use subjects with logged classes', () => {
   ], 75);
   assert.deepEqual(rows.map((r) => r.id), ['b', 'a']);
 });
+
+// Critical regression: 599/799 is 74.9687%, which must stay BELOW a 75% target
+// even though its one-decimal display value is "75.0".
+test('regression: 599/799 at 75% is below target and uses raw comparisons', () => {
+  const st = calc.stats({ attended: 599, total: 799 }, 75);
+  assert.equal(st.isShort, true);
+  assert.equal(st.status, 'short');
+  assert.equal(st.percentage, '75.0');
+  assert.ok(Math.abs(st.pctNum - (599 / 799) * 100) < 1e-9);
+  assert.ok(Math.abs(st.exactPct - (599 / 799) * 100) < 1e-9);
+  assert.equal(st.pctNum >= 75, false);
+  assert.equal(st.safeBunks, 0);
+  assert.equal(st.classesNeeded, 1);
+});
+
+test('regression: display rounding never leaks into warning thresholds', () => {
+  const st = calc.stats({ attended: 599, total: 799 }, 75);
+  // Danger threshold must use the raw value, not the rounded 75.0 display string.
+  assert.equal(Number.parseFloat(st.percentage) >= 75, true);
+  assert.equal(st.exactPct < 75, true);
+  const agg = calc.aggregate([{ id: 'x', name: 'X', attended: 599, total: 799 }], 75);
+  assert.equal(agg.rows[0].isShort, true);
+  assert.equal(agg.belowTarget, 1);
+  assert.equal(agg.percentage, '75.0');
+  assert.ok(Math.abs(agg.pctNum - (599 / 799) * 100) < 1e-9);
+});

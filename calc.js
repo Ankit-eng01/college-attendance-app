@@ -159,11 +159,11 @@
     return {
       attended: newAttended,
       total: newTotal,
-      pctNum: pctNum === null ? 0 : round1(pctNum),
-      percentage: pctNum === null ? '--' : round1(pctNum).toFixed(1),
+      pctNum: pctNum === null ? 0 : pctNum,
+      percentage: pctNum === null ? '--' : pctNum.toFixed(1),
       hasData: newTotal > 0,
       meets: pctNum !== null && pctNum >= target,
-      delta: pctNum === null ? 0 : round1(pctNum - (current.exactPct || 0)),
+      delta: pctNum === null ? 0 : pctNum - (current.exactPct || 0),
       target,
       neededAfter: classesNeeded(newAttended, newTotal, target),
       safeBunksAfter: safeBunks(newAttended, newTotal, target),
@@ -195,8 +195,8 @@
       conducted,
       missed: Math.max(0, conducted - attended),
       hasData: conducted > 0,
-      pctNum: pctNum === null ? null : round1(pctNum),
-      percentage: pctNum === null ? '--' : round1(pctNum).toFixed(1),
+      pctNum: pctNum === null ? null : pctNum,
+      percentage: pctNum === null ? '--' : pctNum.toFixed(1),
       target,
       belowTarget,
       atRisk,
@@ -364,7 +364,7 @@
       present,
       absent,
       total,
-      pctNum: total > 0 ? round1((present / total) * 100) : null
+      pctNum: total > 0 ? (present / total) * 100 : null
     };
   }
 
@@ -429,7 +429,7 @@
 
     buckets.forEach((b) => {
       b.total = b.present + b.absent;
-      b.pctNum = b.total > 0 ? round1((b.present / b.total) * 100) : null;
+      b.pctNum = b.total > 0 ? (b.present / b.total) * 100 : null;
     });
     return buckets;
   }
@@ -452,9 +452,9 @@
       return { direction: 'unknown', delta: 0, current: null, previous: null, window: 0 };
     }
     const avg = (rows) => rows.reduce((sum, b) => sum + b.pctNum * b.total, 0) / rows.reduce((sum, b) => sum + b.total, 0);
-    const current = round1(avg(recent));
-    const previous = round1(avg(earlier));
-    const delta = round1(current - previous);
+    const current = avg(recent);
+    const previous = avg(earlier);
+    const delta = current - previous;
     return {
       direction: delta > 0.5 ? 'up' : delta < -0.5 ? 'down' : 'flat',
       delta,
