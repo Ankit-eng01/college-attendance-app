@@ -113,23 +113,6 @@
     // Wizard state
     let wizardSubjectCount = 5;
 
-    // Initialization
-    window.addEventListener('DOMContentLoaded', () => {
-      initDate();
-      applyThemeUI(appState.activeTheme || 'graphite');
-      applyPrivacyModeUI();
-      renderApp();
-      initServiceWorker();
-
-      // First launch requires an explicit choice: account or guest.
-      // The setup wizard only opens after that choice has been made.
-      if (needsAuthGate()) {
-        setTimeout(openAuthGate, 150);
-      } else {
-        openSetupIfNeeded();
-      }
-    });
-
     function initDate() {
       const now = new Date();
       const opts = { month: 'short', day: 'numeric', year: 'numeric' };
@@ -479,10 +462,13 @@
       let maxCanMiss = 0;
 
       if (isShort) {
-        const numerator = (target * t) - (100 * a);
-        const denominator = 100 - target;
-        minNeededToReach75 = Math.ceil(numerator / denominator);
-        if (minNeededToReach75 < 0) minNeededToReach75 = 0;
+        if (target >= 100) {
+          minNeededToReach75 = null;
+        } else {
+          const numerator = (target * t) - (100 * a);
+          const denominator = 100 - target;
+          minNeededToReach75 = Math.max(1, Math.ceil(numerator / denominator));
+        }
       } else {
         if (target > 0) {
           const maxAllowedTotal = Math.floor((100 * a) / target);
@@ -549,7 +535,11 @@
           : (appState.studentName || (appState.authChoice === 'guest' ? 'Guest mode' : 'Not signed in'));
       }
       const sidebarSub = document.getElementById('sidebarAccountSub');
-      if (sidebarSub) sidebarSub.textContent = appState.accountEmail ? 'Synced account' : 'Local device only';
+      if (sidebarSub) {
+        sidebarSub.textContent = appState.accountEmail
+          ? 'Email account · Synced'
+          : (appState.authChoice === 'guest' ? 'Guest · Sync code backup' : 'Choose account or guest');
+      }
       ['dashTargetVal', 'dashTargetValMirror'].forEach((id) => {
         const el = document.getElementById(id);
         if (el) el.textContent = `${target}%`;
@@ -568,18 +558,34 @@
       if (keyDisp) keyDisp.textContent = isKeyVisible ? (appState.syncAuthKey || 'Not Set') : '••••••••••••••••';
       updateAccountUI();
       const lastSyncEl = document.getElementById('settingsLastSyncTime');
+      const badgeEl = document.getElementById('cloudConnectionBadge');
       if (lastSyncEl) {
         if (appState.lastSyncedAt) {
           const d = new Date(appState.lastSyncedAt);
           lastSyncEl.textContent = isNaN(d.getTime()) ? 'Recently' : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          if (badgeEl && badgeEl.textContent !== 'Syncing...') {
+            badgeEl.className = 'criteria-pill pill-safe';
+            badgeEl.innerHTML = '<span class="pill-dot dot-green"></span> Connected';
+          }
         } else {
           lastSyncEl.textContent = 'Not synced yet';
+          if (badgeEl && badgeEl.textContent !== 'Syncing...') {
+            badgeEl.className = 'criteria-pill pill-neutral';
+            badgeEl.textContent = 'Ready';
+          }
         }
       }
 
       renderSmartDashboard();
       renderChips();
       renderSubjectAnalyticsList();
+      if (appState.activeTab === 'calendar') {
+        renderCalendar();
+      }
+      if (appState.activeTab === 'calculator') {
+        populateCalcOptions();
+        runSimulation();
+      }
       const badge = document.getElementById('subjectCountBadge');
       if (badge) badge.textContent = appState.subjects.length;
     }
@@ -705,17 +711,28 @@
       }
 
       if (isOverallShort) {
-        const needed = Math.max(1, Math.ceil(((target * totalConducted) - (100 * totalAtt)) / (100 - target)));
-        const neededLabel = `${needed} ${needed === 1 ? 'class' : 'classes'}`;
-        adviceEl.innerHTML = `Below criteria. Attend the next <strong class="privacy-blur" style="color:var(--danger-text);">${neededLabel}</strong> in a row to recover.`;
-        alertBar.className = 'shortage-banner banner-danger';
-        alertBar.style.display = 'flex';
-        alertBar.innerHTML = `
-          <div>
-            <strong>Below ${target}%:</strong> You're <span class="privacy-blur">${(target - overallPctNum).toFixed(1)}%</span> short.
-            Attend <span class="privacy-blur">${neededLabel}</span> consecutively to get back on track.
-          </div>
-        `;
+        if (target >= 100) {
+          adviceEl.innerHTML = `Below 100% target (${overallPct}%). Once a class is missed, 100% cannot be reached.`;
+          alertBar.className = 'shortage-banner banner-danger';
+          alertBar.style.display = 'flex';
+          alertBar.innerHTML = `
+            <div>
+              <strong>Below 100%:</strong> You're <span class="privacy-blur">${(target - overallPctNum).toFixed(1)}%</span> short. Lower your target or keep attending to raise your percentage.
+            </div>
+          `;
+        } else {
+          const needed = Math.max(1, Math.ceil(((target * totalConducted) - (100 * totalAtt)) / (100 - target)));
+          const neededLabel = `${needed} ${needed === 1 ? 'class' : 'classes'}`;
+          adviceEl.innerHTML = `Below criteria. Attend the next <strong class="privacy-blur" style="color:var(--danger-text);">${neededLabel}</strong> in a row to recover.`;
+          alertBar.className = 'shortage-banner banner-danger';
+          alertBar.style.display = 'flex';
+          alertBar.innerHTML = `
+            <div>
+              <strong>Below ${target}%:</strong> You're <span class="privacy-blur">${(target - overallPctNum).toFixed(1)}%</span> short.
+              Attend <span class="privacy-blur">${neededLabel}</span> consecutively to get back on track.
+            </div>
+          `;
+        }
       } else {
         const allowedTot = Math.floor((100 * totalAtt) / target);
         const bunks = Math.max(0, allowedTot - totalConducted);
@@ -831,7 +848,7 @@
               <div class="analytic-chip ${stats.isShort ? 'alert-chip' : ''}">
                 <span class="analytic-lbl">Min to reach ${stats.target}%</span>
                 <span class="analytic-val ${!stats.hasData ? 'text-muted' : (stats.isShort ? 'text-danger' : 'text-success')} privacy-blur">
-                  ${!stats.hasData ? 'Log a class first' : (stats.isShort ? `Attend ${stats.minNeededToReach75} in a row` : '0 (Already Safe)')}
+                  ${!stats.hasData ? 'Log a class first' : (stats.isShort ? (stats.minNeededToReach75 === null ? 'Not reachable at 100%' : `Attend ${stats.minNeededToReach75} in a row`) : '0 (Already Safe)')}
                 </span>
               </div>
 
@@ -925,7 +942,7 @@
         }
       } else if (status !== 'none') {
         appState.history.unshift({
-          id: 'hist_' + Date.now(),
+          id: 'hist_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
           subId,
           date: dateStr,
           status,
@@ -1134,7 +1151,9 @@
         document.getElementById('histGoalText').textContent = 'No classes logged yet';
         document.getElementById('histGoalText').style.color = 'var(--text-muted)';
       } else if (stats.isShort) {
-        document.getElementById('histGoalText').textContent = `Min to 75%: Attend ${stats.minNeededToReach75} in a row`;
+        document.getElementById('histGoalText').textContent = stats.minNeededToReach75 === null
+          ? 'Not reachable at 100% target'
+          : `Min to ${stats.target}%: Attend ${stats.minNeededToReach75} in a row`;
         document.getElementById('histGoalText').style.color = 'var(--danger-text)';
       } else {
         document.getElementById('histGoalText').textContent = `Max you can miss: ${stats.maxCanMiss} classes`;
@@ -1395,7 +1414,10 @@ Created ${newSubjects.length} customized subjects for you.`);
       const id = document.getElementById('singleEditId').value;
       const rawName = document.getElementById('singleName').value;
       let name = sanitizeText(rawName);
-      if (!name) return;
+      if (!name) {
+        notify('Please enter a valid subject name.');
+        return;
+      }
       if (name.length > 80) name = name.substring(0, 80);
 
       const category = document.getElementById('singleCategory').value;
@@ -1412,7 +1434,7 @@ Created ${newSubjects.length} customized subjects for you.`);
         }
       } else {
         appState.subjects.push({
-          id: 'sub_' + Date.now(),
+          id: 'sub_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
           name,
           category,
           attended,
@@ -1421,6 +1443,7 @@ Created ${newSubjects.length} customized subjects for you.`);
         });
       }
 
+      appState.isSetupCompleted = true;
       closeSingleModal();
       saveState();
     }
@@ -1429,6 +1452,15 @@ Created ${newSubjects.length} customized subjects for you.`);
       const id = document.getElementById('singleEditId').value;
       if (id && confirm('Delete this subject and its records?')) {
         appState.subjects = appState.subjects.filter(s => s.id !== id);
+        appState.history = (appState.history || []).filter(h => h.subId !== id);
+        if (appState.calendar && typeof appState.calendar === 'object') {
+          Object.keys(appState.calendar).forEach(dateKey => {
+            if (appState.calendar[dateKey] && appState.calendar[dateKey].entries) {
+              delete appState.calendar[dateKey].entries[id];
+            }
+          });
+        }
+        if (currentHistorySubId === id) closeHistoryDrawer();
         closeSingleModal();
         saveState();
       }
@@ -1444,6 +1476,9 @@ Created ${newSubjects.length} customized subjects for you.`);
     }
     function setTarget(val) {
       appState.globalTarget = Math.max(50, Math.min(100, val));
+      (appState.subjects || []).forEach(sub => {
+        sub.target = appState.globalTarget;
+      });
       closeTargetModal();
       saveState();
     }
@@ -1703,11 +1738,11 @@ Created ${newSubjects.length} customized subjects for you.`);
       appState.subjects = [];
       appState.calendar = {};
       appState.history = [];
+      resetKeyVisibility();
 
       applyThemeUI('graphite');
       applyPrivacyModeUI();
       saveStateOnly();
-      setTimeout(openAuthGate, 150);
 
       if (deleteBtn) {
         deleteBtn.disabled = false;
@@ -1725,7 +1760,7 @@ Created ${newSubjects.length} customized subjects for you.`);
         notify('Local attendance records erased.\n\nNote: Could not reach cloud server to delete remote backup. Please reconnect and wipe your cloud record if needed.');
       }
 
-      openSetupModal();
+      setTimeout(openAuthGate, 150);
     }
 
     async function wipeCloudBackupOnly() {
@@ -1882,12 +1917,24 @@ Created ${newSubjects.length} customized subjects for you.`);
     // Single entry point for the Attendify Sync API.
     // Endpoints: POST /auth/register, POST /auth/login, POST /push,
     //            POST /pull, POST /delete, GET /health
-    function syncApiRequest(path, payload) {
-      return fetch(`${SYNC_API_URL}${path}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+    async function syncApiRequest(path, payload, timeoutMs = 15000) {
+      const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+      try {
+        return await fetch(`${SYNC_API_URL}${path}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          signal: controller ? controller.signal : undefined
+        });
+      } catch (err) {
+        if (err && err.name === 'AbortError') {
+          throw new Error('Request timed out. Please check your connection and try again.');
+        }
+        throw err;
+      } finally {
+        if (timer) clearTimeout(timer);
+      }
     }
 
     // Cryptographically Secure Sync Credentials Generation (CSPRNG)
@@ -1917,7 +1964,12 @@ Created ${newSubjects.length} customized subjects for you.`);
       }, 800);
     }
 
+    let isSyncInFlight = false;
+
     async function syncToCloudStorage() {
+      if (isSyncInFlight) return { ok: false, busy: true };
+      isSyncInFlight = true;
+
       if (!appState.syncCode || !appState.syncCode.startsWith('ATN-')) appState.syncCode = generateSyncCode();
       if (!appState.syncAuthKey) appState.syncAuthKey = generateAuthToken();
 
@@ -1949,41 +2001,72 @@ Created ${newSubjects.length} customized subjects for you.`);
 
         if (response.ok) {
           appState.lastSyncedAt = Date.now();
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+          } catch (storageErr) {
+            console.warn('Could not persist lastSyncedAt:', storageErr);
+          }
           if (statusEl) statusEl.innerHTML = '<span style="color:var(--success-text);">Synced</span>';
           const badgeOk = document.getElementById('cloudConnectionBadge');
-          if (badgeOk) { badgeOk.className = 'criteria-pill pill-safe'; badgeOk.innerHTML = '<span class=\"pill-dot dot-green\"></span> Connected'; }
+          if (badgeOk) { badgeOk.className = 'criteria-pill pill-safe'; badgeOk.innerHTML = '<span class="pill-dot dot-green"></span> Connected'; }
           const lastSyncEl = document.getElementById('settingsLastSyncTime');
-          if (lastSyncEl) lastSyncEl.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          if (lastSyncEl) lastSyncEl.textContent = new Date(appState.lastSyncedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          return { ok: true };
         } else {
-          console.warn('Cloud sync response error:', response.status);
+          const errData = await response.json().catch(() => ({}));
+          console.warn('Cloud sync response error:', response.status, errData);
           if (statusEl) statusEl.innerHTML = '<span style="color:var(--text-dim);">Local</span>';
           const badgeLocal = document.getElementById('cloudConnectionBadge');
-          if (badgeLocal) { badgeLocal.className = 'criteria-pill pill-neutral'; badgeLocal.textContent = 'Local'; }
+          if (badgeLocal) { badgeLocal.className = 'criteria-pill pill-neutral'; badgeLocal.textContent = 'Error'; }
+          return { ok: false, error: errData.error || `Server error (${response.status})` };
         }
       } catch (err) {
         console.warn('Offline or network error syncing to cloud:', err);
         if (statusEl) statusEl.innerHTML = '<span style="color:var(--text-dim);">Offline</span>';
-          const badgeOff = document.getElementById('cloudConnectionBadge');
-          if (badgeOff) { badgeOff.className = 'criteria-pill pill-neutral'; badgeOff.textContent = 'Offline'; }
+        const badgeOff = document.getElementById('cloudConnectionBadge');
+        if (badgeOff) { badgeOff.className = 'criteria-pill pill-neutral'; badgeOff.textContent = 'Offline'; }
+        return { ok: false, error: err.message || 'Network unavailable' };
       } finally {
+        isSyncInFlight = false;
         const headerBtn = document.getElementById('headerCloudSyncBtn');
         if (headerBtn) headerBtn.style.opacity = '1';
       }
     }
 
     async function triggerManualSync() {
-      const headerBtn = document.getElementById('headerCloudSyncBtn');
-      if (headerBtn) headerBtn.classList.add('active');
-      await syncToCloudStorage();
-      setTimeout(() => {
-        if (headerBtn) headerBtn.classList.remove('active');
-      }, 600);
-      notify(`Cloud Storage Synced!
-Your attendance records are backed up securely under Code: ${appState.syncCode}`);
+      const syncBtn = document.querySelector('[data-action="triggerManualSync"]');
+      if (syncBtn && syncBtn.disabled) return;
+      const originalText = syncBtn ? syncBtn.textContent : 'Sync now';
+      if (syncBtn) {
+        syncBtn.disabled = true;
+        syncBtn.textContent = 'Syncing...';
+      }
+
+      try {
+        const res = await syncToCloudStorage();
+        if (res && res.busy) return;
+        if (res && res.ok) {
+          notify(`Cloud backup synced.\nYour records are backed up under Code: ${appState.syncCode}`);
+        } else {
+          notify(`Cloud sync failed: ${(res && res.error) || 'Network unavailable'}. Your records remain saved locally.`);
+        }
+      } finally {
+        if (syncBtn) {
+          syncBtn.disabled = false;
+          syncBtn.textContent = originalText;
+        }
+      }
     }
 
     
     let isKeyVisible = false;
+    function resetKeyVisibility() {
+      isKeyVisible = false;
+      const keyEl = document.getElementById('settingsSyncKeyDisplay');
+      const btn = document.getElementById('toggleKeyVisibilityBtn');
+      if (keyEl) keyEl.textContent = '••••••••••••••••';
+      if (btn) btn.textContent = 'Show';
+    }
     function toggleKeyVisibility() {
       isKeyVisible = !isKeyVisible;
       const keyEl = document.getElementById('settingsSyncKeyDisplay');
@@ -2027,12 +2110,16 @@ Your attendance records are backed up securely under Code: ${appState.syncCode}`
 
     function copySyncCode() {
       if (!appState.syncCode) return;
-      navigator.clipboard.writeText(appState.syncCode).then(() => {
-        notify(`Copied Cloud Sync Code: ${appState.syncCode}
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(appState.syncCode).then(() => {
+          notify(`Copied Cloud Sync Code: ${appState.syncCode}
 Save this code to restore your courses on another phone or computer!`);
-      }).catch(() => {
+        }).catch(() => {
+          prompt('Copy your Cloud Sync Code:', appState.syncCode);
+        });
+      } else {
         prompt('Copy your Cloud Sync Code:', appState.syncCode);
-      });
+      }
     }
 
     function openRestoreCloudModal() {
@@ -2043,9 +2130,13 @@ Save this code to restore your courses on another phone or computer!`);
       document.getElementById('restoreCloudModal').classList.remove('open');
     }
 
+    let isRestoreInFlight = false;
     async function confirmRestoreFromCloud() {
+      if (isRestoreInFlight) return;
+
       const codeInput = document.getElementById('restoreSyncCodeInput');
       const keyInput = document.getElementById('restoreAuthKeyInput');
+      const restoreBtn = document.querySelector('[data-action="confirmRestoreFromCloud"]');
       let code = (codeInput ? codeInput.value : '').trim();
       let key = (keyInput ? keyInput.value : '').trim();
 
@@ -2053,7 +2144,7 @@ Save this code to restore your courses on another phone or computer!`);
       if (code.includes(':')) {
         const parts = code.split(':');
         code = parts[0].trim();
-        key = parts[1].trim();
+        key = parts.slice(1).join(':').trim();
       }
 
       if (!code) {
@@ -2063,6 +2154,13 @@ Save this code to restore your courses on another phone or computer!`);
       if (!key) {
         notify('Please enter your Private Secret Key (Authorization) to restore this sync code.');
         return;
+      }
+
+      isRestoreInFlight = true;
+      const originalText = restoreBtn ? restoreBtn.textContent : 'Fetch & Restore';
+      if (restoreBtn) {
+        restoreBtn.disabled = true;
+        restoreBtn.textContent = 'Restoring...';
       }
 
       try {
@@ -2101,16 +2199,27 @@ Save this code to restore your courses on another phone or computer!`);
         appState.syncCode = code;
         appState.syncAuthKey = key;
         appState.isSetupCompleted = true;
+        appState.lastSyncedAt = Date.now();
         appState.studentName = sanitizeText(cloudData.studentName || '');
 
+        resetKeyVisibility();
+        if (codeInput) codeInput.value = '';
+        if (keyInput) keyInput.value = '';
         applyThemeUI(appState.activeTheme || 'graphite');
         applyPrivacyModeUI();
-        saveState();
+        saveStateOnly();
+        renderCalendar();
         closeRestoreCloudModal();
 
-        notify(`Cloud Restore Successful.\nWelcome back, ${appState.studentName || 'Student'}!\nRestored ${appState.subjects.length} subjects from secure cloud storage.`);
+        notify(`Cloud Restore Successful.\nWelcome back, ${appState.studentName || 'Student'}!\nRestored ${appState.subjects.length} subjects from cloud backup.`);
       } catch (err) {
         notify('Error connecting to Cloud Storage: ' + err.message);
+      } finally {
+        isRestoreInFlight = false;
+        if (restoreBtn) {
+          restoreBtn.disabled = false;
+          restoreBtn.textContent = originalText;
+        }
       }
     }
 
@@ -2265,6 +2374,7 @@ Save this code to restore your courses on another phone or computer!`);
       }
       saveStateOnly();
 
+      let pulledFromCloud = false;
       if (restoreCloud) {
         try {
           const response = await syncApiRequest('/pull', {
@@ -2280,28 +2390,41 @@ Save this code to restore your courses on another phone or computer!`);
               restored.syncAuthKey = appState.syncAuthKey;
               restored.authChoice = 'account';
               restored.isSetupCompleted = true;
+              restored.lastSyncedAt = Date.now();
               appState = restored;
+              pulledFromCloud = true;
               applyThemeUI(appState.activeTheme || 'graphite');
               applyPrivacyModeUI();
               saveStateOnly();
             }
+          } else if (response.status !== 404) {
+            notify('Signed in, but cloud restore returned an error. Local records were kept.');
           }
         } catch (err) {
           console.warn('Could not pull cloud data after sign in:', err);
+          notify('Signed in, but could not reach cloud storage right now. Local records were kept.');
         }
       }
 
+      resetKeyVisibility();
       renderApp();
-      openSetupIfNeeded();
-      setAccountMessage(
-        restoreCloud ? 'Signed in successfully.' : 'Account created. Your data is syncing.',
-        'success'
-      );
+      renderCalendar();
       ['accountPasswordInput', 'accountModalPassword'].forEach((id) => {
         const el = document.getElementById(id);
         if (el) el.value = '';
       });
-      await syncToCloudStorage();
+
+      let syncRes = { ok: pulledFromCloud };
+      if (!pulledFromCloud) {
+        syncRes = await syncToCloudStorage();
+      }
+      setAccountMessage(
+        restoreCloud
+          ? (pulledFromCloud ? 'Signed in and restored from cloud.' : 'Signed in. No cloud backup found yet—using device data.')
+          : (syncRes && syncRes.ok ? 'Account created and synced to cloud.' : 'Account created. Cloud sync will retry when online.'),
+        'success'
+      );
+      openSetupIfNeeded();
     }
 
     async function createAccount(modal) {
@@ -2347,8 +2470,14 @@ Save this code to restore your courses on another phone or computer!`);
       if (!confirm('Sign out of your Attendify account? Your records stay on this device.')) return;
       appState.accountEmail = '';
       appState.authChoice = '';
+      appState.lastSyncedAt = null;
       appState.syncCode = generateSyncCode();
       appState.syncAuthKey = generateAuthToken();
+      resetKeyVisibility();
+      ['accountPasswordInput', 'accountModalPassword'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
       saveStateOnly();
       renderApp();
       setAccountMessage('Signed out. Choose how to continue.', 'success');
@@ -2369,14 +2498,13 @@ Save this code to restore your courses on another phone or computer!`);
       if (newName) {
         appState.studentName = newName;
         saveState();
-        queueCloudSync();
       }
       closeEditNameModal();
     }
 
     function initServiceWorker() {
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js?v=20261127r8', { updateViaCache: 'none' }).catch(() => {});
+        navigator.serviceWorker.register('./sw.js?v=20261127r9', { updateViaCache: 'none' }).catch(() => {});
       }
     }
   
@@ -2628,8 +2756,9 @@ Save this code to restore your courses on another phone or computer!`);
         if (val.includes(':')) {
           const parts = val.split(':');
           restoreSyncCodeInput.value = parts[0].trim();
-          if (restoreAuthKeyInput && parts[1]) {
-            restoreAuthKeyInput.value = parts[1].trim();
+          const joinedKey = parts.slice(1).join(':').trim();
+          if (restoreAuthKeyInput && joinedKey) {
+            restoreAuthKeyInput.value = joinedKey;
           }
         }
       });
@@ -2649,8 +2778,25 @@ Save this code to restore your courses on another phone or computer!`);
       initDate();
       applyThemeUI(appState.activeTheme || 'graphite');
       applyPrivacyModeUI();
-      renderApp();
+      try {
+        renderApp();
+        renderCalendar();
+      } catch (err) {
+        console.error('Failed to render initial UI:', err);
+        const healthTag = document.getElementById('dashHealthTag');
+        const adviceEl = document.getElementById('dashAdviceText');
+        if (healthTag) healthTag.textContent = '● Error';
+        if (adviceEl) adviceEl.textContent = 'Could not load saved attendance data. Check console or reset data in Settings.';
+      }
       initServiceWorker();
+
+      // First launch requires an explicit choice: account or guest.
+      // The setup wizard only opens after that choice has been made.
+      if (needsAuthGate()) {
+        setTimeout(openAuthGate, 150);
+      } else {
+        openSetupIfNeeded();
+      }
 
       // Initial cloud sync if enabled — only once the student has real data,
       // otherwise every first-time visitor creates an empty cloud record.

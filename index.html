@@ -3211,7 +3211,7 @@
       <div class="sidebar-foot">
         <div class="sidebar-status">
           <div class="sidebar-status-title"><span class="pill-dot dot-green"></span> Cloud backup</div>
-          <div class="sidebar-status-copy">Cloud backup runs automatically over HTTPS. Guest records can be restored with your sync code.</div>
+          <div class="sidebar-status-copy">Records save to browser storage for offline use and back up over HTTPS with your Sync Code + Secret Key.</div>
         </div>
         <button type="button" class="sidebar-account" data-action="switchTab" data-tab="settings" aria-label="Open account settings">
           <span class="sidebar-avatar" aria-hidden="true">
@@ -3321,9 +3321,9 @@
 
             <!-- Health Indicator & Status Advice -->
             <div class="dash-hero-info">
-              <div id="dashHealthTag" class="health-tag health-good">● Calculating...</div>
+              <div id="dashHealthTag" class="health-tag health-good">● Ready</div>
               <p id="dashAdviceText" class="dash-advice">
-                Loading attendance intelligence...
+                Add your subjects or log a class to view your attendance summary.
               </p>
               <div class="dash-target-note">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -3388,20 +3388,7 @@
       </div>
 
       <!-- 2. SUBJECT-WISE ANALYTICS LIST -->
-      <div id="subjectsList" class="subjects-list">
-        <div class="skeleton-card" aria-hidden="true">
-          <div class="skeleton-line w40"></div>
-          <div class="skeleton-line w60"></div>
-          <div class="skeleton-block"></div>
-          <div class="skeleton-line w80"></div>
-        </div>
-        <div class="skeleton-card" aria-hidden="true">
-          <div class="skeleton-line w40"></div>
-          <div class="skeleton-line w60"></div>
-          <div class="skeleton-block"></div>
-          <div class="skeleton-line w80"></div>
-        </div>
-      </div>
+      <div id="subjectsList" class="subjects-list"></div>
 
       <div id="emptyState" class="subjects-empty-state" style="display:none;" role="region" aria-label="No subjects added yet">
         <div class="subjects-empty-inner">
@@ -3440,7 +3427,7 @@
         <!-- 3. ATTENDANCE CALENDAR COMPONENT -->
         <div class="cal-card">
           <div class="cal-header">
-            <div class="cal-month-title" id="calMonthTitle">October 2026</div>
+            <div class="cal-month-title" id="calMonthTitle">Current Month</div>
             <div class="cal-nav-btns">
               <button type="button" class="cal-nav-btn" data-action="prevMonth" aria-label="Previous month">‹</button>
               <button type="button" class="icon-btn" style="padding:4px 9px; font-size:11px;" data-action="goToTodayCal">Today</button>
@@ -3763,7 +3750,10 @@
               <div><strong>Strict JSON schema validation:</strong> Every imported backup is checked for object bounds, types, and value limits before it is applied.</div>
             </div>
             <div class="security-check-row">
-              <div><strong>Local-first storage:</strong> Records live in this device's browser storage. While cloud sync is enabled, attendance data, your account email (if signed in), and a compact device label are sent over HTTPS to the sync API for cross-device restore. Guest records use the same backup flow and can be restored with the sync code shown above.</div>
+              <div><strong>Local storage &amp; cloud upload:</strong> Your subjects, attendance logs, calendar entries, and preferences always stay in browser storage for offline use. Once subjects are set up, those records, your student name, compact device info, and account email (if signed in) are uploaded over HTTPS to the sync API.</div>
+            </div>
+            <div class="security-check-row">
+              <div><strong>Guest Mode vs. Account Mode:</strong> In Guest Mode, Attendify backs up over HTTPS using only your random Sync Code + Private Secret Key (no email recovery if both device and key are lost). Creating an account links your Sync Code + Secret Key to your email and password for cross-device sign-in.</div>
             </div>
           </div>
 
@@ -4070,28 +4060,30 @@
         </div>
 
         <div style="background:var(--bg-surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:12px;">
-          <strong style="color:var(--text-strong); font-size:13px; display:block; margin-bottom:4px;">2. Local-First Storage &amp; Optional Cloud Backup</strong>
-          Attendance records, subjects, and calendar entries are stored in this device's browser storage and the app works offline. While cloud sync is enabled (the default), your attendance data, account email (if signed in), and a compact device label (device type, browser, OS, screen size) are sent over HTTPS to the Attendify sync API so you can restore on another device. Guest records use the same backup flow and can be restored with the sync code shown in Settings; create an account for email-based recovery.
+          <strong style="color:var(--text-strong); font-size:13px; display:block; margin-bottom:4px;">2. Local Storage vs. Cloud Backup</strong>
+          Your subjects, attendance logs, calendar entries, and theme settings are saved locally in this browser's storage so Attendify works offline. Once you finish setup with subjects, cloud backup uploads your attendance data, student name, compact device profile (type, browser, OS, screen size), and account email (if signed in) over HTTPS to the Attendify sync API.
         </div>
 
         <div style="background:var(--bg-surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:12px;">
-          <strong style="color:var(--text-strong); font-size:13px; display:block; margin-bottom:4px;">3. XSS Protection &amp; Strict Content Security Policy (CSP)</strong>
+          <strong style="color:var(--text-strong); font-size:13px; display:block; margin-bottom:4px;">3. Guest Mode, Accounts &amp; Sync Codes</strong>
+          <strong>Guest Mode:</strong> Requires no email or password. Attendify still generates a Sync Code (<code style="font-family:var(--font-mono);">ATN-...</code>) and Private Secret Key stored in this browser so you can back up and restore across devices. Guest backups have no email recovery if you lose both this device and your pairing credentials.<br>
+          <strong>Account Mode:</strong> Signing up links your Sync Code and Secret Key to an email and password (hashed server-side with salted scrypt), letting you sign in and restore on another device.<br>
+          <strong>How Sync Codes work:</strong> Your Sync Code identifies your backup; your Private Secret Key authorizes reads, writes, and server deletion (verified server-side via its SHA-256 hash). Data is protected in transit by HTTPS rather than client-side zero-knowledge encryption—keep your Secret Key and pairing token (<code style="font-family:var(--font-mono);">Code:Key</code>) private.
+        </div>
+
+        <div style="background:var(--bg-surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:12px;">
+          <strong style="color:var(--text-strong); font-size:13px; display:block; margin-bottom:4px;">4. XSS Protection &amp; Strict Content Security Policy (CSP)</strong>
           All rendered user inputs undergo strict character escaping. A Content Security Policy restricts scripts to first-party sources and blocks unauthorized payloads and cross-site scripting.
         </div>
 
         <div style="background:var(--bg-surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:12px;">
-          <strong style="color:var(--text-strong); font-size:13px; display:block; margin-bottom:4px;">4. Verified JSON Backups &amp; Schema Validation</strong>
+          <strong style="color:var(--text-strong); font-size:13px; display:block; margin-bottom:4px;">5. Verified JSON Backups &amp; Schema Validation</strong>
           Imported backup files are checked by an in-memory schema validator that verifies object bounds, property types, and value limits before applying state changes.
         </div>
 
         <div style="background:var(--bg-surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:12px;">
-          <strong style="color:var(--text-strong); font-size:13px; display:block; margin-bottom:4px;">5. Account Security</strong>
-          Passwords are hashed server-side with scrypt and a per-account salt. Sync tokens are hashed for verification and encrypted at rest. No passwords, API keys, or secret tokens are embedded in the frontend code.
-        </div>
-
-        <div style="background:var(--bg-surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:12px;">
           <strong style="color:var(--text-strong); font-size:13px; display:block; margin-bottom:4px;">6. Your Data Rights &amp; Deletion</strong>
-          You can export a CSV or JSON copy at any time. Clearing data removes local records and can also delete your cloud backup from the server. Guest records remain local unless you choose to create an account and sync.
+          You can export a CSV or JSON backup at any time. Using "Wipe cloud backup from server" in Settings deletes only the remote server copy while keeping local records. Using "Clear all subjects &amp; data deletion options" erases local browser storage and deletes your server backup for both Guest and Account modes.
         </div>
       </div>
 
@@ -4169,7 +4161,7 @@
       </div>
 
       <p style="font-size:11px; color:var(--text-dim); line-height:1.45; margin:0; text-align:center;">
-        Guest mode works without an account. Cloud backup still runs so you can restore with your sync code; create an account later from Settings for email-based recovery.
+        Guest mode works without an account and stores data locally with automatic HTTPS Sync Code backup (save your Sync Code + Secret Key from Settings to restore; no email recovery).
       </p>
     </div>
   </div>
@@ -4281,6 +4273,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=20261127r8" defer></script>
+  <script src="app.js?v=20261127r9" defer></script>
 </body>
 </html>
