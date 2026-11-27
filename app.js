@@ -649,13 +649,21 @@
         healthTag.textContent = '● Setup Required';
         healthTag.className = 'health-tag health-warning';
         adviceEl.innerHTML = `Open <strong>Settings</strong> or use the button below to add your subjects and start tracking.`;
-        alertBar.className = 'shortage-banner banner-safe';
+        alertBar.className = 'shortage-banner banner-safe welcome-panel';
         alertBar.style.display = 'flex';
         alertBar.innerHTML = `
-          <div>
-            <strong>Welcome to Attendify.</strong> How many subjects do you have this semester?
-            <button type="button" class="btn-primary btn-inline" data-action="openSetupModal">Set Up My Subjects</button>
+          <div class="welcome-panel-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"></path>
+              <path d="M22 10v6"></path>
+              <path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"></path>
+            </svg>
           </div>
+          <div class="welcome-panel-body">
+            <div class="welcome-panel-title">Welcome to Attendify</div>
+            <p class="welcome-panel-text">How many subjects do you have this semester? Set up your courses to start tracking.</p>
+          </div>
+          <button type="button" class="btn-primary welcome-panel-cta" data-action="openSetupModal">Set Up My Subjects</button>
         `;
         return;
       }
@@ -664,13 +672,21 @@
         healthTag.textContent = '● No Classes Yet';
         healthTag.className = 'health-tag health-warning';
         adviceEl.innerHTML = 'Mark your first class as Present or Absent to start tracking attendance.';
-        alertBar.className = 'shortage-banner banner-safe';
+        alertBar.className = 'shortage-banner banner-safe welcome-panel';
         alertBar.style.display = 'flex';
         alertBar.innerHTML = `
-          <div>
-            <strong>No classes logged yet.</strong> Attendance stays blank until you mark a class.
-            <button type="button" class="btn-primary btn-inline" data-action="openSetupModal">Edit Subjects</button>
+          <div class="welcome-panel-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"></path>
+              <path d="M22 10v6"></path>
+              <path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"></path>
+            </svg>
           </div>
+          <div class="welcome-panel-body">
+            <div class="welcome-panel-title">No classes logged yet</div>
+            <p class="welcome-panel-text">Attendance stays blank until you mark your first class as Present or Absent.</p>
+          </div>
+          <button type="button" class="btn-primary welcome-panel-cta" data-action="openSetupModal">Edit Subjects</button>
         `;
         return;
       }
@@ -745,6 +761,10 @@
     function renderSubjectAnalyticsList() {
       const list = document.getElementById('subjectsList');
       const empty = document.getElementById('emptyState');
+      const sectionAddBtn = document.getElementById('subjectsSectionAddBtn');
+      if (sectionAddBtn) {
+        sectionAddBtn.style.display = appState.subjects.length === 0 ? 'none' : '';
+      }
 
       const filtered = appState.subjects.filter(s => {
         if (appState.activeCategory === 'all') return true;
@@ -759,11 +779,11 @@
         const title = document.getElementById('emptyStateTitle');
         const copy = document.getElementById('emptyStateText');
         const cta = document.getElementById('emptyStateCta');
-        if (title) title.textContent = hasAny ? 'No subjects in this filter' : 'No subjects yet';
+        if (title) title.textContent = hasAny ? 'No subjects in this filter' : 'Your semester starts here.';
         if (copy) {
           copy.textContent = hasAny
             ? 'Try another category or clear the filter to see all your courses.'
-            : 'Tell Attendify how many courses you have this semester and name them to start calculating your attendance.';
+            : 'Add your first subject to start tracking attendance and monitoring your progress.';
         }
         if (cta) cta.style.display = hasAny ? 'none' : '';
         return;
@@ -2357,7 +2377,7 @@ Save this code to restore your courses on another phone or computer!`);
 
     function initServiceWorker() {
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js?v=20261127r5', { updateViaCache: 'none' }).catch(() => {});
+        navigator.serviceWorker.register('./sw.js?v=20261127r6', { updateViaCache: 'none' }).catch(() => {});
       }
     }
   
