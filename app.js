@@ -419,7 +419,10 @@
 
       THEME_IDS.forEach(t => {
         const btn = document.getElementById(`themeBtn_${t}`);
-        if (btn) btn.classList.toggle('active', t === theme);
+        if (!btn) return;
+        const isActive = t === theme;
+        btn.classList.toggle('active', isActive);
+        btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
       });
 
       THEME_MODES.forEach(m => {
@@ -576,7 +579,6 @@
       if (keyDisp) keyDisp.textContent = isKeyVisible ? (appState.syncAuthKey || 'Not Set') : '••••••••••••••••';
       updateAccountUI();
       const lastSyncEl = document.getElementById('settingsLastSyncTime');
-      const badgeEl = document.getElementById('cloudConnectionBadge');
       if (lastSyncEl) {
         if (appState.lastSyncedAt) {
           const d = new Date(appState.lastSyncedAt);
@@ -585,24 +587,7 @@
           lastSyncEl.textContent = 'Not synced yet';
         }
       }
-      if (badgeEl) {
-        if (lastSyncState === 'syncing') {
-          badgeEl.className = 'criteria-pill pill-neutral';
-          badgeEl.textContent = 'Syncing...';
-        } else if (lastSyncState === 'offline') {
-          badgeEl.className = 'criteria-pill pill-neutral';
-          badgeEl.textContent = 'Offline';
-        } else if (lastSyncState === 'error') {
-          badgeEl.className = 'criteria-pill pill-short';
-          badgeEl.textContent = 'Sync error';
-        } else if (appState.lastSyncedAt) {
-          badgeEl.className = 'criteria-pill pill-safe';
-          badgeEl.innerHTML = '<span class="pill-dot dot-green"></span> Connected';
-        } else {
-          badgeEl.className = 'criteria-pill pill-neutral';
-          badgeEl.textContent = 'Ready';
-        }
-      }
+      updateCloudStatusUI();
 
       renderSmartDashboard();
       renderChips();
@@ -616,6 +601,29 @@
       }
       const badge = document.getElementById('subjectCountBadge');
       if (badge) badge.textContent = appState.subjects.length;
+    }
+
+    function updateCloudStatusUI() {
+      const badgeEl = document.getElementById('cloudConnectionBadge');
+      if (!badgeEl) return;
+
+      const online = typeof navigator === 'undefined' || navigator.onLine !== false;
+      if (lastSyncState === 'syncing') {
+        badgeEl.className = 'criteria-pill pill-neutral';
+        badgeEl.textContent = 'Syncing...';
+      } else if (!online || lastSyncState === 'offline') {
+        badgeEl.className = 'criteria-pill pill-neutral';
+        badgeEl.textContent = 'Not connected';
+      } else if (lastSyncState === 'error') {
+        badgeEl.className = 'criteria-pill pill-short';
+        badgeEl.innerHTML = `${statusPillIcon('short')} Failed`;
+      } else if (lastSyncState === 'synced' || appState.lastSyncedAt) {
+        badgeEl.className = 'criteria-pill pill-safe';
+        badgeEl.innerHTML = `${statusPillIcon('safe')} Synced`;
+      } else {
+        badgeEl.className = 'criteria-pill pill-neutral';
+        badgeEl.textContent = 'Ready to sync';
+      }
     }
 
     // 7. COMPONENT 1: SMART DASHBOARD
@@ -1037,16 +1045,31 @@
         });
 
         let dotClass = '';
-        if (isHoliday) dotClass = 'dot-hol';
-        else if (presentCount > 0 && absentCount === 0) dotClass = 'dot-pres';
-        else if (absentCount > 0 && presentCount === 0) dotClass = 'dot-abs';
-        else if (presentCount > 0 && absentCount > 0) dotClass = 'dot-mix';
+        let statusLabel = 'No logs';
+        if (isHoliday) {
+          dotClass = 'dot-hol';
+          statusLabel = 'Holiday';
+        } else if (presentCount > 0 && absentCount === 0) {
+          dotClass = 'dot-pres';
+          statusLabel = `${presentCount} present`;
+        } else if (absentCount > 0 && presentCount === 0) {
+          dotClass = 'dot-abs';
+          statusLabel = `${absentCount} absent`;
+        } else if (presentCount > 0 && absentCount > 0) {
+          dotClass = 'dot-mix';
+          statusLabel = `${presentCount} present, ${absentCount} absent`;
+        }
 
+        const ariaDate = new Date(calCurrentYear, calCurrentMonth, day).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
+        const todayNote = isToday ? ', Today' : '';
         html += `
           <div class="cal-cell ${isToday ? 'is-today' : ''} ${isSelected ? 'is-selected' : ''} ${isHoliday ? 'is-holiday' : ''}"
+               role="button" tabindex="0"
+               aria-pressed="${isSelected ? 'true' : 'false'}"
+               aria-label="${escapeHtml(`${ariaDate}${todayNote} (${statusLabel})`)}"
                data-action="selectCalendarDate" data-date="${escapeHtml(currentIsoDate)}">
             <span>${day}</span>
-            ${dotClass ? `<div class="cal-dot-row"><span class="cal-dot ${dotClass}"></span></div>` : ''}
+            ${dotClass ? `<div class="cal-dot-row" aria-hidden="true"><span class="cal-dot ${dotClass}"></span></div>` : ''}
           </div>
         `;
       }
@@ -1134,10 +1157,10 @@
               </span>
             </div>
 
-            <div style="display:flex; gap:5px;">
-              <button type="button" class="act-btn ${currentStatus === 'present' ? 'act-present' : ''}" style="padding:5px 9px; font-size:11px;" data-action="recordAttendanceEntry" data-date="${safeDateStr}" data-subid="${safeSubId}" data-status="present">✓</button>
-              <button type="button" class="act-btn ${currentStatus === 'absent' ? 'act-absent' : ''}" style="padding:5px 9px; font-size:11px;" data-action="recordAttendanceEntry" data-date="${safeDateStr}" data-subid="${safeSubId}" data-status="absent">✕</button>
-              <button type="button" class="act-btn ${currentStatus === 'off' ? 'act-off' : ''}" style="padding:5px 9px; font-size:11px;" data-action="recordAttendanceEntry" data-date="${safeDateStr}" data-subid="${safeSubId}" data-status="off">—</button>
+            <div class="day-sub-actions">
+              <button type="button" class="act-btn ${currentStatus === 'present' ? 'act-present' : ''}" data-action="recordAttendanceEntry" data-date="${safeDateStr}" data-subid="${safeSubId}" data-status="present" aria-label="Mark ${safeSubName} present">✓</button>
+              <button type="button" class="act-btn ${currentStatus === 'absent' ? 'act-absent' : ''}" data-action="recordAttendanceEntry" data-date="${safeDateStr}" data-subid="${safeSubId}" data-status="absent" aria-label="Mark ${safeSubName} absent">✕</button>
+              <button type="button" class="act-btn ${currentStatus === 'off' ? 'act-off' : ''}" data-action="recordAttendanceEntry" data-date="${safeDateStr}" data-subid="${safeSubId}" data-status="off" aria-label="Mark ${safeSubName} off">—</button>
             </div>
           </div>
         `;
@@ -1533,15 +1556,44 @@ Created ${newSubjects.length} customized subjects for you.`);
     // 15. SIMULATOR
     function populateCalcOptions() {
       const sel = document.getElementById('calcSubjectSelect');
+      const emptyEl = document.getElementById('calcEmptyState');
+      const layoutEl = document.getElementById('calcLayout');
+      const hasSubs = Array.isArray(appState.subjects) && appState.subjects.length > 0;
+
+      if (emptyEl) emptyEl.style.display = hasSubs ? 'none' : 'flex';
+      if (layoutEl) layoutEl.style.display = hasSubs ? '' : 'none';
       if (!sel) return;
+
+      const prevVal = sel.value;
       sel.innerHTML = '';
 
       appState.subjects.forEach(sub => {
         const opt = document.createElement('option');
         opt.value = sub.id;
-        opt.textContent = `${sub.name} (${sub.attended}/${sub.total})`;
+        const pct = sub.total > 0 ? `${((sub.attended / sub.total) * 100).toFixed(1)}%` : '--%';
+        opt.textContent = `${sub.name} (${sub.attended}/${sub.total} · ${pct})`;
         sel.appendChild(opt);
       });
+
+      if (prevVal && appState.subjects.some(s => s.id === prevVal)) {
+        sel.value = prevVal;
+      }
+    }
+
+    function adjustSimInput(inputId, delta) {
+      const inp = document.getElementById(inputId);
+      if (!inp) return;
+      const cur = Math.max(0, parseInt(inp.value, 10) || 0);
+      inp.value = String(Math.max(0, Math.min(500, cur + delta)));
+      runSimulation();
+    }
+
+    function resetSimulation() {
+      const attInp = document.getElementById('calcAttendNext');
+      const bunkInp = document.getElementById('calcBunkNext');
+      if (attInp) attInp.value = '0';
+      if (bunkInp) bunkInp.value = '0';
+      runSimulation();
     }
 
     function runSimulation() {
@@ -1551,19 +1603,32 @@ Created ${newSubjects.length} customized subjects for you.`);
       const numEl = document.getElementById('calcProjectedPercent');
       const pillWrap = document.getElementById('calcProjectedPillWrap');
       const resText = document.getElementById('calcProjectedText');
+      const curSummary = document.getElementById('calcCurrentSummary');
 
       if (!sel || !sel.value) {
-        numEl.textContent = '--%';
-        pillWrap.innerHTML = '';
-        resText.textContent = 'Add subjects to run simulation.';
+        if (numEl) {
+          numEl.textContent = '--%';
+          numEl.style.color = 'var(--text-muted)';
+        }
+        if (pillWrap) pillWrap.innerHTML = '';
+        if (resText) resText.textContent = 'Add subjects to run a simulation.';
+        if (curSummary) curSummary.innerHTML = '<span>Current standing</span><strong style="color:var(--text-strong);">--</strong>';
         return;
       }
 
       const sub = appState.subjects.find(s => s.id === sel.value);
       if (!sub) return;
 
-      const addAtt = Math.max(0, parseInt(attInp.value) || 0);
-      const addBunk = Math.max(0, parseInt(bunkInp.value) || 0);
+      const curStats = calcStats(sub);
+      if (curSummary) {
+        curSummary.innerHTML = `
+          <span>Current standing</span>
+          <strong style="color:var(--text-strong);">${curStats.attended}/${curStats.total} (${curStats.hasData ? `${curStats.percentage}%` : '--%'})</strong>
+        `;
+      }
+
+      const addAtt = Math.max(0, Math.min(500, parseInt(attInp.value, 10) || 0));
+      const addBunk = Math.max(0, Math.min(500, parseInt(bunkInp.value, 10) || 0));
 
       const newAtt = sub.attended + addAtt;
       const newTot = sub.total + addAtt + addBunk;
@@ -1573,7 +1638,7 @@ Created ${newSubjects.length} customized subjects for you.`);
         numEl.textContent = '--%';
         numEl.style.color = 'var(--text-muted)';
         pillWrap.innerHTML = '';
-        resText.textContent = 'Add at least one class to run the simulation.';
+        resText.textContent = 'Increase Attend Next or Bunk Next above 0 to preview projected attendance.';
         return;
       }
 
@@ -1583,12 +1648,22 @@ Created ${newSubjects.length} customized subjects for you.`);
       numEl.textContent = `${pctStr}%`;
       numEl.style.color = pctNum < target ? 'var(--danger)' : 'var(--success)';
 
+      const deltaText = addAtt === 0 && addBunk === 0
+        ? 'No upcoming changes applied yet.'
+        : `After +${addAtt} attended & +${addBunk} missed (${newAtt}/${newTot} total):`;
+
       if (pctNum < target) {
-        pillWrap.innerHTML = `<span class="criteria-pill pill-short">${statusPillIcon('short')} Short by ${(target - pctNum).toFixed(1)}%</span>`;
-        resText.innerHTML = `Projected: <strong>${newAtt}/${newTot}</strong> classes. Still below ${target}% criteria.`;
+        const gap = (target - pctNum).toFixed(1);
+        const needMore = target < 100
+          ? Math.max(1, Math.ceil(((target * newTot) - (100 * newAtt)) / (100 - target)))
+          : null;
+        pillWrap.innerHTML = `<span class="criteria-pill pill-short">${statusPillIcon('short')} Below target · Short by ${gap}%</span>`;
+        resText.innerHTML = `${deltaText} <strong>Target not achieved</strong> (${target}%).${needMore !== null ? ` You would still need <strong>${needMore}</strong> consecutive present ${needMore === 1 ? 'class' : 'classes'}.` : ''}`;
       } else {
-        pillWrap.innerHTML = `<span class="criteria-pill pill-safe">${statusPillIcon('safe')} On track · +${(pctNum - target).toFixed(1)}%</span>`;
-        resText.innerHTML = `Projected: <strong>${newAtt}/${newTot}</strong> classes. Safely clears ${target}% criteria.`;
+        const surplus = (pctNum - target).toFixed(1);
+        const safeBunks = target > 0 ? Math.max(0, Math.floor((100 * newAtt) / target) - newTot) : 0;
+        pillWrap.innerHTML = `<span class="criteria-pill pill-safe">${statusPillIcon('safe')} Target achieved · +${surplus}%</span>`;
+        resText.innerHTML = `${deltaText} <strong>Meets ${target}% target</strong> with room to miss <strong>${safeBunks}</strong> more ${safeBunks === 1 ? 'class' : 'classes'}.`;
       }
     }
 
@@ -1842,11 +1917,13 @@ Created ${newSubjects.length} customized subjects for you.`);
         }
 
         appState.lastSyncedAt = null;
+        lastSyncState = 'idle';
         saveStateOnly();
 
         if (statusEl) statusEl.innerHTML = '<span style="color:var(--text-dim);">Wiped</span>';
         const lastSyncEl = document.getElementById('settingsLastSyncTime');
         if (lastSyncEl) lastSyncEl.textContent = 'Deleted from server';
+        updateCloudStatusUI();
 
         if (resData.status === 'deleted') {
           notify('Cloud backup has been permanently deleted from the server.');
@@ -2021,9 +2098,8 @@ Created ${newSubjects.length} customized subjects for you.`);
       if (!appState.syncAuthKey) appState.syncAuthKey = generateAuthToken();
 
       const statusEl = document.getElementById('topCloudStatus');
-      const badgeEl = document.getElementById('cloudConnectionBadge');
       if (statusEl) statusEl.innerHTML = '<span style="color:var(--warning-text);">Syncing...</span>';
-      if (badgeEl) { badgeEl.className = 'criteria-pill pill-neutral'; badgeEl.textContent = 'Syncing...'; }
+      updateCloudStatusUI();
 
       const payload = {
         sync_code: appState.syncCode,
@@ -2055,8 +2131,7 @@ Created ${newSubjects.length} customized subjects for you.`);
             console.warn('Could not persist lastSyncedAt:', storageErr);
           }
           if (statusEl) statusEl.innerHTML = '<span style="color:var(--success-text);">Synced</span>';
-          const badgeOk = document.getElementById('cloudConnectionBadge');
-          if (badgeOk) { badgeOk.className = 'criteria-pill pill-safe'; badgeOk.innerHTML = '<span class="pill-dot dot-green"></span> Connected'; }
+          updateCloudStatusUI();
           const lastSyncEl = document.getElementById('settingsLastSyncTime');
           if (lastSyncEl) lastSyncEl.textContent = new Date(appState.lastSyncedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
           return { ok: true };
@@ -2065,16 +2140,14 @@ Created ${newSubjects.length} customized subjects for you.`);
           const errData = await response.json().catch(() => ({}));
           console.warn('Cloud sync response error:', response.status, errData);
           if (statusEl) statusEl.innerHTML = '<span style="color:var(--text-dim);">Local</span>';
-          const badgeLocal = document.getElementById('cloudConnectionBadge');
-          if (badgeLocal) { badgeLocal.className = 'criteria-pill pill-short'; badgeLocal.textContent = 'Sync error'; }
+          updateCloudStatusUI();
           return { ok: false, error: errData.error || `Server error (${response.status})` };
         }
       } catch (err) {
-        lastSyncState = 'offline';
+        lastSyncState = (typeof navigator !== 'undefined' && navigator.onLine === false) ? 'offline' : 'error';
         console.warn('Offline or network error syncing to cloud:', err);
         if (statusEl) statusEl.innerHTML = '<span style="color:var(--text-dim);">Offline</span>';
-        const badgeOff = document.getElementById('cloudConnectionBadge');
-        if (badgeOff) { badgeOff.className = 'criteria-pill pill-neutral'; badgeOff.textContent = 'Offline'; }
+        updateCloudStatusUI();
         return { ok: false, error: err.message || 'Network unavailable' };
       } finally {
         isSyncInFlight = false;
@@ -2564,7 +2637,7 @@ Save this code to restore your courses on another phone or computer!`);
             window.location.reload();
           });
         }
-        navigator.serviceWorker.register('./sw.js?v=20261127r10', { updateViaCache: 'none' })
+        navigator.serviceWorker.register('./sw.js?v=20261127r11', { updateViaCache: 'none' })
           .then((reg) => {
             if (reg && typeof reg.update === 'function') reg.update().catch(() => {});
           })
@@ -2779,6 +2852,12 @@ Save this code to restore your courses on another phone or computer!`);
         case 'exportCSVReport':
           exportCSVReport();
           break;
+        case 'adjustSimInput':
+          adjustSimInput(el.getAttribute('data-target'), parseInt(el.getAttribute('data-delta'), 10) || 0);
+          break;
+        case 'resetSimulation':
+          resetSimulation();
+          break;
         case 'switchTab':
           switchTab(el.getAttribute('data-tab'));
           break;
@@ -2828,13 +2907,37 @@ Save this code to restore your courses on another phone or computer!`);
       });
     }
 
-    // Accessibility: Close modals with Escape key
+    // Accessibility: Close modals with Escape & activate role="button" elements with Enter/Space
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         document.querySelectorAll('.modal-backdrop.open').forEach((m) => {
           if (m.getAttribute('data-locked') !== 'true') m.classList.remove('open');
         });
+        return;
       }
+      if (e.key === 'Enter' || e.key === ' ') {
+        const target = e.target;
+        if (!target) return;
+        if (target.matches('[role="button"][data-action]')) {
+          e.preventDefault();
+          target.click();
+        } else if (target.matches('label.settings-link')) {
+          const inp = target.querySelector('input[type="file"]');
+          if (inp) {
+            e.preventDefault();
+            inp.click();
+          }
+        }
+      }
+    });
+
+    window.addEventListener('online', () => {
+      if (lastSyncState === 'offline') lastSyncState = appState.lastSyncedAt ? 'synced' : 'idle';
+      updateCloudStatusUI();
+    });
+    window.addEventListener('offline', () => {
+      if (lastSyncState !== 'syncing') lastSyncState = 'offline';
+      updateCloudStatusUI();
     });
 
     // Initialize application on DOM ready

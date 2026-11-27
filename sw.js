@@ -7,13 +7,13 @@
 // 4. Non-GET requests: Direct bypass
 // ==========================================================================
 
-const CACHE_NAME = 'attendify-v31-sync-cal-fix';
+const CACHE_NAME = 'attendify-v32-polish';
 
 // Critical core assets to precache on install
 const PRECACHE_ASSETS = [
   './',
   './index.html',
-  './app.js?v=20261127r10',
+  './app.js?v=20261127r11',
   './app.js',
   './manifest.json',
   './icon.svg',
