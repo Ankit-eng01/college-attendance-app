@@ -648,7 +648,7 @@
         circle.style.strokeDashoffset = circumference;
         healthTag.textContent = '● Setup Required';
         healthTag.className = 'health-tag health-warning';
-        adviceEl.innerHTML = `Open <strong>Settings</strong> or use the button below to add your subjects and start tracking.`;
+        adviceEl.innerHTML = `Add your subjects below or run <strong>Semester Setup</strong> to start tracking attendance.`;
         alertBar.className = 'shortage-banner banner-safe welcome-panel';
         alertBar.style.display = 'flex';
         alertBar.innerHTML = `
@@ -661,9 +661,8 @@
           </div>
           <div class="welcome-panel-body">
             <div class="welcome-panel-title">Welcome to Attendify</div>
-            <p class="welcome-panel-text">How many subjects do you have this semester? Set up your courses to start tracking.</p>
+            <p class="welcome-panel-text">Add your first subject below to unlock overall attendance, safe-bunk limits, and progress alerts.</p>
           </div>
-          <button type="button" class="btn-primary welcome-panel-cta" data-action="openSetupModal">Set Up My Subjects</button>
         `;
         return;
       }
@@ -2377,7 +2376,7 @@ Save this code to restore your courses on another phone or computer!`);
 
     function initServiceWorker() {
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js?v=20261127r6', { updateViaCache: 'none' }).catch(() => {});
+        navigator.serviceWorker.register('./sw.js?v=20261127r7', { updateViaCache: 'none' }).catch(() => {});
       }
     }
   
