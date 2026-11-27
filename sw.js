@@ -7,13 +7,13 @@
 // 4. Non-GET requests: Direct bypass
 // ==========================================================================
 
-const CACHE_NAME = 'attendify-v30-consistency';
+const CACHE_NAME = 'attendify-v31-sync-cal-fix';
 
 // Critical core assets to precache on install
 const PRECACHE_ASSETS = [
   './',
   './index.html',
-  './app.js?v=20261127r9',
+  './app.js?v=20261127r10',
   './app.js',
   './manifest.json',
   './icon.svg',
@@ -22,11 +22,15 @@ const PRECACHE_ASSETS = [
   './icon-maskable.png'
 ];
 
-// 1. Install Event: Precache core shell assets & activate immediately
+// 1. Install Event: Precache core shell assets bypassing HTTP cache & activate immediately
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(PRECACHE_ASSETS);
+      return Promise.all(
+        PRECACHE_ASSETS.map((asset) =>
+          cache.add(new Request(asset, { cache: 'reload' }))
+        )
+      );
     }).then(() => self.skipWaiting())
   );
 });
@@ -70,11 +74,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // C. HTML Navigation Requests: Network-First with Offline Cache Fallback
+  // C. HTML Navigation Requests: Network-First (bypassing HTTP max-age cache) with Offline Cache Fallback
   // Guarantees users always see the latest version when connected, while remaining 100% functional offline
   if (request.mode === 'navigate' || request.destination === 'document') {
     event.respondWith(
-      fetch(request)
+      fetch(request.url, { cache: 'no-cache', credentials: 'same-origin' })
         .then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200) {
             const copy = networkResponse.clone();
@@ -98,7 +102,10 @@ self.addEventListener('fetch', (event) => {
   // D. Static Assets (app.js, icons, fonts, manifest): Stale-While-Revalidate
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
-      const fetchPromise = fetch(request)
+      const networkReq = url.origin === self.location.origin
+        ? new Request(request, { cache: 'no-cache' })
+        : request;
+      const fetchPromise = fetch(networkReq)
         .then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200) {
             const copy = networkResponse.clone();

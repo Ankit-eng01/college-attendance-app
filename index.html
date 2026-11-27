@@ -2012,6 +2012,7 @@
     .health-excellent { background: var(--success-soft); color: var(--success-text); border: 1px solid var(--success-soft-strong); }
     .health-good { background: var(--brand-soft); color: var(--info-text); border: 1px solid var(--border-accent); }
     .health-warning { background: rgba(245, 158, 11, 0.12); color: var(--warning-text); border: 1px solid rgba(245, 158, 11, 0.28); }
+    .health-neutral { background: var(--bg-surface); color: var(--text-muted); border: 1px solid var(--border); }
     .health-danger { background: var(--danger-soft); color: var(--danger-text); border: 1px solid var(--danger-soft-strong); }
     .dash-advice {
       font-size: 13px;
@@ -3211,7 +3212,7 @@
       <div class="sidebar-foot">
         <div class="sidebar-status">
           <div class="sidebar-status-title"><span class="pill-dot dot-green"></span> Cloud backup</div>
-          <div class="sidebar-status-copy">Records save to browser storage for offline use and back up over HTTPS with your Sync Code + Secret Key.</div>
+          <div class="sidebar-status-copy">Records save locally for offline use and auto-sync over HTTPS (both Guest &amp; Account modes once subjects are added).</div>
         </div>
         <button type="button" class="sidebar-account" data-action="switchTab" data-tab="settings" aria-label="Open account settings">
           <span class="sidebar-avatar" aria-hidden="true">
@@ -3321,9 +3322,9 @@
 
             <!-- Health Indicator & Status Advice -->
             <div class="dash-hero-info">
-              <div id="dashHealthTag" class="health-tag health-good">● Ready</div>
+              <div id="dashHealthTag" class="health-tag health-neutral">● No Subjects Yet</div>
               <p id="dashAdviceText" class="dash-advice">
-                Add your subjects or log a class to view your attendance summary.
+                Add your subjects below to start tracking your attendance.
               </p>
               <div class="dash-target-note">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -3553,7 +3554,7 @@
             </div>
             <div class="settings-head-copy">
               <h2>Account &amp; Cloud Sync</h2>
-              <p>Sign in for email recovery, or use the sync code to restore on another device.</p>
+              <p>Sign in for email/password recovery, or back up and restore in Guest Mode using your Sync Code + Secret Key.</p>
             </div>
             <span class="criteria-pill pill-neutral" id="accountStatusBadge">Not signed in</span>
           </div>
@@ -3750,10 +3751,10 @@
               <div><strong>Strict JSON schema validation:</strong> Every imported backup is checked for object bounds, types, and value limits before it is applied.</div>
             </div>
             <div class="security-check-row">
-              <div><strong>Local storage &amp; cloud upload:</strong> Your subjects, attendance logs, calendar entries, and preferences always stay in browser storage for offline use. Once subjects are set up, those records, your student name, compact device info, and account email (if signed in) are uploaded over HTTPS to the sync API.</div>
+              <div><strong>Local vs. cloud storage:</strong> All subjects, attendance logs, calendar entries, preferences, and your Sync Code + Secret Key are saved locally in browser storage for offline use. Once at least one subject is added while online, Attendify automatically uploads your attendance records, student name, preferences, compact device info, and account email (if signed in) over HTTPS to the sync API.</div>
             </div>
             <div class="security-check-row">
-              <div><strong>Guest Mode vs. Account Mode:</strong> In Guest Mode, Attendify backs up over HTTPS using only your random Sync Code + Private Secret Key (no email recovery if both device and key are lost). Creating an account links your Sync Code + Secret Key to your email and password for cross-device sign-in.</div>
+              <div><strong>Guest Mode vs. Account Mode:</strong> Both modes auto-sync over HTTPS once subjects exist. Guest Mode uses only your random Sync Code + Private Secret Key (no email/password recovery if lost); Account Mode links them to a salted scrypt email/password account so you can sign in on another device.</div>
             </div>
           </div>
 
@@ -4061,14 +4062,15 @@
 
         <div style="background:var(--bg-surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:12px;">
           <strong style="color:var(--text-strong); font-size:13px; display:block; margin-bottom:4px;">2. Local Storage vs. Cloud Backup</strong>
-          Your subjects, attendance logs, calendar entries, and theme settings are saved locally in this browser's storage so Attendify works offline. Once you finish setup with subjects, cloud backup uploads your attendance data, student name, compact device profile (type, browser, OS, screen size), and account email (if signed in) over HTTPS to the Attendify sync API.
+          <strong>Stored locally (this browser):</strong> Subjects, attendance logs, calendar entries, theme/target preferences, your Sync Code, and your Private Secret Key are stored in browser <code style="font-family:var(--font-mono);">localStorage</code> so Attendify works offline.<br>
+          <strong>Uploaded to the cloud:</strong> Once you add at least one subject while online, both Guest Mode and Account Mode automatically send your attendance data, student name, theme/target preferences, compact device profile (type, browser, OS, screen size), and account email (if signed in) over HTTPS to the Attendify Sync API. Passwords are never saved locally and are only sent over HTTPS during sign-up or sign-in.
         </div>
 
         <div style="background:var(--bg-surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:12px;">
-          <strong style="color:var(--text-strong); font-size:13px; display:block; margin-bottom:4px;">3. Guest Mode, Accounts &amp; Sync Codes</strong>
-          <strong>Guest Mode:</strong> Requires no email or password. Attendify still generates a Sync Code (<code style="font-family:var(--font-mono);">ATN-...</code>) and Private Secret Key stored in this browser so you can back up and restore across devices. Guest backups have no email recovery if you lose both this device and your pairing credentials.<br>
-          <strong>Account Mode:</strong> Signing up links your Sync Code and Secret Key to an email and password (hashed server-side with salted scrypt), letting you sign in and restore on another device.<br>
-          <strong>How Sync Codes work:</strong> Your Sync Code identifies your backup; your Private Secret Key authorizes reads, writes, and server deletion (verified server-side via its SHA-256 hash). Data is protected in transit by HTTPS rather than client-side zero-knowledge encryption—keep your Secret Key and pairing token (<code style="font-family:var(--font-mono);">Code:Key</code>) private.
+          <strong style="color:var(--text-strong); font-size:13px; display:block; margin-bottom:4px;">3. Guest Mode, Accounts &amp; How Sync Codes Work</strong>
+          <strong>Guest Mode:</strong> Requires no email or password. Attendify auto-generates a Sync Code (<code style="font-family:var(--font-mono);">ATN-...</code>) and Private Secret Key in your browser and uses them to back up automatically over HTTPS once subjects exist. Guest Mode has no email/password recovery if you lose both this device and your pairing credentials.<br>
+          <strong>Account Mode:</strong> Signing up stores a salted <code style="font-family:var(--font-mono);">scrypt</code> password hash on the server and seals your pairing Secret Key with AES-256-GCM so signing in on another device restores your Sync Code + Secret Key.<br>
+          <strong>How Sync Codes work:</strong> Your Sync Code identifies your cloud record; your Private Secret Key authorizes reads, updates, and server deletion (verified server-side against its SHA-256 hash). Traffic is encrypted in transit via HTTPS, while attendance JSON payloads on the server are not client-side end-to-end encrypted—keep your Secret Key and pairing token (<code style="font-family:var(--font-mono);">Code:Key</code>) private.
         </div>
 
         <div style="background:var(--bg-surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:12px;">
@@ -4161,7 +4163,7 @@
       </div>
 
       <p style="font-size:11px; color:var(--text-dim); line-height:1.45; margin:0; text-align:center;">
-        Guest mode works without an account and stores data locally with automatic HTTPS Sync Code backup (save your Sync Code + Secret Key from Settings to restore; no email recovery).
+        Guest Mode saves locally in this browser and automatically backs up over HTTPS once you add subjects (restore using your Sync Code + Secret Key from Settings; no email recovery).
       </p>
     </div>
   </div>
@@ -4273,6 +4275,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=20261127r9" defer></script>
+  <script src="app.js?v=20261127r10" defer></script>
 </body>
 </html>

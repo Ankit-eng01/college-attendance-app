@@ -92,8 +92,10 @@ client and no master credential in the bundle.
 ### Email/password accounts
 
 On first launch the PWA shows a locked choice gate: create an account, sign in,
-or continue as guest. Guest mode is local-only and persistent; the Account
-button can upgrade a guest at any time. Signing out reopens the choice gate.
+or continue as guest. Guest mode stores data locally and automatically backs up
+over HTTPS using the device's random `syncCode` + `syncAuthKey` once subjects
+exist (with no email recovery if lost); the Account button can link an email
+account at any time. Signing out reopens the choice gate.
 
 `POST /auth/register` validates the address and password (8–128 chars, at least
 one letter and one number), hashes the password with salted `scrypt` (16-byte

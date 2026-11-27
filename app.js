@@ -78,6 +78,25 @@
       return `${y}-${m}-${d}`;
     }
 
+    function parseLocalDateStr(dateStr) {
+      if (typeof dateStr !== 'string') return null;
+      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr.trim());
+      if (!m) return null;
+      const year = Number(m[1]);
+      const month = Number(m[2]);
+      const day = Number(m[3]);
+      if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+      const dt = new Date(year, month - 1, day);
+      if (dt.getFullYear() !== year || dt.getMonth() !== month - 1 || dt.getDate() !== day) {
+        return null;
+      }
+      return dt;
+    }
+
+    function isValidCalendarDateStr(dateStr) {
+      return parseLocalDateStr(dateStr) !== null;
+    }
+
     function getDefaultState() {
       return {
         isSetupCompleted: false,
@@ -204,10 +223,9 @@
       // Validate calendar object
       const sanitizedCalendar = {};
       if (raw.calendar && typeof raw.calendar === 'object' && !Array.isArray(raw.calendar)) {
-        const isoDateRegex = /^\d{4}-\d{2}-\d{2}$/;
         const dateKeys = Object.keys(raw.calendar).slice(0, 1000);
         for (const dateKey of dateKeys) {
-          if (!isoDateRegex.test(dateKey)) continue;
+          if (!isValidCalendarDateStr(dateKey)) continue;
           const day = raw.calendar[dateKey];
           if (!day || typeof day !== 'object') continue;
           const cleanDay = {
@@ -235,7 +253,7 @@
           if (!h || typeof h !== 'object') continue;
           const id = typeof h.id === 'string' ? escapeHtml(h.id.substring(0, 64)) : 'hist_' + i;
           const subId = typeof h.subId === 'string' ? escapeHtml(h.subId.substring(0, 64)) : '';
-          const date = typeof h.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(h.date) ? h.date : getTodayDateStr();
+          const date = isValidCalendarDateStr(h.date) ? h.date : getTodayDateStr();
           const status = validStatuses.includes(h.status) ? h.status : 'present';
           const timestamp = typeof h.timestamp === 'number' ? h.timestamp : Date.now();
           sanitizedHistory.push({ id, subId, date, status, timestamp });
@@ -538,7 +556,7 @@
       if (sidebarSub) {
         sidebarSub.textContent = appState.accountEmail
           ? 'Email account · Synced'
-          : (appState.authChoice === 'guest' ? 'Guest · Sync code backup' : 'Choose account or guest');
+          : (appState.authChoice === 'guest' ? 'Guest · Auto-syncs via code' : 'Choose account or guest');
       }
       ['dashTargetVal', 'dashTargetValMirror'].forEach((id) => {
         const el = document.getElementById(id);
@@ -563,16 +581,26 @@
         if (appState.lastSyncedAt) {
           const d = new Date(appState.lastSyncedAt);
           lastSyncEl.textContent = isNaN(d.getTime()) ? 'Recently' : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          if (badgeEl && badgeEl.textContent !== 'Syncing...') {
-            badgeEl.className = 'criteria-pill pill-safe';
-            badgeEl.innerHTML = '<span class="pill-dot dot-green"></span> Connected';
-          }
         } else {
           lastSyncEl.textContent = 'Not synced yet';
-          if (badgeEl && badgeEl.textContent !== 'Syncing...') {
-            badgeEl.className = 'criteria-pill pill-neutral';
-            badgeEl.textContent = 'Ready';
-          }
+        }
+      }
+      if (badgeEl) {
+        if (lastSyncState === 'syncing') {
+          badgeEl.className = 'criteria-pill pill-neutral';
+          badgeEl.textContent = 'Syncing...';
+        } else if (lastSyncState === 'offline') {
+          badgeEl.className = 'criteria-pill pill-neutral';
+          badgeEl.textContent = 'Offline';
+        } else if (lastSyncState === 'error') {
+          badgeEl.className = 'criteria-pill pill-short';
+          badgeEl.textContent = 'Sync error';
+        } else if (appState.lastSyncedAt) {
+          badgeEl.className = 'criteria-pill pill-safe';
+          badgeEl.innerHTML = '<span class="pill-dot dot-green"></span> Connected';
+        } else {
+          badgeEl.className = 'criteria-pill pill-neutral';
+          badgeEl.textContent = 'Ready';
         }
       }
 
@@ -652,8 +680,8 @@
       if (appState.subjects.length === 0) {
         document.getElementById('dashOverallPct').textContent = '--%';
         circle.style.strokeDashoffset = circumference;
-        healthTag.textContent = '● Setup Required';
-        healthTag.className = 'health-tag health-warning';
+        healthTag.textContent = '● No Subjects Yet';
+        healthTag.className = 'health-tag health-neutral';
         adviceEl.innerHTML = `Add your subjects below or run <strong>Semester Setup</strong> to start tracking attendance.`;
         alertBar.className = 'shortage-banner banner-safe welcome-panel';
         alertBar.style.display = 'flex';
@@ -967,6 +995,15 @@
       const grid = document.getElementById('calGridDays');
       if (!monthTitle || !grid) return;
 
+      if (!Number.isInteger(calCurrentYear) || !Number.isInteger(calCurrentMonth) || calCurrentMonth < 0 || calCurrentMonth > 11) {
+        const now = new Date();
+        calCurrentYear = now.getFullYear();
+        calCurrentMonth = now.getMonth();
+      }
+      if (!isValidCalendarDateStr(calSelectedDate)) {
+        calSelectedDate = getTodayDateStr();
+      }
+
       const dateObj = new Date(calCurrentYear, calCurrentMonth, 1);
       monthTitle.textContent = dateObj.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
 
@@ -1045,6 +1082,7 @@
     }
 
     function selectCalendarDate(dateStr) {
+      if (!isValidCalendarDateStr(dateStr)) return;
       calSelectedDate = dateStr;
       renderCalendar();
     }
@@ -1057,11 +1095,11 @@
 
       if (!titleEl || !listEl) return;
 
-      const parts = dateStr.split('-');
-      const dObj = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+      const safeDateKey = isValidCalendarDateStr(dateStr) ? dateStr : getTodayDateStr();
+      const dObj = parseLocalDateStr(safeDateKey) || new Date();
       titleEl.textContent = dObj.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
 
-      const dayData = appState.calendar[dateStr] || { isHoliday: false, entries: {} };
+      const dayData = appState.calendar[safeDateKey] || { isHoliday: false, entries: {} };
       const isHoliday = dayData.isHoliday;
 
       holidayBanner.style.display = isHoliday ? 'block' : 'none';
@@ -1079,7 +1117,7 @@
         const safeSubName = escapeHtml(sub.name);
         const safeSubId = escapeHtml(sub.id);
         const safeCat = escapeHtml(cat);
-        const safeDateStr = escapeHtml(dateStr);
+        const safeDateStr = escapeHtml(safeDateKey);
 
         html += `
           <div class="day-sub-entry">
@@ -1218,8 +1256,13 @@
 
     function addManualEntryToSubject() {
       if (!currentHistorySubId) return;
-      const date = prompt('Enter date for attendance entry (YYYY-MM-DD):', getTodayDateStr());
-      if (!date || !date.match(/^\d{4}-\d{2}-\d{2}$/)) return;
+      const rawDate = prompt('Enter date for attendance entry (YYYY-MM-DD):', getTodayDateStr());
+      if (rawDate === null) return;
+      const date = rawDate.trim();
+      if (!isValidCalendarDateStr(date)) {
+        notify('Invalid date. Please enter a real calendar date in YYYY-MM-DD format.');
+        return;
+      }
 
       const status = confirm('Click OK for Present (✓), or Cancel for Absent (✕)') ? 'present' : 'absent';
       recordAttendanceEntry(date, currentHistorySubId, status);
@@ -1704,63 +1747,65 @@ Created ${newSubjects.length} customized subjects for you.`);
 
       let cloudDeleteResult = 'skipped';
 
-      // 1. Delete cloud backup from Neon servers if credentials exist
-      if (codeToDelete && keyToDelete) {
-        try {
-          const response = await syncApiRequest('/delete', {
-            sync_code: codeToDelete,
-            auth_token: keyToDelete
-          });
+      try {
+        // 1. Delete cloud backup from Neon servers if credentials exist
+        if (codeToDelete && keyToDelete) {
+          try {
+            const response = await syncApiRequest('/delete', {
+              sync_code: codeToDelete,
+              auth_token: keyToDelete
+            });
 
-          if (response.ok) {
-            const resJson = await response.json().catch(() => ({}));
-            cloudDeleteResult = resJson.status === 'deleted' ? 'deleted' : 'not_found';
-            console.log('[Attendify] Cloud backup deleted successfully:', resJson);
-          } else {
-            const errData = await response.json().catch(() => ({}));
-            console.warn('[Attendify] Cloud deletion error from server:', response.status, errData);
-            cloudDeleteResult = 'failed';
+            if (response.ok) {
+              const resJson = await response.json().catch(() => ({}));
+              cloudDeleteResult = resJson.status === 'deleted' ? 'deleted' : 'not_found';
+              console.log('[Attendify] Cloud backup deleted successfully:', resJson);
+            } else {
+              const errData = await response.json().catch(() => ({}));
+              console.warn('[Attendify] Cloud deletion error from server:', response.status, errData);
+              cloudDeleteResult = 'failed';
+            }
+          } catch (err) {
+            console.warn('[Attendify] Cloud deletion network failure:', err);
+            cloudDeleteResult = 'offline';
           }
+        }
+
+        // 2. Clear local storage & reset in-memory state
+        try {
+          localStorage.removeItem(STORAGE_KEY);
         } catch (err) {
-          console.warn('[Attendify] Cloud deletion network failure:', err);
-          cloudDeleteResult = 'offline';
+          console.warn('Could not remove localStorage key:', err);
+        }
+
+        appState = getDefaultState();
+        appState.subjects = [];
+        appState.calendar = {};
+        appState.history = [];
+        lastSyncState = 'idle';
+        resetKeyVisibility();
+
+        applyThemeUI('graphite');
+        applyPrivacyModeUI();
+        saveStateOnly();
+        closeDeleteModal();
+
+        // 3. User feedback
+        if (cloudDeleteResult === 'deleted') {
+          notify('Attendify has been reset.\n\n• Local attendance records erased.\n• Cloud backup permanently deleted.');
+        } else if (cloudDeleteResult === 'not_found' || cloudDeleteResult === 'skipped') {
+          notify('Attendify has been reset.\n\n• Local attendance records erased.');
+        } else {
+          notify('Local attendance records erased.\n\nNote: Could not reach cloud server to delete remote backup. Please reconnect and wipe your cloud record if needed.');
+        }
+
+        setTimeout(openAuthGate, 150);
+      } finally {
+        if (deleteBtn) {
+          deleteBtn.disabled = false;
+          deleteBtn.innerHTML = originalBtnText;
         }
       }
-
-      // 2. Clear local storage & reset in-memory state
-      try {
-        localStorage.removeItem(STORAGE_KEY);
-      } catch (err) {
-        console.warn('Could not remove localStorage key:', err);
-      }
-
-      appState = getDefaultState();
-      appState.subjects = [];
-      appState.calendar = {};
-      appState.history = [];
-      resetKeyVisibility();
-
-      applyThemeUI('graphite');
-      applyPrivacyModeUI();
-      saveStateOnly();
-
-      if (deleteBtn) {
-        deleteBtn.disabled = false;
-        deleteBtn.innerHTML = originalBtnText;
-      }
-
-      closeDeleteModal();
-
-      // 3. User feedback
-      if (cloudDeleteResult === 'deleted') {
-        notify('Attendify has been reset.\n\n• Local attendance records erased.\n• Cloud backup permanently deleted.');
-      } else if (cloudDeleteResult === 'not_found' || cloudDeleteResult === 'skipped') {
-        notify('Attendify has been reset.\n\n• Local attendance records erased.');
-      } else {
-        notify('Local attendance records erased.\n\nNote: Could not reach cloud server to delete remote backup. Please reconnect and wipe your cloud record if needed.');
-      }
-
-      setTimeout(openAuthGate, 150);
     }
 
     async function wipeCloudBackupOnly() {
@@ -1965,10 +2010,12 @@ Created ${newSubjects.length} customized subjects for you.`);
     }
 
     let isSyncInFlight = false;
+    let lastSyncState = 'idle';
 
     async function syncToCloudStorage() {
       if (isSyncInFlight) return { ok: false, busy: true };
       isSyncInFlight = true;
+      lastSyncState = 'syncing';
 
       if (!appState.syncCode || !appState.syncCode.startsWith('ATN-')) appState.syncCode = generateSyncCode();
       if (!appState.syncAuthKey) appState.syncAuthKey = generateAuthToken();
@@ -2001,6 +2048,7 @@ Created ${newSubjects.length} customized subjects for you.`);
 
         if (response.ok) {
           appState.lastSyncedAt = Date.now();
+          lastSyncState = 'synced';
           try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
           } catch (storageErr) {
@@ -2013,14 +2061,16 @@ Created ${newSubjects.length} customized subjects for you.`);
           if (lastSyncEl) lastSyncEl.textContent = new Date(appState.lastSyncedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
           return { ok: true };
         } else {
+          lastSyncState = 'error';
           const errData = await response.json().catch(() => ({}));
           console.warn('Cloud sync response error:', response.status, errData);
           if (statusEl) statusEl.innerHTML = '<span style="color:var(--text-dim);">Local</span>';
           const badgeLocal = document.getElementById('cloudConnectionBadge');
-          if (badgeLocal) { badgeLocal.className = 'criteria-pill pill-neutral'; badgeLocal.textContent = 'Error'; }
+          if (badgeLocal) { badgeLocal.className = 'criteria-pill pill-short'; badgeLocal.textContent = 'Sync error'; }
           return { ok: false, error: errData.error || `Server error (${response.status})` };
         }
       } catch (err) {
+        lastSyncState = 'offline';
         console.warn('Offline or network error syncing to cloud:', err);
         if (statusEl) statusEl.innerHTML = '<span style="color:var(--text-dim);">Offline</span>';
         const badgeOff = document.getElementById('cloudConnectionBadge');
@@ -2471,6 +2521,7 @@ Save this code to restore your courses on another phone or computer!`);
       appState.accountEmail = '';
       appState.authChoice = '';
       appState.lastSyncedAt = null;
+      lastSyncState = 'idle';
       appState.syncCode = generateSyncCode();
       appState.syncAuthKey = generateAuthToken();
       resetKeyVisibility();
@@ -2504,7 +2555,20 @@ Save this code to restore your courses on another phone or computer!`);
 
     function initServiceWorker() {
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js?v=20261127r9', { updateViaCache: 'none' }).catch(() => {});
+        const hadController = Boolean(navigator.serviceWorker.controller);
+        let reloaded = false;
+        if (hadController) {
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (reloaded) return;
+            reloaded = true;
+            window.location.reload();
+          });
+        }
+        navigator.serviceWorker.register('./sw.js?v=20261127r10', { updateViaCache: 'none' })
+          .then((reg) => {
+            if (reg && typeof reg.update === 'function') reg.update().catch(() => {});
+          })
+          .catch(() => {});
       }
     }
   
@@ -2775,6 +2839,10 @@ Save this code to restore your courses on another phone or computer!`);
 
     // Initialize application on DOM ready
     document.addEventListener('DOMContentLoaded', () => {
+      const now = new Date();
+      calCurrentYear = now.getFullYear();
+      calCurrentMonth = now.getMonth();
+      calSelectedDate = getTodayDateStr();
       initDate();
       applyThemeUI(appState.activeTheme || 'graphite');
       applyPrivacyModeUI();

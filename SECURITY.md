@@ -73,7 +73,7 @@ This document details the security model, cryptographic controls, cloud access a
   `5A:E4:A9:D0:42:FB:4D:87:26:E8:A2:A5:47:C4:5C:E0:74:3E:16:FB:6A:64:FA:CA:40:DC:B9:B9:7A:8D:8A:7A`
 
 ### H. Email/Password Account Authentication
-- First launch requires an explicit choice: create an email account, sign in, or continue as guest. Guest mode is local-only and persistent; signing out reopens the choice gate.
+- First launch requires an explicit choice: create an email account, sign in, or continue as guest. Guest mode stores records locally and also auto-backs up over HTTPS using the browser's random `syncCode` + `syncAuthKey` once subjects exist (without email recovery); signing out clears the email session and reopens the choice gate.
 - Registered accounts are additive: the original Cloud Sync Code + Private Secret Key flow continues to work unchanged.
 - The browser never stores or transmits a reusable account password to the database. `POST /auth/register` hashes it server-side with **salted scrypt** (16-byte random salt, 64-byte derived key). Plaintext passwords are never persisted.
 - `POST /auth/login` verifies the hash with a constant-time comparison. Unknown emails run an equally expensive dummy scrypt verification plus a short random delay, so timing cannot enumerate registered users. All credential failures return the same generic message.
