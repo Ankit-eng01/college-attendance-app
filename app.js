@@ -111,6 +111,9 @@
         calendar: {},
         history: [],
         globalTarget: 75,
+        notifPrefs: (window.AttendifyCalc && window.AttendifyCalc.sanitizeNotifPrefs)
+          ? window.AttendifyCalc.sanitizeNotifPrefs({}) : { enabled: true },
+        notifications: [],
         activeTheme: 'graphite',
         themeMode: 'dark',
         privacyMode: false,
@@ -1729,6 +1732,9 @@ Created ${newSubjects.length} customized subjects for you.`);
       if (tab === 'timetable') {
         document.getElementById('viewTimetable').classList.add('active');
       }
+      if (tab === 'notifications') {
+        document.getElementById('viewNotifications').classList.add('active');
+      }
       if (tab === 'settings') {
         document.getElementById('viewSettings').classList.add('active');
       }
@@ -1753,7 +1759,11 @@ Created ${newSubjects.length} customized subjects for you.`);
         privacyMode: appState.privacyMode,
         subjects: appState.subjects,
         calendar: appState.calendar,
-        history: appState.history
+        history: appState.history,
+        timetable: appState.timetable || [],
+        notifPrefs: appState.notifPrefs || {},
+        notifications: appState.notifications || [],
+        simScenarios: appState.simScenarios || []
       };
 
       const blob = new Blob([JSON.stringify(exportPayload, null, 2)], { type: 'application/json' });

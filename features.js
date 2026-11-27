@@ -1005,13 +1005,22 @@
   // ===============================================================
   // 7. Notifications
   // ===============================================================
-  const notified = new Set();
+  let notificationFilter = 'all';
 
   function prefs() {
     const state = liveState();
     if (!state) return null;
-    if (!state.notifPrefs || typeof state.notifPrefs !== 'object') state.notifPrefs = C.sanitizeNotifPrefs({});
+    if (!state.notifPrefs || typeof state.notifPrefs !== 'object' || !state.notifPrefs.categories) {
+      state.notifPrefs = C.sanitizeNotifPrefs(state.notifPrefs || {});
+    }
     return state.notifPrefs;
+  }
+
+  function permissionLabel() {
+    const permission = typeof Notification !== 'undefined' ? Notification.permission : 'unsupported';
+    if (permission === 'granted') return 'Device notifications allowed while this tab is open.';
+    if (permission === 'denied') return 'Device notifications blocked in browser settings — in-app alerts still work.';
+    return 'In-app alerts are on. Device pop-ups need browser permission.';
   }
 
   function renderNotificationSettings() {
@@ -1021,21 +1030,32 @@
     if (enabled) enabled.checked = p.enabled !== false;
     ['belowTarget', 'danger', 'classReminder', 'weekly', 'milestones'].forEach((key) => {
       const input = document.querySelector(`[data-notif-key="${key}"]`);
-      if (input) input.checked = p[key] !== false;
+      if (input) input.checked = p.categories[key] !== false;
     });
     const status = $('notifPermissionStatus');
-    if (status) {
-      const permission = typeof Notification !== 'undefined' ? Notification.permission : 'unsupported';
-      status.textContent = permission === 'granted'
-        ? 'Device notifications allowed.'
-        : permission === 'denied'
-          ? 'Device notifications blocked in browser settings — in-app toasts still work.'
-          : 'In-app toasts are on. Allow device notifications for background reminders.';
+    if (status) status.textContent = permissionLabel();
+    const status2 = $('notifPermissionStatus2');
+    if (status2) status2.textContent = permissionLabel();
+
+    const lead = $('notifLead');
+    if (lead) {
+      const allowed = [10, 30, 60, 120];
+      lead.value = String(allowed.includes(p.reminderLeadMinutes) ? p.reminderLeadMinutes : 30);
     }
-    const permBtn = $('notifEnableBtn');
-    if (permBtn) {
-      permBtn.hidden = typeof Notification === 'undefined' || Notification.permission === 'granted';
-    }
+    const quiet = $('notifQuietEnabled');
+    if (quiet) quiet.checked = Boolean(p.quietHoursEnabled);
+    const quietStart = $('notifQuietStart');
+    if (quietStart) quietStart.value = p.quietStart;
+    const quietEnd = $('notifQuietEnd');
+    if (quietEnd) quietEnd.value = p.quietEnd;
+
+    const shouldHide = typeof Notification === 'undefined' ||
+      Notification.permission === 'granted' ||
+      (Notification.permission === 'denied' && p.permissionDenied);
+    ['notifEnableBtn', 'notifEnableBtn2'].forEach((id) => {
+      const btn = $(id);
+      if (btn) btn.hidden = shouldHide;
+    });
   }
 
   function handleNotifToggle(input) {
@@ -1043,7 +1063,10 @@
     if (!p || !input) return;
     const key = input.getAttribute('data-notif-key');
     if (key === 'enabled') p.enabled = input.checked;
-    else if (key) p[key] = input.checked;
+    else if (key) {
+      p[key] = input.checked;
+      if (p.categories && Object.prototype.hasOwnProperty.call(p.categories, key)) p.categories[key] = input.checked;
+    }
     const state = liveState();
     state.localUpdatedAt = Date.now();
     persist(true);
@@ -1065,101 +1088,166 @@
 
   function requestNotificationPermission() {
     if (typeof Notification === 'undefined') {
-      toast('This browser does not support device notifications. In-app toasts still work.', 'warning');
+      toast('This browser does not support device notifications. In-app alerts still work.', 'warning');
+      return;
+    }
+    if (Notification.permission === 'denied') {
+      const p = prefs();
+      if (p) { p.permissionDenied = true; persist(true); }
+      renderNotificationSettings();
+      toast('Device notifications are blocked in browser settings. In-app alerts still work.', 'info', 6000);
       return;
     }
     Notification.requestPermission().then((result) => {
+      const p = prefs();
+      if (p) p.permissionDenied = result === 'denied';
+      persist(true);
       renderNotificationSettings();
       toast(result === 'granted'
-        ? 'Device notifications enabled.'
-        : 'Device notifications were not enabled. In-app toasts still work.', result === 'granted' ? 'success' : 'info');
+        ? 'Device notifications enabled for this tab.'
+        : 'Device pop-ups were not enabled. In-app alerts still work.', result === 'granted' ? 'success' : 'info');
     }).catch(() => {
-      toast('Could not request notification permission.', 'error');
+      toast('Could not request notification permission. In-app alerts still work.', 'error');
     });
   }
 
-  function pushNotification(title, body) {
-    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+  function pushNotification(title, body, key) {
+    const p = prefs();
+    if (!p || typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+    if (p.permissionDenied) return;
+    if (C.isQuietHour(p, new Date())) return; // quiet hours suppress only the device pop-up
     try {
-      new Notification(title, { body, tag: 'attendify-' + title.replace(/\s+/g, '-').toLowerCase() });
+      new Notification(title, { body, tag: 'attendify-' + (key || title).replace(/[^A-Za-z0-9_-]/g, '-') });
     } catch (err) {
       /* Some browsers only allow notifications from a service worker. */
     }
   }
 
-  function alertOnce(key, message, type, title) {
-    if (notified.has(key)) return;
-    notified.add(key);
-    toast(message, type || 'warning', 6000);
-    pushNotification(title || 'Attendify', message);
+  function notificationTone(category) {
+    if (category === 'danger') return 'error';
+    if (category === 'milestones') return 'success';
+    if (category === 'weekly') return 'info';
+    return 'warning';
+  }
+
+  function ensureNotifications() {
+    const state = liveState();
+    if (!state) return [];
+    if (!Array.isArray(state.notifications)) state.notifications = [];
+    state.notifications = C.sanitizeNotifications(state.notifications, state.notifPrefs);
+    return state.notifications;
   }
 
   function checkNotifications() {
     const state = liveState();
     const p = prefs();
-    if (!state || !p || p.enabled === false) return;
-    if (!state.subjects.length) return;
-    const tg = target();
+    if (!state || !p || p.enabled === false) return [];
+    const now = new Date();
+    const existing = ensureNotifications().map((note) => note.key);
+    const result = C.buildNotificationCandidates(state, now, p, existing);
 
-    if (p.belowTarget !== false) {
-      state.subjects.forEach((sub) => {
-        const st = C.stats(sub, tg);
-        if (st.hasData && st.isShort) {
-          alertOnce(`below:${sub.id}`, `${sub.name} is at ${st.percentage}% — attend ${st.classesNeeded === null ? 'every remaining class' : st.classesNeeded + ' in a row'} to reach ${tg}%.`, 'warning', 'Attendance below target');
-        }
-      });
-    }
+    Object.keys(result.prefUpdates).forEach((key) => { p[key] = result.prefUpdates[key]; });
+    result.candidates.forEach((candidate) => {
+      const record = C.sanitizeNotification(candidate);
+      if (!record) return;
+      state.notifications.unshift(record);
+      toast(record.body, notificationTone(record.category), 6000);
+      pushNotification(record.title, record.body, record.key);
+    });
 
-    if (p.danger !== false) {
-      state.subjects.forEach((sub) => {
-        const st = C.stats(sub, tg);
-        if (st.hasData && st.pctNum < tg - 10) {
-          alertOnce(`danger:${sub.id}`, `${sub.name} is in the danger zone at ${st.percentage}%.`, 'error', 'Attendance danger zone');
-        }
-      });
+    state.notifications = C.sanitizeNotifications(state.notifications, p);
+    if (result.candidates.length || Object.keys(result.prefUpdates).length) {
+      state.localUpdatedAt = Date.now();
+      persist(true);
     }
+    renderNotificationCenter();
+    renderNotificationSettings();
+    return result.candidates;
+  }
 
-    if (p.classReminder !== false && Array.isArray(state.timetable)) {
-      const view = C.upcomingClasses(state.timetable, new Date());
-      view.today.filter((entry) => !entry.isPast && entry.minutesUntil !== null && entry.minutesUntil <= 120).forEach((entry) => {
-        const sub = state.subjects.find((s) => s.id === entry.subjectId);
-        if (!sub) return;
-        const st = C.stats(sub, tg);
-        if (st.hasData && st.isShort) {
-          alertOnce(`before:${entry.id}:${C.todayISO()}`, `${sub.name} starts at ${C.formatTime12(entry.start)} — you are at ${st.percentage}%.`, 'warning', 'Class reminder');
-        }
-      });
-    }
+  function setNotificationFilter(filter) {
+    notificationFilter = filter || 'all';
+    renderNotificationCenter();
+  }
 
-    if (p.milestones !== false) {
-      const agg = C.aggregate(state.subjects, tg);
-      if (agg.hasData) {
-        const bucket = agg.pctNum >= 85 ? 85 : agg.pctNum >= 80 ? 80 : agg.pctNum >= 75 ? 75 : 0;
-        if (!p.lastMilestone && bucket) {
-          p.lastMilestone = bucket;
-          persist();
-        } else if (bucket > (p.lastMilestone || 0)) {
-          p.lastMilestone = bucket;
-          persist();
-          toast(`Milestone: overall attendance reached ${bucket}%.`, 'success', 6000);
-          pushNotification('Attendance milestone', `You are now at ${bucket}% overall.`);
-        }
-      }
-    }
+  function renderNotificationCenter() {
+    const state = liveState();
+    if (!state) return;
+    const notes = ensureNotifications();
+    const unread = notes.filter((n) => !n.read).length;
+    setText('notifUnreadCount', `${unread} unread`);
+    document.querySelectorAll('[data-action="notifFilter"]').forEach((btn) => {
+      btn.classList.toggle('active', btn.getAttribute('data-filter') === notificationFilter);
+    });
 
-    if (p.weekly !== false) {
-      const weekStart = C.startOfWeekISO(C.todayISO());
-      if (p.lastWeeklyISO !== weekStart) {
-        const summary = C.ledgerSummary(state, weekStart, C.addDaysISO(weekStart, 6));
-        if (summary.total > 0) {
-          p.lastWeeklyISO = weekStart;
-          persist();
-          const weekPct = summary.pctNum === null ? '—' : C.round1(summary.pctNum);
-          toast(`This week: ${summary.present} present, ${summary.absent} absent (${weekPct}%).`, 'info', 6000);
-          pushNotification('Weekly attendance summary', `${summary.present} present · ${summary.absent} absent · ${weekPct}%.`);
-        }
-      }
+    const host = $('notifList');
+    if (!host) return;
+    const visible = notes.filter((n) => {
+      if (notificationFilter === 'unread') return !n.read;
+      if (notificationFilter !== 'all') return n.category === notificationFilter;
+      return true;
+    });
+    host.innerHTML = visible.length ? visible.map((note) => `
+      <div class="notif-item ${note.read ? '' : 'is-unread'}">
+        <div>
+          <strong>${esc(note.title)}</strong>
+          <p>${esc(note.body)}</p>
+          <time datetime="${esc(new Date(note.timestamp).toISOString())}">${esc(new Date(note.timestamp).toLocaleString())}</time>
+        </div>
+        <div class="ana-report-actions">
+          ${note.read ? '' : `<button type="button" class="act-btn" data-action="notifRead" data-id="${esc(note.id)}">Mark read</button>`}
+          <button type="button" class="act-btn act-absent" data-action="notifDelete" data-id="${esc(note.id)}" aria-label="Delete notification">✕</button>
+        </div>
+      </div>`).join('') : '<p class="empty-inline">No alerts in this view. Real alerts are created automatically when your records need attention.</p>';
+  }
+
+  function markNotificationRead(id, all) {
+    const notes = ensureNotifications();
+    let changed = false;
+    notes.forEach((note) => {
+      if ((all || note.id === id) && !note.read) { note.read = true; changed = true; }
+    });
+    if (!changed) return;
+    stateChanged();
+    toast(all ? 'All alerts marked as read.' : 'Alert marked as read.', 'success', 2400);
+  }
+
+  function deleteNotification(id, all) {
+    const state = liveState();
+    if (!state) return;
+    const before = state.notifications.length;
+    state.notifications = all ? [] : state.notifications.filter((note) => note.id !== id);
+    if (state.notifications.length === before) return;
+    stateChanged();
+    toast(all ? 'Notification history cleared.' : 'Alert removed.', 'info', 2400);
+  }
+
+  function stateChanged() {
+    const state = liveState();
+    if (state) state.localUpdatedAt = Date.now();
+    persist(true);
+    renderNotificationCenter();
+    renderNotificationSettings();
+  }
+
+  function handleReminderPreference(input) {
+    const p = prefs();
+    if (!p) return;
+    const id = input.id;
+    if (id === 'notifLead') {
+      const allowed = [10, 30, 60, 120];
+      const value = C.clampInt(input.value, 10, 120, 30);
+      p.reminderLeadMinutes = allowed.includes(value) ? value : 30;
+    } else if (id === 'notifQuietEnabled') {
+      p.quietHoursEnabled = Boolean(input.checked);
+    } else if (id === 'notifQuietStart') {
+      p.quietStart = C.normalizeTime(input.value) || '22:00';
+    } else if (id === 'notifQuietEnd') {
+      p.quietEnd = C.normalizeTime(input.value) || '07:00';
+    } else {
+      return;
     }
+    stateChanged();
   }
 
   // ===============================================================
@@ -1415,6 +1503,7 @@
         history: state.history,
         timetable: state.timetable || [],
         notifPrefs: state.notifPrefs || {},
+        notifications: state.notifications || [],
         simScenarios: state.simScenarios || []
       };
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
@@ -1573,6 +1662,7 @@
     renderTimetable();
     renderCalendarFilter();
     renderNotificationSettings();
+    renderNotificationCenter();
     renderSyncStatus();
     renderSimulatorExtras();
   }
@@ -1585,6 +1675,10 @@
       applyCalendarFilter();
     }
     if (tab === 'calculator') renderSimulatorExtras();
+    if (tab === 'notifications') {
+      renderNotificationCenter();
+      renderNotificationSettings();
+    }
     if (tab === 'settings') {
       renderNotificationSettings();
       renderSyncStatus();
@@ -1612,7 +1706,12 @@
       case 'simSaveScenario': saveSimScenario(); break;
       case 'simClearScenarios': clearSimScenarios(); break;
       case 'notifEnable': requestNotificationPermission(); break;
-      case 'notifTest': checkNotifications(); toast('Reminder check complete. Alerts appear only for real risks.', 'info'); break;
+      case 'notifTest': checkNotifications(); toast('Reminder check complete. Alerts appear only for real records.', 'info'); break;
+      case 'notifRead': markNotificationRead(el.getAttribute('data-id'), false); break;
+      case 'notifDelete': deleteNotification(el.getAttribute('data-id'), false); break;
+      case 'notifReadAll': markNotificationRead('', true); break;
+      case 'notifClear': deleteNotification('', true); break;
+      case 'notifFilter': setNotificationFilter(el.getAttribute('data-filter')); break;
       case 'syncRetry': retrySync(); break;
       case 'syncKeepLocal': resolveSyncConflict('local'); break;
       case 'syncUseRemote': resolveSyncConflict('remote'); break;
@@ -1644,6 +1743,9 @@
     }
     if (targetEl.matches('[data-notif-key]')) {
       handleNotifToggle(targetEl);
+    }
+    if (['notifLead', 'notifQuietEnabled', 'notifQuietStart', 'notifQuietEnd'].includes(targetEl.id)) {
+      handleReminderPreference(targetEl);
     }
     if (targetEl.id === 'ttRecurrence') syncRecurrenceFields();
   });

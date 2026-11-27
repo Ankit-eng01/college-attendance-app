@@ -3874,6 +3874,19 @@
     .notif-row:last-child { border-bottom: none; }
     .notif-row > span:first-child { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
     .notif-row strong { font-size: 12.5px; color: var(--text-strong); font-weight: 700; }
+    .notif-item {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 11px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .notif-item:last-child { border-bottom: 0; }
+    .notif-item.is-unread { border-left: 3px solid var(--brand); padding-left: 9px; }
+    .notif-item strong { display: block; font-size: 12.5px; color: var(--text-strong); }
+    .notif-item p { margin: 3px 0 0; font-size: 11.5px; color: var(--text-muted); line-height: 1.5; }
+    .notif-item time { font-size: 10.5px; color: var(--text-dim); }
     .switch {
       appearance: none;
       -webkit-appearance: none;
@@ -4045,6 +4058,13 @@
               <path d="M12 7v5l3 2"></path>
             </svg>
             <span>Timetable</span>
+          </button>
+          <button type="button" class="nav-item sidebar-link" data-action="switchTab" data-tab="notifications">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path>
+              <path d="M13.7 21a2 2 0 0 1-3.4 0"></path>
+            </svg>
+            <span>Notifications</span>
           </button>
           <button type="button" class="nav-item sidebar-link" data-action="switchTab" data-tab="settings">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -4712,6 +4732,61 @@
         <p class="chart-caption" id="ttOverlapNote"></p>
       </div>
 
+    </section>
+
+    <!-- TAB: NOTIFICATION CENTER -->
+    <section id="viewNotifications" class="view-content">
+      <div class="page-heading">
+        <div>
+          <p class="eyebrow">Notifications</p>
+          <h2 class="page-title">Notification centre</h2>
+          <p class="page-sub">Alerts are created only from your own attendance records. Device pop-ups appear only while this page is open and permission is granted.</p>
+        </div>
+      </div>
+
+      <div class="insight-card">
+        <div class="insight-head">
+          <h3>Your alerts <span id="notifUnreadCount" class="insight-meta">0 unread</span></h3>
+          <div class="ana-report-actions">
+            <button type="button" class="act-btn" data-action="notifReadAll">Mark all read</button>
+            <button type="button" class="act-btn act-absent" data-action="notifClear">Clear history</button>
+          </div>
+        </div>
+        <div class="ana-filter-bar" id="notifFilters" role="group" aria-label="Filter notifications">
+          <button type="button" class="filter-chip active" data-action="notifFilter" data-filter="all">All</button>
+          <button type="button" class="filter-chip" data-action="notifFilter" data-filter="unread">Unread</button>
+          <button type="button" class="filter-chip" data-action="notifFilter" data-filter="belowTarget">Below target</button>
+          <button type="button" class="filter-chip" data-action="notifFilter" data-filter="danger">Danger</button>
+          <button type="button" class="filter-chip" data-action="notifFilter" data-filter="classReminder">Class</button>
+        </div>
+        <div id="notifList" aria-live="polite"></div>
+      </div>
+
+      <div class="insight-card">
+        <div class="insight-head"><h3>Reminder preferences</h3><span class="insight-meta" id="notifPermissionStatus2">In-app only</span></div>
+        <div class="form-group">
+          <label class="form-lbl" for="notifLead">Class reminder lead time</label>
+          <select id="notifLead" class="form-sel">
+            <option value="10">10 minutes before</option>
+            <option value="30">30 minutes before</option>
+            <option value="60">1 hour before</option>
+            <option value="120">2 hours before</option>
+          </select>
+        </div>
+        <label class="check-row"><input type="checkbox" id="notifQuietEnabled"> Quiet hours (suppress device pop-ups only)</label>
+        <div class="tt-time-grid">
+          <div class="form-group">
+            <label class="form-lbl" for="notifQuietStart">Quiet hours start</label>
+            <input type="time" id="notifQuietStart" class="form-inp">
+          </div>
+          <div class="form-group">
+            <label class="form-lbl" for="notifQuietEnd">Quiet hours end</label>
+            <input type="time" id="notifQuietEnd" class="form-inp">
+          </div>
+        </div>
+        <button type="button" class="btn-quiet" data-action="notifEnable" id="notifEnableBtn2">Allow device notifications</button>
+        <p class="form-hint">Browser reminders work only while this tab is open. There is no server-side scheduler; quiet hours never hide in-app alerts.</p>
+      </div>
     </section>
 
     <!-- TAB 4: SETTINGS, ACCOUNT, CLOUD & DATA -->

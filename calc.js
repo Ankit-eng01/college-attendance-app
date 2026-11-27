@@ -935,18 +935,200 @@
   const SYNC_CODE_RE = /^[A-Za-z0-9_-]{6,64}$/;
   const AUTH_KEY_RE = /^[A-Za-z0-9_-]{16,128}$/;
 
+  const VALID_NOTIF_CATEGORIES = ['belowTarget', 'danger', 'classReminder', 'weekly', 'milestones', 'system'];
+
   function sanitizeNotifPrefs(raw) {
     const p = raw && typeof raw === 'object' ? raw : {};
+    const categories = p.categories && typeof p.categories === 'object' ? p.categories : {};
+    const categoryPrefs = {};
+    VALID_NOTIF_CATEGORIES.forEach((key) => {
+      const legacy = p[key];
+      categoryPrefs[key] = categories[key] !== undefined ? categories[key] !== false : legacy !== false;
+    });
+    const q = p.quietHours && typeof p.quietHours === 'object' ? p.quietHours : {};
     return {
       enabled: p.enabled !== false,
-      belowTarget: p.belowTarget !== false,
-      danger: p.danger !== false,
-      classReminder: p.classReminder !== false,
-      weekly: p.weekly !== false,
-      milestones: p.milestones !== false,
+      // Legacy flat keys remain so older backups and existing UI keep working.
+      belowTarget: categoryPrefs.belowTarget,
+      danger: categoryPrefs.danger,
+      classReminder: categoryPrefs.classReminder,
+      weekly: categoryPrefs.weekly,
+      milestones: categoryPrefs.milestones,
+      categories: categoryPrefs,
+      quietHoursEnabled: p.quietHoursEnabled !== undefined ? Boolean(p.quietHoursEnabled) : Boolean(q.enabled),
+      quietStart: normalizeTime(q.start || p.quietStart) || '22:00',
+      quietEnd: normalizeTime(q.end || p.quietEnd) || '07:00',
+      reminderLeadMinutes: clampInt(p.reminderLeadMinutes, 5, 240, 30),
+      maxHistory: clampInt(p.maxHistory, 20, 200, 80),
+      permissionDenied: Boolean(p.permissionDenied),
       lastWeeklyISO: typeof p.lastWeeklyISO === 'string' && isValidISODate(p.lastWeeklyISO) ? p.lastWeeklyISO : '',
       lastMilestone: clampInt(p.lastMilestone, 0, 100, 0)
     };
+  }
+
+  function notificationId(key) {
+    let hash = 5381;
+    const text = String(key || '');
+    for (let i = 0; i < text.length; i++) hash = ((hash << 5) + hash + text.charCodeAt(i)) | 0;
+    return 'n_' + (hash >>> 0).toString(36);
+  }
+
+  function sanitizeNotification(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    const key = cleanText(raw.key, 160);
+    if (!key) return null;
+    const title = cleanText(raw.title, 100) || 'Attendify';
+    const body = cleanText(raw.body, 240);
+    if (!body) return null;
+    return {
+      id: safeId(raw.id, notificationId(key)),
+      key,
+      category: VALID_NOTIF_CATEGORIES.includes(raw.category) ? raw.category : 'system',
+      title,
+      body,
+      subjectId: safeId(raw.subjectId, ''),
+      timestamp: toNumber(raw.timestamp, Date.now()) || Date.now(),
+      read: Boolean(raw.read)
+    };
+  }
+
+  function sanitizeNotifications(raw, prefs) {
+    const limit = sanitizeNotifPrefs(prefs).maxHistory;
+    const seen = new Set();
+    const rows = [];
+    (Array.isArray(raw) ? raw : []).slice(0, limit * 2).forEach((item) => {
+      const clean = sanitizeNotification(item);
+      if (!clean || seen.has(clean.key)) return;
+      seen.add(clean.key);
+      rows.push(clean);
+    });
+    return rows.sort((a, b) => b.timestamp - a.timestamp).slice(0, limit);
+  }
+
+  /** True only during the configured local quiet-hours window. */
+  function isQuietHour(prefs, now) {
+    const p = sanitizeNotifPrefs(prefs);
+    if (!p.quietHoursEnabled) return false;
+    const current = now instanceof Date ? now : new Date();
+    const at = current.getHours() * 60 + current.getMinutes();
+    const start = timeToMinutes(p.quietStart);
+    const end = timeToMinutes(p.quietEnd);
+    if (start === null || end === null || start === end) return false;
+    return start < end ? (at >= start && at < end) : (at >= start || at < end);
+  }
+
+  /** Class reminders use the configured lead time and never look into the past. */
+  function isWithinReminderLead(entry, prefs, now) {
+    const start = timeToMinutes(entry && entry.start);
+    if (start === null) return false;
+    const current = now instanceof Date ? now : new Date();
+    const minutesUntil = start - (current.getHours() * 60 + current.getMinutes());
+    const lead = sanitizeNotifPrefs(prefs).reminderLeadMinutes;
+    return minutesUntil >= 0 && minutesUntil <= lead;
+  }
+
+  /**
+   * Build notification records from real subject/timetable/history state.
+   * `existingKeys` makes repeat checks idempotent. Pref updates (weekly and
+   * milestone markers) are returned for the caller to persist.
+   */
+  function buildNotificationCandidates(state, now, prefs, existingKeys) {
+    const st = state || {};
+    const p = sanitizeNotifPrefs(prefs);
+    const current = now instanceof Date ? now : new Date();
+    const iso = todayISO(current);
+    const seen = new Set(Array.isArray(existingKeys) ? existingKeys : []);
+    const candidates = [];
+    const prefUpdates = {};
+    const tg = clampTarget(st.globalTarget, 75);
+    const add = (candidate) => {
+      if (seen.has(candidate.key)) return;
+      seen.add(candidate.key);
+      candidates.push(Object.assign({ timestamp: current.getTime(), read: false }, candidate));
+    };
+
+    if (p.enabled === false) return { candidates, prefUpdates };
+
+    if (p.categories.belowTarget) {
+      (Array.isArray(st.subjects) ? st.subjects : []).forEach((sub) => {
+        if (!sub) return;
+        const s = stats(sub, tg);
+        if (!s.hasData || !s.isShort) return;
+        add({
+          key: `below:${sub.id}:${s.total}:${s.percentage}`,
+          category: 'belowTarget',
+          subjectId: sub.id || '',
+          title: 'Attendance below target',
+          body: `${s.name || sub.name || 'Subject'} is at ${s.percentage}% — attend ${s.classesNeeded} more in a row to reach ${s.target}%.`
+        });
+      });
+    }
+
+    if (p.categories.danger) {
+      (Array.isArray(st.subjects) ? st.subjects : []).forEach((sub) => {
+        if (!sub) return;
+        const s = stats(sub, tg);
+        if (!s.hasData || s.pctNum >= tg - 10) return;
+        add({
+          key: `danger:${sub.id}:${s.total}`,
+          category: 'danger',
+          subjectId: sub.id || '',
+          title: 'Attendance danger zone',
+          body: `${s.name || sub.name || 'Subject'} is at ${s.percentage}%, more than 10 points below the ${s.target}% target.`
+        });
+      });
+    }
+
+    if (p.categories.classReminder) {
+      const today = timetableForDay(st.timetable, current.getDay());
+      today.filter((entry) => !entry.cancelled && !entry.holiday && isWithinReminderLead(entry, p, current))
+        .forEach((entry) => {
+          const sub = (Array.isArray(st.subjects) ? st.subjects : []).find((s) => s && s.id === entry.subjectId);
+          if (!sub) return;
+          add({
+            key: `class:${entry.id}:${iso}:${entry.start}`,
+            category: 'classReminder',
+            subjectId: sub.id || '',
+            title: 'Class starting soon',
+            body: `${sub.name} starts at ${formatTime12(entry.start)} · ${entry.room || 'Room not set'}.`
+          });
+        });
+    }
+
+    if (p.categories.milestones) {
+      const agg = aggregate(st.subjects, tg);
+      const bucket = agg.hasData ? (agg.pctNum >= 85 ? 85 : agg.pctNum >= 80 ? 80 : agg.pctNum >= 75 ? 75 : 0) : 0;
+      if (bucket > p.lastMilestone) {
+        prefUpdates.lastMilestone = bucket;
+        add({
+          key: `milestone:${bucket}:${monthKey(iso)}`,
+          category: 'milestones',
+          subjectId: '',
+          title: 'Attendance milestone',
+          body: `Overall attendance reached ${bucket}%.`
+        });
+      }
+    }
+
+    if (p.categories.weekly) {
+      const weekStart = startOfWeekISO(iso);
+      if (p.lastWeeklyISO !== weekStart) {
+        const summary = ledgerSummary(st, weekStart, addDaysISO(weekStart, 6));
+        if (summary.total > 0) {
+          prefUpdates.lastWeeklyISO = weekStart;
+          const weekPct = summary.pctNum === null ? '--' : round1(summary.pctNum);
+          add({
+            key: `weekly:${weekStart}`,
+            category: 'weekly',
+            subjectId: '',
+            title: 'Weekly attendance summary',
+            body: `${summary.present} present · ${summary.absent} absent · ${weekPct}%.`
+          });
+        }
+      }
+    }
+
+    return { candidates, prefUpdates };
   }
 
   function sanitizeSyncMeta(raw) {
@@ -1078,6 +1260,7 @@
       history,
       timetable,
       notifPrefs: sanitizeNotifPrefs(raw.notifPrefs),
+      notifications: sanitizeNotifications(raw.notifications, raw.notifPrefs),
       syncMeta: sanitizeSyncMeta(raw.syncMeta),
       simScenarios,
       localUpdatedAt: toNumber(raw.localUpdatedAt, 0) || 0,
@@ -1100,7 +1283,7 @@
     const local = sanitizeState(localRaw || {});
     const incoming = sanitizeState(incomingRaw || {});
     const result = JSON.parse(JSON.stringify(local));
-    const added = { subjects: 0, history: 0, calendar: 0, timetable: 0 };
+    const added = { subjects: 0, history: 0, calendar: 0, timetable: 0, notifications: 0 };
 
     incoming.subjects.forEach((inc) => {
       const existing = result.subjects.find((s) => s.id === inc.id);
@@ -1148,6 +1331,15 @@
       result.timetable.push(entry);
       added.timetable++;
     });
+
+    const notifKeys = new Set(result.notifications.map((n) => n.key));
+    incoming.notifications.forEach((note) => {
+      if (notifKeys.has(note.key)) return;
+      result.notifications.push(note);
+      notifKeys.add(note.key);
+      added.notifications++;
+    });
+    result.notifications = sanitizeNotifications(result.notifications, result.notifPrefs);
 
     result.subjects.sort((a, b) => a.name.localeCompare(b.name));
     return { state: result, added };
@@ -1254,6 +1446,8 @@
       st.subjects.map((s) => `${s.id}:${s.name}:${s.attended}/${s.total}:${s.target}`).sort().join('|'),
       st.history.map((h) => `${h.date}:${h.subId}:${h.status}`).sort().join('|'),
       Object.keys(st.calendar).sort().map((d) => `${d}:${JSON.stringify(st.calendar[d])}`).join('|'),
+      JSON.stringify(st.notifPrefs),
+      st.notifications.map((n) => `${n.key}:${n.read ? 1 : 0}`).sort().join('|'),
       String(st.globalTarget)
     ];
     let hash = 5381;
@@ -1342,6 +1536,11 @@
     escapeHtml,
     sanitizeState,
     sanitizeNotifPrefs,
+    sanitizeNotification,
+    sanitizeNotifications,
+    isQuietHour,
+    isWithinReminderLead,
+    buildNotificationCandidates,
     sanitizeSyncMeta,
     mergeStates,
     subjectsToCSV,
