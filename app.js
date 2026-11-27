@@ -536,7 +536,7 @@
       // Dashboard greeting + semester snapshot
       const firstName = (appState.studentName || '').trim().split(/\s+/)[0];
       const greetingName = document.getElementById('dashGreetingName');
-      if (greetingName) greetingName.textContent = firstName || 'there';
+      if (greetingName) greetingName.textContent = firstName || 'Student';
       const greetingPart = document.getElementById('dashGreetingPart');
       if (greetingPart) {
         const hour = new Date().getHours();
@@ -1947,6 +1947,7 @@ Created ${newSubjects.length} customized subjects for you.`);
           const badgeOff = document.getElementById('cloudConnectionBadge');
           if (badgeOff) { badgeOff.className = 'criteria-pill pill-neutral'; badgeOff.textContent = 'Offline'; }
       } finally {
+        const headerBtn = document.getElementById('headerCloudSyncBtn');
         if (headerBtn) headerBtn.style.opacity = '1';
       }
     }
@@ -2356,7 +2357,7 @@ Save this code to restore your courses on another phone or computer!`);
 
     function initServiceWorker() {
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js?v=20261126nodata', { updateViaCache: 'none' }).catch(() => {});
+        navigator.serviceWorker.register('./sw.js?v=20261127r2', { updateViaCache: 'none' }).catch(() => {});
       }
     }
   
