@@ -487,7 +487,7 @@
         : `${bucket.label}: ${pct}% attendance (${bucket.present} present, ${bucket.absent} absent)`;
       return `
         <div class="bar-col" role="img" aria-label="${esc(aria)}">
-          <span class="bar-value">${pct === null ? '–' : Math.round(pct) + '%'}</span>
+          <span class="bar-value ${pct === null ? 'is-empty' : ''}">${pct === null ? '' : Math.round(pct) + '%'}</span>
           <span class="bar-track"><span class="bar-fill ${level}" style="height:${height}%"></span></span>
           <span class="bar-label">${esc(bucket.label)}</span>
         </div>`;
@@ -603,6 +603,18 @@
     }
 
     const entries = ensureTimetable();
+    let minStartMin = 8 * 60;
+    let maxEndMin = 17 * 60;
+    entries.forEach((entry) => {
+      const s = C.timeToMinutes(entry.start);
+      const e = entry.end ? C.timeToMinutes(entry.end) : s + 60;
+      if (Number.isFinite(s) && s < minStartMin) minStartMin = Math.floor(s / 60) * 60;
+      if (Number.isFinite(e) && e > maxEndMin) maxEndMin = Math.ceil(e / 60) * 60;
+    });
+    const pxPerHour = 56;
+    const spanHours = Math.max(7, Math.ceil((maxEndMin - minStartMin) / 60));
+    const gridHeight = Math.max(380, spanHours * pxPerHour + 16);
+
     const columns = [];
     for (let index = 0; index < 7; index++) {
       const day = (index + 1) % 7; // Monday first
@@ -612,24 +624,25 @@
         .filter((entry) => entry.recurrence !== 'once' || !entry.date || entry.date === iso || ttWeekOffset !== 0);
       const blocks = dayEntries.map((entry) => {
         const start = C.timeToMinutes(entry.start);
-        const end = entry.end ? C.timeToMinutes(entry.end) : start + 45;
-        const top = Math.max(0, ((start - 6 * 60) / 60) * 44);
-        const height = Math.max(38, ((end - start) / 60) * 44);
+        const end = entry.end ? C.timeToMinutes(entry.end) : start + 60;
+        const top = Math.max(6, ((start - minStartMin) / 60) * pxPerHour + 6);
+        const height = Math.max(46, ((end - start) / 60) * pxPerHour);
         const color = subjectColor(entry.subjectId);
         const classes = ['tt-grid-block', entry.cancelled ? 'is-cancelled' : '', entry.holiday ? 'is-holiday' : ''].filter(Boolean).join(' ');
+        const tip = `${entry.subjectName} · ${C.formatTime12(entry.start)}${entry.end ? ' – ' + C.formatTime12(entry.end) : ''}${entry.room ? ' · ' + entry.room : ''}`;
         return `
           <button type="button" class="${classes}" style="top:${top}px;height:${height}px;--tt-color:${color};"
-            data-action="ttEdit" data-id="${esc(entry.id)}"
+            data-action="ttEdit" data-id="${esc(entry.id)}" title="${esc(tip)}"
             aria-label="${esc(entry.subjectName)} at ${esc(C.formatTime12(entry.start))}${entry.cancelled ? ', cancelled' : ''}${entry.holiday ? ', holiday' : ''}">
             <strong>${esc(entry.subjectName)}</strong>
-            <span>${esc(C.formatTime12(entry.start))}</span>
+            <span>${esc(C.formatTime12(entry.start))}${entry.room ? ' · ' + esc(entry.room) : ''}</span>
             ${entry.cancelled ? '<em>Cancelled</em>' : ''}${entry.holiday ? '<em>Holiday</em>' : ''}
           </button>`;
       }).join('');
       columns.push(`
         <div class="tt-grid-day ${isToday ? 'is-today' : ''}">
           <div class="tt-grid-head"><span>${esc(C.dayName(day).slice(0, 3))}</span><strong>${Number(iso.slice(8, 10))}</strong></div>
-          <div class="tt-grid-body">${blocks || '<span class="tt-grid-empty">No class</span>'}</div>
+          <div class="tt-grid-body" style="min-height:${gridHeight}px;">${blocks || '<span class="tt-grid-empty">No class</span>'}</div>
         </div>`);
     }
     host.innerHTML = columns.join('');
@@ -661,14 +674,18 @@
         </div>
         <div class="tt-actions">
           ${recordable ? `
-            <button type="button" class="act-btn act-present" data-action="ttMark" data-status="present" data-id="${esc(entry.id)}" title="Mark present">✓</button>
-            <button type="button" class="act-btn act-absent" data-action="ttMark" data-status="absent" data-id="${esc(entry.id)}" title="Mark absent">✕</button>
-            <button type="button" class="act-btn" data-action="ttMark" data-status="off" data-id="${esc(entry.id)}" title="Mark cancelled class (does not count)">Off</button>
+            <div class="tt-action-group">
+              <button type="button" class="act-btn act-present" data-action="ttMark" data-status="present" data-id="${esc(entry.id)}" title="Mark present" aria-label="Mark present">✓</button>
+              <button type="button" class="act-btn act-absent" data-action="ttMark" data-status="absent" data-id="${esc(entry.id)}" title="Mark absent" aria-label="Mark absent">✕</button>
+              <button type="button" class="act-btn" data-action="ttMark" data-status="off" data-id="${esc(entry.id)}" title="Mark cancelled class (does not count)">Off</button>
+            </div>
           ` : ''}
-          ${isToday && entry.subjectId ? `<button type="button" class="act-btn" data-action="ttHistory" data-id="${esc(entry.id)}" title="View attendance history">History</button>` : ''}
-          <button type="button" class="act-btn" data-action="ttDuplicate" data-id="${esc(entry.id)}" title="Duplicate class">Copy</button>
-          <button type="button" class="act-btn" data-action="ttEdit" data-id="${esc(entry.id)}" title="Edit class">Edit</button>
-          <button type="button" class="act-btn act-absent" data-action="ttDelete" data-id="${esc(entry.id)}" title="Delete class">✕</button>
+          <div class="tt-action-group">
+            ${isToday && entry.subjectId ? `<button type="button" class="act-btn" data-action="ttHistory" data-id="${esc(entry.id)}" title="View attendance history">History</button>` : ''}
+            <button type="button" class="act-btn" data-action="ttDuplicate" data-id="${esc(entry.id)}" title="Duplicate class">Copy</button>
+            <button type="button" class="act-btn" data-action="ttEdit" data-id="${esc(entry.id)}" title="Edit class">Edit</button>
+            <button type="button" class="act-btn act-absent" data-action="ttDelete" data-id="${esc(entry.id)}" title="Delete class" aria-label="Delete class">✕</button>
+          </div>
         </div>
       </div>`;
   }
