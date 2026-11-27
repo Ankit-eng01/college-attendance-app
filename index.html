@@ -44,7 +44,7 @@
 
       --text: #F5F7FC;
       --text-muted: #94A3B8;
-      --text-dim: #64748B;
+      --text-dim: #7B8EA8;
       --text-strong: #F5F7FC;
 
       --brand: #4285F4;               /* Primary blue */
@@ -2473,9 +2473,9 @@
       }
       .dash-grid {
         display: grid;
-        grid-template-columns: minmax(0, 1.65fr) minmax(250px, 1fr);
+        grid-template-columns: minmax(0, 1.62fr) minmax(260px, 1fr);
         gap: 16px;
-        align-items: start;
+        align-items: stretch;
       }
     }
 
@@ -2588,7 +2588,6 @@
     .settings-card,
     .cal-card,
     .calc-card,
-    .empty-state-card,
     .subjects-empty-state {
       border-radius: 16px;
       border: 1px solid var(--border-subtle);
@@ -2611,19 +2610,19 @@
       background: linear-gradient(90deg, transparent 0%, var(--hairline) 50%, transparent 100%);
     }
     .glance-card {
-      padding: 18px;
+      padding: 20px 18px 18px;
       gap: 0;
       background: linear-gradient(168deg, var(--bg-card) 0%, var(--bg-surface) 100%);
     }
 
     /* ---- Dashboard hero ---- */
     .dash-top { align-items: center; gap: 12px; }
-    .dash-hero { gap: 20px; align-items: center; }
-    .gauge-wrap { width: 132px; height: 132px; }
-    .gauge-wrap::before { inset: -16px; opacity: 0.26; }
-    .gauge-wrap svg circle { stroke-width: 7; }
-    .gauge-pct { font-size: 27px; font-weight: 800; letter-spacing: -0.04em; }
-    .gauge-lbl { margin-top: 2px; font-size: 9px; letter-spacing: 0.12em; }
+    .dash-hero { gap: 22px; align-items: center; }
+    .gauge-wrap { width: 144px; height: 144px; }
+    .gauge-wrap::before { inset: -16px; opacity: 0.28; }
+    .gauge-wrap svg circle { stroke-width: 7.5; }
+    .gauge-pct { font-size: 32px; font-weight: 800; letter-spacing: -0.045em; line-height: 1.05; }
+    .gauge-lbl { margin-top: 3px; font-size: 9.5px; letter-spacing: 0.13em; color: var(--text-dim); }
     .dash-hero-info { flex: 1; min-width: 0; gap: 8px; }
     .dash-hero-title { font-size: 10.5px; letter-spacing: 0.11em; font-weight: 700; color: var(--text-dim); }
     .health-tag { padding: 5px 10px; font-size: 11px; font-weight: 700; }
@@ -2737,7 +2736,7 @@
       text-align: right;
       min-width: 36px;
     }
-    .glance-actions { margin-top: 14px; gap: 8px; }
+    .glance-actions { margin-top: auto; padding-top: 14px; gap: 8px; }
     .glance-actions .btn-ghost {
       height: 36px;
       font-size: 12px;
@@ -2925,33 +2924,6 @@
     .act-btn { height: 34px; border-radius: 9px; font-size: 11.5px; font-weight: 600; }
     .card-actions { padding-top: 11px; border-top: 1px solid var(--hairline); }
 
-    /* ---- Empty state ---- */
-    .empty-state-card {
-      padding: 24px 20px 22px;
-      gap: 0;
-      border-style: solid;
-      border-color: var(--border-subtle);
-      background:
-        radial-gradient(120% 100% at 50% 0%, var(--brand-soft) 0%, transparent 62%),
-        linear-gradient(168deg, var(--bg-card) 0%, var(--bg-surface) 100%);
-    }
-    .empty-emblem {
-      width: 44px;
-      height: 44px;
-      border-radius: 12px;
-      margin-bottom: 12px;
-      display: grid;
-      place-items: center;
-      background: var(--brand-soft);
-      border: 1px solid var(--border-subtle);
-      color: var(--brand);
-      box-shadow: none;
-    }
-    .empty-emblem svg { width: 21px; height: 21px; }
-    .empty-title { font-size: 15px; font-weight: 700; letter-spacing: -0.015em; margin-bottom: 5px; }
-    .empty-copy { font-size: 12.5px; line-height: 1.55; max-width: 340px; margin: 0 auto 14px; }
-    .empty-state-card .btn-primary { height: 38px; padding: 0 18px; font-size: 12.5px; border-radius: 10px; }
-
     /* ---- Typography scale ---- */
     .page-heading { align-items: flex-end; gap: 14px; padding: 2px 2px 0; }
     .page-title { font-size: clamp(23px, 2.7vw, 30px); font-weight: 800; letter-spacing: -0.032em; line-height: 1.18; }
@@ -3094,7 +3066,7 @@
     /* ---- Micro-interactions (150-200ms, restrained) ---- */
     .btn-primary, .btn-ghost, .btn-quiet, .icon-btn, .filter-chip, .act-btn,
     .settings-link, .nav-item, .theme-card, .appearance-mode-btn, .sidebar-account,
-    .stat-box, .subject-card, .dashboard-card, .glance-card {
+    .stat-box, .subject-card, .dashboard-card, .glance-card, .cal-cell {
       transition:
         background-color var(--dur) var(--ease-out),
         border-color var(--dur) var(--ease-out),
@@ -3104,7 +3076,7 @@
     }
     .btn-primary:hover { filter: brightness(1.06); }
     .btn-primary:active { transform: translateY(1px); }
-    .stat-box:hover { border-color: var(--border); }
+    .stat-box:hover { border-color: var(--border); background: var(--bg-card-secondary); }
     .icon-btn:hover { border-color: var(--border-accent); }
     .btn-primary:focus-visible,
     .btn-ghost:focus-visible,
@@ -3117,6 +3089,9 @@
     .theme-card:focus-visible,
     .appearance-mode-btn:focus-visible,
     .sidebar-account:focus-visible,
+    .cal-cell:focus-visible,
+    .form-inp:focus-visible,
+    .form-sel:focus-visible,
     .adv-details > summary:focus-visible {
       outline: 2px solid var(--brand);
       outline-offset: 2px;
@@ -3131,13 +3106,14 @@
       .sidebar { overflow-y: auto; }
     }
     @media (max-width: 560px) {
+      .app-container { gap: 14px; }
       .page-title { font-size: 22px; }
       .page-sub { font-size: 12px; }
       .dashboard-card { padding: 16px; gap: 14px; }
       .glance-card, .settings-card, .cal-card, .calc-card { padding: 16px; }
       .dash-hero { gap: 14px; }
-      .gauge-wrap { width: 112px; height: 112px; }
-      .gauge-pct { font-size: 23px; }
+      .gauge-wrap { width: 120px; height: 120px; }
+      .gauge-pct { font-size: 26px; }
       .dash-advice { font-size: 12px; }
       .stat-grid { gap: 8px; }
       .stat-box { padding: 10px 11px; }
@@ -3151,7 +3127,6 @@
       }
       .welcome-panel-cta { width: 100%; }
       .subject-card { padding: 14px; }
-      .empty-state-card { padding: 22px 16px 20px; }
       .subjects-empty-state { padding: 28px 18px; }
       .subjects-empty-title { font-size: 15px; }
       .subjects-empty-text { font-size: 12.5px; }
@@ -4306,6 +4281,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=20261127r7" defer></script>
+  <script src="app.js?v=20261127r8" defer></script>
 </body>
 </html>

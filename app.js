@@ -2376,7 +2376,7 @@ Save this code to restore your courses on another phone or computer!`);
 
     function initServiceWorker() {
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js?v=20261127r7', { updateViaCache: 'none' }).catch(() => {});
+        navigator.serviceWorker.register('./sw.js?v=20261127r8', { updateViaCache: 'none' }).catch(() => {});
       }
     }
   
