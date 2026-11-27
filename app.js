@@ -654,7 +654,7 @@
         alertBar.innerHTML = `
           <div>
             <strong>Welcome to Attendify.</strong> How many subjects do you have this semester?
-            <button type="button" class="btn-primary" style="margin-top:8px; padding:6px 14px; font-size:12px;" data-action="openSetupModal">Set Up My Subjects</button>
+            <button type="button" class="btn-primary btn-inline" data-action="openSetupModal">Set Up My Subjects</button>
           </div>
         `;
         return;
@@ -669,7 +669,7 @@
         alertBar.innerHTML = `
           <div>
             <strong>No classes logged yet.</strong> Attendance stays blank until you mark a class.
-            <button type="button" class="btn-primary" style="margin-top:8px; padding:6px 14px; font-size:12px;" data-action="openSetupModal">Edit Subjects</button>
+            <button type="button" class="btn-primary btn-inline" data-action="openSetupModal">Edit Subjects</button>
           </div>
         `;
         return;
@@ -754,7 +754,7 @@
 
       if (filtered.length === 0) {
         list.innerHTML = '';
-        empty.style.display = 'block';
+        empty.style.display = 'flex';
         const hasAny = appState.subjects.length > 0;
         const title = document.getElementById('emptyStateTitle');
         const copy = document.getElementById('emptyStateText');

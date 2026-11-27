@@ -2558,6 +2558,441 @@
         transition-duration: 0.01ms !important;
       }
     }
+    /* ============================================================
+       POLISH V2 — refined surfaces, type scale & micro-interactions
+       Additive layer: overrides visuals only. No behaviour, no
+       attendance math, no auth / sync logic is touched here.
+       ============================================================ */
+
+    :root {
+      --radius-sm: 10px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --dur: 0.18s;
+      --ease-out: cubic-bezier(0.22, 0.68, 0.28, 1);
+      --card-shadow: 0 1px 2px rgba(3, 8, 18, 0.32), 0 10px 28px -22px rgba(0, 0, 0, 0.9);
+      --card-shadow-hover: 0 1px 2px rgba(3, 8, 18, 0.28), 0 16px 34px -24px rgba(0, 0, 0, 0.92);
+    }
+
+    /* ---- Layout safety: no horizontal scroll, no oversized icons ---- */
+    .app-shell, .app-main, .app-container { min-width: 0; max-width: 100%; }
+    .dash-grid, .settings-grid, .subjects-list, .glance-actions, .card-head { min-width: 0; }
+
+    /* ---- Unified premium card surface ---- */
+    .dashboard-card,
+    .glance-card,
+    .settings-card,
+    .cal-card,
+    .calc-card,
+    .empty-state-card {
+      border-radius: 16px;
+      border: 1px solid var(--border-subtle);
+      box-shadow: var(--card-shadow);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      background: linear-gradient(168deg, var(--bg-card) 0%, var(--bg-surface) 100%);
+    }
+    .dashboard-card {
+      padding: 20px;
+      gap: 16px;
+      border-color: var(--border-subtle);
+      background:
+        radial-gradient(120% 92% at 100% 0%, var(--brand-soft) 0%, transparent 56%),
+        linear-gradient(168deg, var(--bg-card) 0%, var(--bg-surface) 100%);
+    }
+    .dashboard-card::before {
+      left: 20px;
+      right: 20px;
+      background: linear-gradient(90deg, transparent 0%, var(--hairline) 50%, transparent 100%);
+    }
+    .glance-card {
+      padding: 18px;
+      gap: 0;
+      background:
+        radial-gradient(120% 92% at 0% 0%, var(--success-soft) 0%, transparent 54%),
+        linear-gradient(168deg, var(--bg-card) 0%, var(--bg-surface) 100%);
+    }
+
+    /* ---- Dashboard hero ---- */
+    .dash-top { align-items: center; gap: 12px; }
+    .dash-hero { gap: 20px; align-items: center; }
+    .gauge-wrap { width: 132px; height: 132px; }
+    .gauge-wrap::before { inset: -16px; opacity: 0.26; }
+    .gauge-wrap svg circle { stroke-width: 7; }
+    .gauge-pct { font-size: 27px; font-weight: 800; letter-spacing: -0.04em; }
+    .gauge-lbl { margin-top: 2px; font-size: 9px; letter-spacing: 0.12em; }
+    .dash-hero-info { flex: 1; min-width: 0; gap: 8px; }
+    .dash-hero-title { font-size: 10.5px; letter-spacing: 0.11em; font-weight: 700; color: var(--text-dim); }
+    .health-tag { padding: 5px 10px; font-size: 11px; font-weight: 700; }
+    .dash-advice { font-size: 12.5px; line-height: 1.5; max-width: 48ch; color: var(--text-muted); }
+    .dash-target-note { font-size: 11.5px; gap: 6px; color: var(--text-dim); }
+    .dash-target-note strong { font-weight: 700; }
+
+    /* ---- Metric strip ---- */
+    .stat-grid { gap: 10px; }
+    .stat-box {
+      padding: 12px 13px;
+      gap: 3px;
+      border-radius: 12px;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-surface);
+      box-shadow: inset 0 1px 0 var(--inset-highlight);
+    }
+    .stat-val { font-size: 19px; font-weight: 800; letter-spacing: -0.03em; }
+    .stat-lbl { font-size: 9.5px; letter-spacing: 0.07em; font-weight: 600; color: var(--text-dim); }
+
+    /* ---- Criteria banner ---- */
+    .shortage-banner {
+      border-radius: 12px;
+      padding: 11px 13px;
+      font-size: 12px;
+      line-height: 1.5;
+      gap: 10px;
+      align-items: flex-start;
+    }
+    .shortage-banner strong { font-weight: 700; }
+    .btn-inline {
+      height: 32px;
+      margin-top: 10px;
+      padding: 0 13px;
+      font-size: 11.5px;
+      border-radius: 9px;
+      font-weight: 700;
+    }
+
+    /* ---- Semester snapshot ---- */
+    .glance-title { margin-bottom: 8px; font-size: 10.5px; letter-spacing: 0.11em; font-weight: 700; color: var(--text-dim); }
+    .glance-row { padding: 9px 0; font-size: 12px; border-bottom: 1px solid var(--hairline); }
+    .glance-row strong { font-size: 13.5px; font-weight: 700; color: var(--text-strong); }
+    .glance-actions { margin-top: 12px; gap: 7px; }
+    .glance-actions .btn-ghost { height: 36px; font-size: 12px; border-radius: 9px; font-weight: 600; border-color: var(--border-subtle); }
+    .glance-actions .btn-ghost:hover { border-color: var(--border-accent); }
+
+    /* ---- Course filter tabs ---- */
+    .filter-scroll { gap: 7px; padding: 2px 2px 2px; }
+    .filter-chip {
+      padding: 5px 12px;
+      font-size: 11.5px;
+      font-weight: 600;
+      border-radius: 999px;
+      border: 1px solid var(--border-subtle);
+      background: transparent;
+      color: var(--text-muted);
+    }
+    .filter-chip:hover { background: var(--bg-card); border-color: var(--border-accent); color: var(--text); }
+    .filter-chip.active {
+      background: var(--brand);
+      color: var(--on-brand);
+      border-color: transparent;
+      font-weight: 700;
+      box-shadow: 0 1px 2px rgba(3, 8, 18, 0.4);
+    }
+
+    /* ---- Section header ---- */
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 2px 2px 0;
+    }
+    .section-head-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .section-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 22px;
+      height: 20px;
+      padding: 0 6px;
+      border-radius: 6px;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-card);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+    .btn-quiet {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      height: 32px;
+      padding: 0 12px;
+      border-radius: 9px;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-card);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 11.5px;
+      font-weight: 700;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .btn-quiet:hover { border-color: var(--border-accent); background: var(--bg-card-hover); }
+    .btn-quiet:active { transform: scale(0.98); }
+
+    /* ---- Subject cards ---- */
+    .subject-card {
+      padding: 16px;
+      gap: 12px;
+      border-radius: 16px;
+      border: 1px solid var(--border-subtle);
+      background: linear-gradient(168deg, var(--bg-card) 0%, var(--bg-surface) 100%);
+      box-shadow: 0 1px 2px rgba(3, 8, 18, 0.18);
+    }
+    .subject-card::after { top: 14px; bottom: 14px; width: 2px; }
+    .subject-card:hover {
+      transform: translateY(-1px);
+      border-color: var(--border-accent);
+      box-shadow: var(--card-shadow-hover);
+    }
+    .card-title { font-size: 14px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.35; }
+    .score-pct { font-size: 20px; font-weight: 800; letter-spacing: -0.03em; }
+    .score-ratio { font-size: 10.5px; color: var(--text-dim); }
+    .analytic-chip { padding: 8px 10px; border-radius: 10px; border-color: var(--border-subtle); background: var(--bg-surface); }
+    .analytic-lbl { font-size: 9px; letter-spacing: 0.06em; }
+    .analytic-val { font-size: 12px; font-weight: 700; }
+    .act-btn { height: 34px; border-radius: 9px; font-size: 11.5px; font-weight: 600; }
+    .card-actions { padding-top: 11px; border-top: 1px solid var(--hairline); }
+
+    /* ---- Empty state ---- */
+    .empty-state-card {
+      padding: 24px 20px 22px;
+      gap: 0;
+      border-style: solid;
+      border-color: var(--border-subtle);
+      background:
+        radial-gradient(120% 100% at 50% 0%, var(--brand-soft) 0%, transparent 62%),
+        linear-gradient(168deg, var(--bg-card) 0%, var(--bg-surface) 100%);
+    }
+    .empty-emblem {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      margin-bottom: 12px;
+      display: grid;
+      place-items: center;
+      background: var(--brand-soft);
+      border: 1px solid var(--border-subtle);
+      color: var(--brand);
+      box-shadow: none;
+    }
+    .empty-emblem svg { width: 21px; height: 21px; }
+    .empty-title { font-size: 15px; font-weight: 700; letter-spacing: -0.015em; margin-bottom: 5px; }
+    .empty-copy { font-size: 12.5px; line-height: 1.55; max-width: 340px; margin: 0 auto 14px; }
+    .empty-state-card .btn-primary { height: 38px; padding: 0 18px; font-size: 12.5px; border-radius: 10px; }
+
+    /* ---- Typography scale ---- */
+    .page-heading { align-items: flex-end; gap: 14px; padding: 2px 2px 0; }
+    .page-title { font-size: clamp(23px, 2.7vw, 30px); font-weight: 800; letter-spacing: -0.032em; line-height: 1.18; }
+    .page-sub { margin-top: 5px; font-size: 12.5px; line-height: 1.5; color: var(--text-muted); }
+    .eyebrow { margin-bottom: 5px; font-size: 10px; letter-spacing: 0.14em; }
+    .brand-title { font-size: 20px; }
+    .btn-sm { height: 36px; padding: 0 14px; font-size: 12px; border-radius: 10px; }
+
+    /* ---- Sidebar ---- */
+    .sidebar { border-right-color: var(--border-subtle); }
+    .sidebar-nav { gap: 5px; }
+    .nav-item.sidebar-link {
+      padding: 9px 11px;
+      gap: 11px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      border: 1px solid transparent;
+      background: transparent;
+    }
+    .nav-item.sidebar-link svg { width: 18px; height: 18px; flex: 0 0 18px; stroke-width: 2; color: var(--text-dim); }
+    .nav-item.sidebar-link:hover { background: var(--bg-card); color: var(--text); border-color: var(--border-subtle); }
+    .nav-item.sidebar-link.active {
+      background: var(--brand-soft);
+      border-color: var(--border-accent);
+      color: var(--text-strong);
+      font-weight: 700;
+      box-shadow: inset 0 1px 0 var(--inset-highlight);
+    }
+    .nav-item.sidebar-link.active svg { color: var(--brand); }
+    .sidebar-label { font-size: 10px; letter-spacing: 0.12em; margin-bottom: 8px; }
+    .sidebar-brand { padding: 6px 8px 14px; gap: 11px; }
+    .sidebar-logo { width: 38px; height: 38px; border-radius: 11px; }
+    .sidebar-name { font-size: 16px; }
+    .sidebar-tag { font-size: 9.5px; letter-spacing: 0.11em; margin-top: 2px; }
+
+    .sidebar-status {
+      border-radius: 12px;
+      padding: 12px;
+      gap: 6px;
+      border-color: var(--border-subtle);
+      background: var(--bg-card);
+      box-shadow: none;
+    }
+    .sidebar-status-title { font-size: 11.5px; font-weight: 700; gap: 6px; }
+    .sidebar-status-copy { font-size: 11px; line-height: 1.5; color: var(--text-muted); }
+    .sidebar-account {
+      padding: 9px 10px;
+      border-radius: 12px;
+      gap: 9px;
+      border-color: var(--border-subtle);
+      background: var(--bg-card);
+    }
+    .sidebar-account:hover { border-color: var(--border-accent); background: var(--bg-card-hover); }
+    .sidebar-avatar { width: 30px; height: 30px; }
+    .sidebar-account-name { font-size: 12px; font-weight: 700; }
+    .sidebar-account-sub { font-size: 10.5px; }
+
+    /* ---- Mobile bottom navigation ---- */
+    .bottom-nav { border-radius: 22px; border-color: var(--border-subtle); padding: 6px 7px calc(6px + var(--safe-bottom)); }
+    .nav-item { border-radius: 15px; padding: 6px 4px; gap: 3px; font-size: 10px; font-weight: 600; }
+    .nav-item svg { width: 19px; height: 19px; }
+    .nav-item.active { background: var(--brand-soft); color: var(--text-strong); }
+    .nav-item.active svg { color: var(--brand); transform: translateY(-1px); }
+
+    /* ---- Settings ---- */
+    .settings-card { padding: 20px; gap: 14px; }
+    .settings-card-head { align-items: center; gap: 12px; }
+    .settings-icon {
+      width: 34px;
+      height: 34px;
+      flex: 0 0 34px;
+      border-radius: 10px;
+      background: var(--brand-soft);
+      border: 1px solid var(--border-subtle);
+      color: var(--brand);
+    }
+    .settings-icon svg { width: 17px; height: 17px; }
+    .settings-head-copy h2 { font-size: 14px; font-weight: 700; letter-spacing: -0.01em; }
+    .settings-head-copy p { margin-top: 3px; font-size: 11.5px; line-height: 1.45; }
+    .settings-row { padding: 10px 12px; border-radius: 10px; border-color: var(--border-subtle); background: var(--bg-surface); }
+    .settings-row-label { font-size: 12.5px; font-weight: 700; }
+    .settings-row-sub { margin-top: 3px; font-size: 11px; line-height: 1.45; }
+    .settings-list { gap: 7px; }
+    .settings-link { height: 42px; border-radius: 10px; border-color: var(--border-subtle); font-size: 12.5px; font-weight: 600; }
+    .settings-link:hover { border-color: var(--border-accent); background: var(--bg-card-hover); }
+    .security-status-grid { gap: 10px; padding: 12px; border-radius: 10px; border-color: var(--border-subtle); background: var(--bg-surface); }
+    .security-check-row { font-size: 11.5px; line-height: 1.5; }
+    .security-check-row strong { font-weight: 700; }
+
+    /* ---- Collapsible advanced credentials ---- */
+    .adv-details {
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      background: var(--bg-surface);
+      overflow: hidden;
+    }
+    .adv-details > summary {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 11px 12px;
+      list-style: none;
+      cursor: pointer;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--text);
+      transition: background-color var(--dur) var(--ease-out);
+    }
+    .adv-details > summary::-webkit-details-marker { display: none; }
+    .adv-details > summary::after {
+      content: '\203A';
+      margin-left: auto;
+      font-size: 15px;
+      line-height: 1;
+      color: var(--text-dim);
+      transform: rotate(90deg);
+      transition: transform var(--dur) var(--ease-out);
+    }
+    .adv-details[open] > summary::after { transform: rotate(-90deg); }
+    .adv-details > summary:hover { background: var(--bg-card-hover); }
+    .adv-details[open] > summary { border-bottom: 1px solid var(--hairline); }
+    .adv-hint { font-size: 10.5px; font-weight: 500; color: var(--text-dim); }
+    .adv-body { display: flex; flex-direction: column; gap: 7px; padding: 10px; }
+
+    /* ---- Appearance pickers ---- */
+    .appearance-mode-grid { gap: 8px; }
+    .appearance-mode-btn { border-radius: 10px; padding: 9px 8px; font-size: 12px; border-color: var(--border-subtle); }
+    .appearance-mode-btn.active { border-color: var(--border-accent); background: var(--brand-soft); }
+    .theme-picker-label { font-size: 10px; letter-spacing: 0.11em; }
+    .theme-picker-grid { gap: 8px; }
+    .theme-card { border-radius: 12px; padding: 8px; border-color: var(--border-subtle); }
+    .theme-card.active { border-color: var(--brand); }
+    .theme-swatch { border-radius: 8px; height: 32px; }
+
+    /* ---- Calendar & simulator consistency ---- */
+    .cal-card { padding: 18px; }
+    .calc-card { padding: 18px; }
+
+    /* ---- Micro-interactions (150-200ms, restrained) ---- */
+    .btn-primary, .btn-ghost, .btn-quiet, .icon-btn, .filter-chip, .act-btn,
+    .settings-link, .nav-item, .theme-card, .appearance-mode-btn, .sidebar-account,
+    .stat-box, .subject-card, .dashboard-card, .glance-card {
+      transition:
+        background-color var(--dur) var(--ease-out),
+        border-color var(--dur) var(--ease-out),
+        color var(--dur) var(--ease-out),
+        box-shadow var(--dur) var(--ease-out),
+        transform var(--dur) var(--ease-out);
+    }
+    .btn-primary:hover { filter: brightness(1.06); }
+    .btn-primary:active { transform: translateY(1px); }
+    .stat-box:hover { border-color: var(--border); }
+    .icon-btn:hover { border-color: var(--border-accent); }
+    .btn-primary:focus-visible,
+    .btn-ghost:focus-visible,
+    .btn-quiet:focus-visible,
+    .icon-btn:focus-visible,
+    .filter-chip:focus-visible,
+    .act-btn:focus-visible,
+    .settings-link:focus-visible,
+    .nav-item:focus-visible,
+    .theme-card:focus-visible,
+    .appearance-mode-btn:focus-visible,
+    .sidebar-account:focus-visible,
+    .adv-details > summary:focus-visible {
+      outline: 2px solid var(--brand);
+      outline-offset: 2px;
+    }
+
+    /* ---- Responsive ---- */
+    @media (max-width: 1079px) {
+      .sidebar { display: none; }
+    }
+    @media (min-width: 1080px) {
+      .bottom-nav { display: none; }
+      .sidebar { overflow-y: auto; }
+    }
+    @media (max-width: 560px) {
+      .page-title { font-size: 22px; }
+      .page-sub { font-size: 12px; }
+      .dashboard-card { padding: 16px; gap: 14px; }
+      .glance-card, .settings-card, .cal-card, .calc-card { padding: 16px; }
+      .dash-hero { gap: 14px; }
+      .gauge-wrap { width: 112px; height: 112px; }
+      .gauge-pct { font-size: 23px; }
+      .dash-advice { font-size: 12px; }
+      .stat-grid { gap: 8px; }
+      .stat-box { padding: 10px 11px; }
+      .stat-val { font-size: 17.5px; }
+      .stat-lbl { font-size: 9px; letter-spacing: 0.05em; }
+      .shortage-banner { padding: 10px 12px; }
+      .subject-card { padding: 14px; }
+      .empty-state-card { padding: 22px 16px 20px; }
+      .section-head-title { font-size: 11px; }
+      .btn-quiet { height: 30px; font-size: 11px; padding: 0 10px; }
+    }
+    @media (max-width: 380px) {
+      .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .btn-quiet span { display: none; }
+    }
   </style>
 </head>
 <body>
@@ -2798,12 +3233,14 @@
       <div class="filter-scroll" id="filterChipsRow"></div>
 
       <!-- COURSES HEADER ROW WITH + ADD SUBJECT -->
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:2px; padding:0 2px;">
-        <span style="font-size:12.5px; font-weight:800; color:var(--text-strong); text-transform:uppercase; letter-spacing:0.06em;">
-          My Subjects (<span id="subjectCountBadge">0</span>)
+      <div class="section-head">
+        <span class="section-head-title">
+          My Subjects
+          <span class="section-count" id="subjectCountBadge">0</span>
         </span>
-        <button type="button" class="icon-btn" style="padding:5px 11px; font-size:11.5px; font-weight:700;" data-action="openAddSingleModal">
-          <span>+</span> Add Subject
+        <button type="button" class="btn-quiet" data-action="openAddSingleModal">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+          <span>Add Subject</span>
         </button>
       </div>
 
@@ -2835,7 +3272,7 @@
         <p class="empty-copy" id="emptyStateText">
           Tell Attendify how many courses you have this semester and name them to start calculating your attendance.
         </p>
-        <button type="button" class="btn-primary" id="emptyStateCta" style="padding:12px 24px;" data-action="openSetupModal">
+        <button type="button" class="btn-primary" id="emptyStateCta" data-action="openSetupModal">
           Start Semester Setup
         </button>
       </div>
@@ -3037,6 +3474,12 @@
               </button>
             </div>
 
+            <details class="adv-details">
+              <summary>
+                <span>Advanced credentials</span>
+                <span class="adv-hint">Sync code &amp; secret key</span>
+              </summary>
+              <div class="adv-body">
             <div class="settings-row">
               <div style="min-width:0;">
                 <span style="font-size:10px; color:var(--text-dim); text-transform:uppercase; font-weight:700; letter-spacing:0.06em;">Cloud sync code</span>
@@ -3066,6 +3509,8 @@
               <span>Copy full pairing credentials (Code:Key)</span>
               <span class="chev" aria-hidden="true">›</span>
             </button>
+              </div>
+            </details>
 
             <div class="settings-row" style="border-style:dashed;">
               <span style="font-size:11.5px; color:var(--text-muted);">Last cloud sync</span>
@@ -3690,6 +4135,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=20261127r2" defer></script>
+  <script src="app.js?v=20261127r4" defer></script>
 </body>
 </html>
