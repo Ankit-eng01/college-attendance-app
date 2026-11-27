@@ -3719,6 +3719,81 @@
       color: var(--brand);
       padding-top: 4px;
     }
+    .check-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 11.5px;
+      color: var(--text-muted);
+      line-height: 1.45;
+      cursor: pointer;
+    }
+    .check-row input { accent-color: var(--brand); margin-top: 2px; }
+    .tt-day-stats { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-bottom: 8px; }
+    .tt-stat { font-size: 11px; color: var(--text-muted); }
+    .tt-stat strong { color: var(--text-strong); font-variant-numeric: tabular-nums; }
+    .tt-row { border-left: 3px solid var(--tt-color, var(--brand)); padding-left: 8px; }
+    .tt-week-nav { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .tt-week-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(104px, 1fr));
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 6px;
+    }
+    .tt-grid-day {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--bg-surface);
+      min-width: 104px;
+      overflow: hidden;
+    }
+    .tt-grid-day.is-today { border-color: var(--brand); box-shadow: 0 0 0 1px var(--brand-inset, transparent); }
+    .tt-grid-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 7px 9px;
+      font-size: 10.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-dim);
+      border-bottom: 1px solid var(--border);
+    }
+    .tt-grid-day.is-today .tt-grid-head { color: var(--brand); background: var(--brand-soft, rgba(60,130,250,0.10)); }
+    .tt-grid-head strong { font-size: 13px; color: var(--text-strong); }
+    .tt-grid-body { position: relative; min-height: 780px; padding-top: 0; }
+    .tt-grid-empty { position: absolute; top: 16px; left: 0; right: 0; text-align: center; font-size: 10.5px; color: var(--text-dim); }
+    .tt-grid-block {
+      position: absolute;
+      left: 5px;
+      right: 5px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 6px 7px;
+      border: 0;
+      border-left: 3px solid var(--tt-color, var(--brand));
+      border-radius: 8px;
+      background: var(--bg-surface-2, var(--bg-surface));
+      background: color-mix(in srgb, var(--tt-color, var(--brand)) 16%, var(--bg-surface));
+      color: var(--text-strong);
+      text-align: left;
+      cursor: pointer;
+      overflow: hidden;
+      font: inherit;
+    }
+    .tt-grid-block strong { font-size: 11px; line-height: 1.25; }
+    .tt-grid-block span { font-size: 10px; color: var(--text-muted); }
+    .tt-grid-block em { font-size: 9.5px; font-style: normal; color: var(--danger-text, var(--danger)); }
+    .tt-grid-block.is-cancelled, .tt-grid-block.is-holiday { opacity: 0.55; text-decoration: line-through; }
+    .tt-grid-block:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+    @media (max-width: 760px) {
+      .tt-layout { grid-template-columns: 1fr; }
+      .tt-time-grid { grid-template-columns: 1fr; }
+      .tt-week-grid { grid-template-columns: repeat(7, minmax(112px, 1fr)); }
+      .tt-grid-body { min-height: 700px; }
+    }
 
     /* Simulator scenarios */
     .sim-compare { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
@@ -4456,24 +4531,46 @@
 
       <div id="ttBody" class="tt-layout">
         <div class="insight-card">
-          <div class="insight-head"><h3 id="ttFormTitle">Add a class</h3><span class="insight-meta">Repeat weekly</span></div>
+          <div class="insight-head"><h3 id="ttFormTitle">Add a class</h3><span class="insight-meta" id="ttFormMeta">Repeats weekly</span></div>
           <form id="ttForm" class="tt-form" novalidate>
             <input type="hidden" id="ttEditId">
             <div class="form-group">
               <label class="form-lbl" for="ttSubject">Subject</label>
               <select id="ttSubject" class="form-sel" required></select>
             </div>
+            <div class="tt-time-grid">
+              <div class="form-group">
+                <label class="form-lbl" for="ttDay">Weekday</label>
+                <select id="ttDay" class="form-sel">
+                  <option value="1">Monday</option>
+                  <option value="2">Tuesday</option>
+                  <option value="3">Wednesday</option>
+                  <option value="4">Thursday</option>
+                  <option value="5">Friday</option>
+                  <option value="6">Saturday</option>
+                  <option value="0">Sunday</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-lbl" for="ttClassType">Class type</label>
+                <select id="ttClassType" class="form-sel">
+                  <option value="theory">Theory</option>
+                  <option value="lab">Lab</option>
+                  <option value="tutorial">Tutorial</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+            </div>
             <div class="form-group">
-              <label class="form-lbl" for="ttDay">Weekday</label>
-              <select id="ttDay" class="form-sel">
-                <option value="1">Monday</option>
-                <option value="2">Tuesday</option>
-                <option value="3">Wednesday</option>
-                <option value="4">Thursday</option>
-                <option value="5">Friday</option>
-                <option value="6">Saturday</option>
-                <option value="0">Sunday</option>
+              <label class="form-lbl" for="ttRecurrence">Repeat</label>
+              <select id="ttRecurrence" class="form-sel">
+                <option value="weekly">Every week</option>
+                <option value="once">One-off / temporary change</option>
               </select>
+            </div>
+            <div class="form-group" id="ttDateGroup" hidden>
+              <label class="form-lbl" for="ttDate">Date of one-off class</label>
+              <input type="date" id="ttDate" class="form-inp">
             </div>
             <div class="tt-time-grid">
               <div class="form-group">
@@ -4485,14 +4582,23 @@
                 <input type="time" id="ttEnd" class="form-inp">
               </div>
             </div>
-            <div class="form-group">
-              <label class="form-lbl" for="ttRoom">Room number</label>
-              <input type="text" id="ttRoom" class="form-inp" maxlength="40" placeholder="e.g. B-204" autocomplete="off">
+            <div class="tt-time-grid">
+              <div class="form-group">
+                <label class="form-lbl" for="ttRoom">Room number</label>
+                <input type="text" id="ttRoom" class="form-inp" maxlength="40" placeholder="e.g. B-204" autocomplete="off">
+              </div>
+              <div class="form-group">
+                <label class="form-lbl" for="ttFaculty">Faculty name</label>
+                <input type="text" id="ttFaculty" class="form-inp" maxlength="60" placeholder="e.g. Dr. Rao" autocomplete="off">
+              </div>
             </div>
             <div class="form-group">
-              <label class="form-lbl" for="ttFaculty">Faculty name</label>
-              <input type="text" id="ttFaculty" class="form-inp" maxlength="60" placeholder="e.g. Dr. Rao" autocomplete="off">
+              <label class="form-lbl" for="ttNotes">Notes (optional)</label>
+              <input type="text" id="ttNotes" class="form-inp" maxlength="200" placeholder="e.g. Bring lab record" autocomplete="off">
             </div>
+            <label class="check-row"><input type="checkbox" id="ttCancelled"> Class cancelled (does not count toward attendance)</label>
+            <label class="check-row"><input type="checkbox" id="ttHoliday"> Holiday (does not count toward attendance)</label>
+            <label class="check-row"><input type="checkbox" id="ttAllowOverlap"> Allow this class to overlap another (I understand the warning)</label>
             <div class="tt-form-actions">
               <button type="submit" class="btn-primary">Save class</button>
               <button type="button" class="btn-quiet" id="ttCancelEdit" data-action="ttCancelEdit" hidden>Cancel edit</button>
@@ -4502,7 +4608,8 @@
         </div>
 
         <div class="insight-card">
-          <div class="insight-head"><h3>Today</h3><span class="insight-meta">Local time</span></div>
+          <div class="insight-head"><h3>Today</h3><span class="insight-meta" id="ttTodayDate">Local time</span></div>
+          <div class="tt-day-stats" id="ttDayStats" aria-live="polite"></div>
           <div id="ttToday"></div>
         </div>
 
@@ -4513,8 +4620,17 @@
       </div>
 
       <div class="insight-card" id="ttWeekCard" style="margin-top:14px;">
-        <div class="insight-head"><h3>Weekly timetable</h3><span class="insight-meta">Edit or delete any class</span></div>
-        <div id="ttWeek" class="tt-week"></div>
+        <div class="insight-head">
+          <h3>Weekly timetable</h3>
+          <div class="tt-week-nav">
+            <button type="button" class="act-btn" data-action="ttPrevWeek" aria-label="Previous week">‹</button>
+            <span class="insight-meta" id="ttWeekLabel">This week</span>
+            <button type="button" class="act-btn" data-action="ttNextWeek" aria-label="Next week">›</button>
+            <button type="button" class="act-btn" data-action="ttThisWeek">Today</button>
+          </div>
+        </div>
+        <div id="ttWeek" class="tt-week-grid" aria-label="Weekly class timetable"></div>
+        <p class="chart-caption" id="ttOverlapNote"></p>
       </div>
 
     </section>

@@ -518,6 +518,9 @@
   // ---------------------------------------------------------------
   // Timetable helpers
   // ---------------------------------------------------------------
+  const VALID_CLASS_TYPES = ['theory', 'lab', 'tutorial', 'other'];
+  const VALID_RECURRENCE = ['weekly', 'once'];
+
   function normalizeTimetableEntry(raw, subjects) {
     if (!raw || typeof raw !== 'object') return null;
     const start = normalizeTime(raw.start);
@@ -527,21 +530,42 @@
     const endMins = end ? timeToMinutes(end) : null;
     if (endMins !== null && endMins <= startMins) return null;
 
-    const subjectId = typeof raw.subjectId === 'string' ? raw.subjectId.slice(0, 64) : '';
+    const recurrence = VALID_RECURRENCE.includes(raw.recurrence) ? raw.recurrence : 'weekly';
+    const date = isValidISODate(raw.date) ? raw.date : '';
+    let day = clampInt(raw.day, 0, 6, 0);
+    if (recurrence === 'once' && date) {
+      const parsedDate = parseISODate(date);
+      if (!parsedDate) return null;
+      day = parsedDate.getDay();
+    }
+
+    const subjectId = safeId(raw.subjectId, '');
     const known = Array.isArray(subjects) ? subjects.find((s) => s && s.id === subjectId) : null;
     let subjectName = cleanText(raw.subjectName, 80);
     if (known) subjectName = known.name;
     if (!subjectName && !known) return null;
 
+    const classType = VALID_CLASS_TYPES.includes(String(raw.classType || '').toLowerCase())
+      ? String(raw.classType).toLowerCase()
+      : 'theory';
+
     return {
-      id: typeof raw.id === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(raw.id) ? raw.id : 'tt_' + Date.now() + '_' + Math.floor(Math.random() * 1e6),
-      day: clampInt(raw.day, 0, 6, 0),
+      id: safeId(raw.id, 'tt_' + Date.now() + '_' + Math.floor(Math.random() * 1e6)),
+      day,
       subjectId: known ? known.id : '',
       subjectName: subjectName || 'Class',
       start,
       end: end || '',
       room: cleanText(raw.room, 40),
-      faculty: cleanText(raw.faculty, 60)
+      faculty: cleanText(raw.faculty, 60),
+      classType,
+      notes: cleanText(raw.notes, 200),
+      recurrence,
+      date: recurrence === 'once' ? date : '',
+      cancelled: Boolean(raw.cancelled),
+      holiday: Boolean(raw.holiday),
+      // Overlaps are only allowed after the user explicitly accepts a warning.
+      allowOverlap: Boolean(raw.allowOverlap)
     };
   }
 
@@ -551,30 +575,123 @@
       .sort((a, b) => timeToMinutes(a.start) - timeToMinutes(b.start));
   }
 
+  function timetableOccurrenceKey(entry, isoDate) {
+    return `${entry && entry.id || 'unknown'}|${isoDate || ''}`;
+  }
+
+  function entryEndMinutes(entry) {
+    const start = timeToMinutes(entry && entry.start);
+    if (start === null) return null;
+    return entry && entry.end ? (timeToMinutes(entry.end) || start + 45) : start + 45;
+  }
+
+  function timetableOverlap(a, b) {
+    if (!a || !b || Number(a.day) !== Number(b.day)) return false;
+    if (a.cancelled || b.cancelled || a.holiday || b.holiday) return false;
+    if (a.recurrence === 'once' && a.date && b.recurrence === 'once' && b.date && a.date !== b.date) return false;
+    const aStart = timeToMinutes(a.start);
+    const bStart = timeToMinutes(b.start);
+    const aEnd = entryEndMinutes(a);
+    const bEnd = entryEndMinutes(b);
+    if (aStart === null || bStart === null || aEnd === null || bEnd === null) return false;
+    return aStart < bEnd && bStart < aEnd;
+  }
+
+  function timetableConflicts(timetable) {
+    const list = Array.isArray(timetable) ? timetable : [];
+    const conflicts = [];
+    for (let i = 0; i < list.length; i++) {
+      for (let j = i + 1; j < list.length; j++) {
+        if (timetableOverlap(list[i], list[j])) conflicts.push([list[i], list[j]]);
+      }
+    }
+    return conflicts;
+  }
+
+  /** Daily schedule state built from real attendance records — never inferred. */
+  function timetableStats(timetable, state, now) {
+    const current = now instanceof Date ? now : new Date();
+    const iso = todayISO(current);
+    const day = current.getDay();
+    const minutes = current.getHours() * 60 + current.getMinutes();
+    const ledger = buildDailyLedger(state || {});
+    // buildDailyLedger deliberately tracks only present/absent. Include "off"
+    // records from the calendar so a cancelled class is visibly acknowledged.
+    const logged = Object.assign({}, (ledger[iso] && ledger[iso].entries) || {});
+    const st = state || {};
+    const calEntries = (st.calendar && st.calendar[iso] && st.calendar[iso].entries) || {};
+    Object.keys(calEntries).forEach((subId) => {
+      if (calEntries[subId] === 'off' && !logged[subId]) logged[subId] = 'off';
+    });
+
+    const rows = timetableForDay(timetable, day)
+      .filter((e) => !e.cancelled && !e.holiday && (e.recurrence !== 'once' || !e.date || e.date === iso))
+      .map((e) => {
+        const startMins = timeToMinutes(e.start);
+        const endMins = entryEndMinutes(e);
+        const status = e.subjectId ? logged[e.subjectId] : '';
+        return Object.assign({}, e, {
+          status: status || 'none',
+          isNow: startMins <= minutes && minutes < endMins,
+          isPast: endMins !== null && endMins <= minutes,
+          minutesUntil: startMins - minutes
+        });
+      });
+
+    // Attendance is stored once per subject per date. When a subject appears in
+    // multiple slots on the same day, all its rows share that one real record;
+    // counting rows would overstate the number of recorded classes.
+    const rowKey = (row) => row.subjectId || `name:${row.subjectName}`;
+    const tracked = new Set(rows.map(rowKey));
+    const recorded = new Set(rows.filter((row) => row.status !== 'none').map(rowKey));
+    const completed = recorded.size;
+    const upcoming = tracked.size - completed;
+    const currentClass = rows.find((row) => row.isNow) || null;
+    const nextClass = rows
+      .filter((row) => row.minutesUntil > 0)
+      .sort((a, b) => a.minutesUntil - b.minutesUntil)[0] || null;
+
+    return {
+      date: iso,
+      day,
+      total: tracked.size,
+      slots: rows.length,
+      completed,
+      upcoming,
+      currentClass,
+      nextClass,
+      rows
+    };
+  }
+
   /** Today's/upcoming classes with a "starts in" hint, computed in local time. */
   function upcomingClasses(timetable, now) {
     const current = now instanceof Date ? now : new Date();
     const today = current.getDay();
     const minutes = current.getHours() * 60 + current.getMinutes();
     const entries = Array.isArray(timetable) ? timetable : [];
-    const todayList = timetableForDay(entries, today).map((e) => {
-      const startMins = timeToMinutes(e.start);
-      const endMins = e.end ? timeToMinutes(e.end) : startMins + 45;
-      return Object.assign({}, e, {
-        dayLabel: 'Today',
-        isNow: startMins <= minutes && minutes < endMins,
-        isPast: endMins <= minutes,
-        minutesUntil: startMins - minutes
+    const todayList = timetableForDay(entries, today)
+      .filter((e) => !e.cancelled && !e.holiday)
+      .map((e) => {
+        const startMins = timeToMinutes(e.start);
+        const endMins = entryEndMinutes(e);
+        return Object.assign({}, e, {
+          dayLabel: 'Today',
+          isNow: startMins <= minutes && minutes < endMins,
+          isPast: endMins !== null && endMins <= minutes,
+          minutesUntil: startMins - minutes
+        });
       });
-    });
 
     const upcomingToday = todayList.filter((e) => !e.isPast);
     const later = [];
     for (let offset = 1; offset <= 7 && upcomingToday.length + later.length < 6; offset++) {
       const day = (today + offset) % 7;
-      timetableForDay(entries, day).forEach((e) => {
-        later.push(Object.assign({}, e, { dayLabel: offset === 1 ? 'Tomorrow' : dayName(day), isNow: false, isPast: false, minutesUntil: null }));
-      });
+      timetableForDay(entries, day)
+        .filter((e) => !e.cancelled && !e.holiday)
+        .forEach((e) => {
+          later.push(Object.assign({}, e, { dayLabel: offset === 1 ? 'Tomorrow' : dayName(day), isNow: false, isPast: false, minutesUntil: null }));
+        });
     }
     return { today: todayList, upcoming: upcomingToday.concat(later).slice(0, 6) };
   }
@@ -1007,6 +1124,10 @@
     recentActivity,
     normalizeTimetableEntry,
     timetableForDay,
+    timetableOccurrenceKey,
+    timetableOverlap,
+    timetableConflicts,
+    timetableStats,
     upcomingClasses,
     cleanText,
     escapeHtml,
