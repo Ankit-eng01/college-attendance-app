@@ -177,14 +177,20 @@
     let attended = 0;
     let conducted = 0;
     let belowTarget = 0;
-    let atRisk = 0;
+    let nearTarget = 0;
+    let onTrack = 0;
 
     const rows = list.map((sub) => {
       const st = stats(sub, target);
       attended += st.attended;
       conducted += st.total;
-      if (st.hasData && st.isShort) belowTarget++;
-      if (st.risk === 'danger' || st.risk === 'watch') atRisk++;
+      if (st.hasData) {
+        if (st.isShort) belowTarget++;
+        else {
+          onTrack++;
+          if (st.risk === 'watch') nearTarget++;
+        }
+      }
       return Object.assign({ id: sub && sub.id, name: (sub && sub.name) || '', category: (sub && sub.category) || 'theory' }, st);
     });
 
@@ -199,7 +205,11 @@
       percentage: pctNum === null ? '--' : pctNum.toFixed(1),
       target,
       belowTarget,
-      atRisk,
+      nearTarget,
+      onTrack,
+      // Only subjects strictly below target count as at risk; above-target
+      // subjects are tracked separately in nearTarget / onTrack.
+      atRisk: belowTarget,
       safeBunks: safeBunks(attended, conducted, target),
       classesNeeded: classesNeeded(attended, conducted, target),
       risk: riskLevel(pctNum, target, conducted > 0),
@@ -314,6 +324,20 @@
   function buildDailyLedger(state) {
     const ledger = {}; // date -> { present, absent, entries: {subId: status} }
     const st = state || {};
+    const calendar = st.calendar && typeof st.calendar === 'object' ? st.calendar : {};
+    const holidayDates = new Set();
+    const offPairs = new Set();
+
+    Object.keys(calendar).forEach((date) => {
+      const day = calendar[date];
+      if (!day || !isValidISODate(date)) return;
+      if (day.isHoliday) holidayDates.add(date);
+      if (day.entries && typeof day.entries === 'object') {
+        Object.keys(day.entries).forEach((subId) => {
+          if (day.entries[subId] === 'off') offPairs.add(`${date}:${subId}`);
+        });
+      }
+    });
 
     const ensure = (date) => {
       if (!ledger[date]) ledger[date] = { present: 0, absent: 0, entries: {} };
@@ -321,18 +345,19 @@
     };
 
     (Array.isArray(st.history) ? st.history : []).forEach((h) => {
-      if (!h || !isValidISODate(h.date)) return;
+      if (!h || !isValidISODate(h.date) || holidayDates.has(h.date)) return;
       if (h.status !== 'present' && h.status !== 'absent') return;
-      const bucket = ensure(h.date);
       const subId = String(h.subId || '');
+      if (subId && offPairs.has(`${h.date}:${subId}`)) return;
+      const bucket = ensure(h.date);
       if (subId && bucket.entries[subId]) return; // duplicate entry: keep the first
       if (subId) bucket.entries[subId] = h.status;
       if (h.status === 'present') bucket.present++;
       else bucket.absent++;
     });
 
-    const calendar = st.calendar && typeof st.calendar === 'object' ? st.calendar : {};
     Object.keys(calendar).forEach((date) => {
+      if (holidayDates.has(date)) return;
       const day = calendar[date];
       if (!day || !isValidISODate(date) || !day.entries) return;
       Object.keys(day.entries).forEach((subId) => {
@@ -442,16 +467,30 @@
     const list = (Array.isArray(buckets) ? buckets : []).filter((b) => b && b.total > 0);
     const requested = clampInt(windowSize, 1, 12, 4);
     if (list.length < 2) {
-      return { direction: 'unknown', delta: 0, current: null, previous: null, window: 0 };
+      return {
+        direction: 'unknown', delta: 0, current: null, previous: null,
+        window: 0, activeWeeks: list.length, recentTotal: 0, previousTotal: 0
+      };
     }
-    // With a short history compare the two halves instead of returning nothing.
     const size = Math.min(requested, Math.floor(list.length / 2));
     const recent = list.slice(-size);
     const earlier = list.slice(-2 * size, -size);
     if (!recent.length || !earlier.length) {
-      return { direction: 'unknown', delta: 0, current: null, previous: null, window: 0 };
+      return {
+        direction: 'unknown', delta: 0, current: null, previous: null,
+        window: 0, activeWeeks: list.length, recentTotal: 0, previousTotal: 0
+      };
     }
-    const avg = (rows) => rows.reduce((sum, b) => sum + b.pctNum * b.total, 0) / rows.reduce((sum, b) => sum + b.total, 0);
+    const sumTotal = (rows) => rows.reduce((sum, b) => sum + b.total, 0);
+    const avg = (rows) => {
+      const tot = sumTotal(rows);
+      if (tot <= 0) return 0;
+      const weighted = rows.reduce((sum, b) => {
+        const p = typeof b.present === 'number' ? b.present * 100 : b.pctNum * b.total;
+        return sum + p;
+      }, 0);
+      return weighted / tot;
+    };
     const current = avg(recent);
     const previous = avg(earlier);
     const delta = current - previous;
@@ -460,7 +499,10 @@
       delta,
       current,
       previous,
-      window: size
+      window: size,
+      activeWeeks: list.length,
+      recentTotal: sumTotal(recent),
+      previousTotal: sumTotal(earlier)
     };
   }
 

@@ -7,19 +7,19 @@
 // 4. Non-GET requests: Direct bypass
 // ==========================================================================
 
-const CACHE_NAME = 'attendify-v38-ui-refine';
+const CACHE_NAME = 'attendify-v39-analytics';
 
 // Critical core assets to precache on install
 const PRECACHE_ASSETS = [
   './',
   './index.html',
-  './calc.js?v=20261127r17',
+  './calc.js?v=20261127r18',
   './calc.js',
-  './app.js?v=20261127r17',
+  './app.js?v=20261127r18',
   './app.js',
-  './offline.js?v=20261127r17',
+  './offline.js?v=20261127r18',
   './offline.js',
-  './features.js?v=20261127r17',
+  './features.js?v=20261127r18',
   './features.js',
   './manifest.json',
   './icon.svg',

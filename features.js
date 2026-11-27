@@ -51,8 +51,8 @@
 
   function riskLabel(risk) {
     if (risk === 'danger') return 'Below target';
-    if (risk === 'watch') return 'Close to target';
-    if (risk === 'safe') return 'Safe';
+    if (risk === 'watch') return 'Near target';
+    if (risk === 'safe') return 'On track';
     return 'No classes yet';
   }
 
@@ -91,8 +91,10 @@
     const pill = $('riskCountPill');
     if (!host) return;
     if (pill) {
-      pill.textContent = String(agg.atRisk);
-      pill.className = 'criteria-pill ' + (agg.atRisk ? 'pill-short' : 'pill-safe');
+      pill.textContent = agg.nearTarget
+        ? `${agg.atRisk} below · ${agg.nearTarget} near`
+        : String(agg.atRisk);
+      pill.className = 'criteria-pill ' + (agg.atRisk ? 'pill-short' : agg.nearTarget ? 'pill-neutral' : 'pill-safe');
     }
     if (!agg.subjects) {
       host.innerHTML = '<p class="empty-inline">Add subjects to see attendance risk.</p>';
@@ -237,39 +239,78 @@
     const empty = $('anaEmpty');
     const weekly = C.attendanceBuckets(state, { mode: 'week', count: 8 });
     const monthly = C.attendanceBuckets(state, { mode: 'month', count: 6 });
-    // Use the full ledger (not just the visible charts) so older records still
-    // make the range report available even if they fall outside 8 weeks.
-    const hasHistory = C.ledgerSummary(state).total > 0;
-
-    if (host) host.hidden = !hasHistory;
-    if (empty) empty.style.display = hasHistory ? 'none' : 'flex';
-    if (!hasHistory) return;
-
     const agg = C.aggregate(state.subjects, target());
+    const ledgerTotal = C.ledgerSummary(state).total;
+    const hasAnyData = agg.conducted > 0 || ledgerTotal > 0;
+
+    if (host) host.hidden = !hasAnyData;
+    if (empty) empty.style.display = hasAnyData ? 'none' : 'flex';
+    if (!hasAnyData) return;
+
     const trend = C.trend(weekly, 4);
+    const trendWindowText = trend.direction === 'unknown'
+      ? 'Insufficient history'
+      : trend.window === 1
+        ? '1-week comparison'
+        : `${trend.window}-week windows`;
 
     const kpis = $('anaKpis');
     if (kpis) {
+      const riskSub = agg.nearTarget
+        ? `Below ${agg.target}% · ${agg.nearTarget} near target`
+        : `Strictly below ${agg.target}%`;
       kpis.innerHTML = [
-        { label: 'Overall attendance', value: agg.hasData ? `${agg.percentage}%` : '—', tone: agg.hasData && agg.isShort ? 'danger' : agg.hasData ? 'success' : 'neutral', subtitle: `${agg.attended} / ${agg.conducted}` },
-        { label: 'Classes attended', value: `${agg.attended}/${agg.conducted}`, tone: 'neutral', subtitle: `of ${agg.conducted} total` },
-        { label: `${trend.window ? trend.window * 2 : 4}-week trend`, value: trend.direction === 'unknown' ? '—' : `${trend.delta > 0 ? '+' : ''}${C.round1(trend.delta)}%`, tone: trend.direction === 'down' ? 'danger' : trend.direction === 'up' ? 'success' : 'neutral', subtitle: `(${C.round1(trend.current)}% vs ${C.round1(trend.previous)}% prior)` },
-        { label: 'Subjects at risk', value: String(agg.atRisk), tone: agg.atRisk ? 'danger' : 'success' }
+        {
+          label: 'Overall attendance',
+          value: agg.hasData ? `${agg.percentage}%` : '—',
+          tone: agg.hasData && agg.isShort ? 'danger' : agg.hasData ? 'success' : 'neutral',
+          subtitle: `${agg.attended} of ${agg.conducted} classes`
+        },
+        {
+          label: 'Classes attended',
+          value: `${agg.attended}/${agg.conducted}`,
+          tone: 'neutral',
+          subtitle: `${agg.missed} missed · target ${agg.target}%`
+        },
+        {
+          label: trend.direction === 'unknown'
+            ? 'Weekly trend'
+            : (trend.window === 1 ? '1-week trend' : `${trend.window}-week trend`),
+          value: trend.direction === 'unknown'
+            ? '—'
+            : `${trend.delta > 0 ? '+' : ''}${C.round1(trend.delta)} pp`,
+          tone: trend.direction === 'down' ? 'danger' : trend.direction === 'up' ? 'success' : 'neutral',
+          subtitle: trend.direction === 'unknown'
+            ? 'Needs 2+ active weeks'
+            : `${C.round1(trend.current)}% vs ${C.round1(trend.previous)}% prior`
+        },
+        {
+          label: 'Subjects at risk',
+          value: String(agg.atRisk),
+          tone: agg.atRisk ? 'danger' : agg.nearTarget ? 'warning' : 'success',
+          subtitle: riskSub
+        }
       ].map((k) => `
         <div class="mini-stat">
           <span class="mini-stat-val tone-${k.tone}">${esc(k.value)}</span>
           <span class="mini-stat-lbl">${esc(k.label)}</span>
+          <span class="mini-stat-sub">${esc(k.subtitle)}</span>
         </div>
       `).join('');
     }
 
     const weeklyHost = $('anaWeeklyChart');
     if (weeklyHost) {
-      weeklyHost.innerHTML = barChart(weekly, agg.target);
-      setText('anaWeeklyNote', `${weekly.filter((b) => b.total).length} active weeks`);
+      const activeWeeks = weekly.filter((b) => b.total > 0).length;
+      weeklyHost.innerHTML = barChart(weekly, agg.target, { minVisible: 4, kind: 'week' });
+      setText('anaWeeklyNote', activeWeeks ? `${activeWeeks} active week${activeWeeks === 1 ? '' : 's'}` : 'No dated logs yet');
     }
     const monthlyHost = $('anaMonthlyChart');
-    if (monthlyHost) monthlyHost.innerHTML = barChart(monthly, agg.target);
+    if (monthlyHost) {
+      const activeMonths = monthly.filter((b) => b.total > 0).length;
+      monthlyHost.innerHTML = barChart(monthly, agg.target, { minVisible: 3, kind: 'month' });
+      setText('anaMonthlyNote', activeMonths ? `${activeMonths} active month${activeMonths === 1 ? '' : 's'}` : 'No dated logs yet');
+    }
 
     const compareHost = $('anaSubjectBars');
     if (compareHost) {
@@ -285,25 +326,34 @@
             <span class="bar-fill ${riskClass(row.risk)}" style="width:${Math.min(100, Math.max(0, row.pctNum))}%"></span>
           </div>
           <div class="subject-bar-meta">
-            <span>${row.attended}/${row.total} attended</span>
+            <span>${row.attended}/${row.total} attended · target ${row.target}%</span>
             <span>${row.isShort ? `Need ${row.classesNeeded === null ? '—' : row.classesNeeded} more` : `${row.safeBunks} safe bunks`}</span>
           </div>
         </div>
       `).join('') : '<p class="empty-inline">Log a few classes to compare subjects.</p>';
     }
 
+    setText('anaTrendWindowMeta', trendWindowText);
     const trendHost = $('anaTrend');
     if (trendHost) {
       if (trend.direction === 'unknown') {
-        trendHost.innerHTML = '<p class="empty-inline">Log attendance across at least two weeks to see a trend.</p>';
+        trendHost.innerHTML = `
+          <div class="insight-empty">
+            <strong>Insufficient weekly history</strong>
+            <p class="empty-inline">Log classes across at least 2 separate weeks to compare attendance trends accurately.</p>
+          </div>`;
       } else {
         const word = trend.direction === 'up' ? 'improving' : trend.direction === 'down' ? 'declining' : 'steady';
+        const periodLabel = trend.window === 1 ? '1 week' : `${trend.window} weeks`;
+        const smallSample = trend.recentTotal < 3 || trend.previousTotal < 3
+          ? ' Small sample size — trend may shift as more classes are logged.'
+          : '';
         trendHost.innerHTML = `
           <div class="trend-block ${trend.direction === 'down' ? 'is-down' : trend.direction === 'up' ? 'is-up' : ''}">
             <span class="trend-arrow" aria-hidden="true">${trend.direction === 'up' ? '↑' : trend.direction === 'down' ? '↓' : '→'}</span>
             <div>
-              <strong>Attendance is ${word}</strong>
-              <p>Last ${trend.window} weeks ${C.round1(trend.current)}% vs the previous ${trend.window} weeks ${C.round1(trend.previous)}% (${trend.delta > 0 ? '+' : ''}${C.round1(trend.delta)} points).</p>
+              <strong>Attendance is ${word} (${trend.delta > 0 ? '+' : ''}${C.round1(trend.delta)} pp)</strong>
+              <p>Last ${periodLabel} (${C.round1(trend.current)}%, ${trend.recentTotal} classes) vs prior ${periodLabel} (${C.round1(trend.previous)}%, ${trend.previousTotal} classes).${smallSample}</p>
             </div>
           </div>`;
       }
@@ -311,20 +361,33 @@
 
     const riskHost = $('anaAtRisk');
     if (riskHost) {
-      const risky = C.aggregate(state.subjects, target()).rows
-        .filter((row) => row.hasData && (row.risk === 'danger' || row.risk === 'watch'))
-        .sort((a, b) => a.pctNum - b.pctNum);
+      const tracked = agg.rows.filter((row) => row.hasData).sort((a, b) => a.pctNum - b.pctNum);
+      const below = tracked.filter((row) => row.isShort);
+      const near = tracked.filter((row) => !row.isShort && row.risk === 'watch');
+      const onTrack = tracked.filter((row) => !row.isShort && row.risk === 'safe');
+      const tierBadge = (row) => row.isShort
+        ? '<span class="risk-tier-pill is-danger">Below target</span>'
+        : row.risk === 'watch'
+          ? '<span class="risk-tier-pill is-watch">Near target</span>'
+          : '<span class="risk-tier-pill is-safe">On track</span>';
+
       riskHost.innerHTML = `
-        <h4 class="insight-subhead">Subjects at risk</h4>
-        ${risky.length ? risky.map((row) => `
+        <h4 class="insight-subhead">Risk breakdown</h4>
+        <div class="risk-summary-pills">
+          <span class="risk-summary-chip is-danger">Below target: <strong>${below.length}</strong></span>
+          <span class="risk-summary-chip is-watch">Near target: <strong>${near.length}</strong></span>
+          <span class="risk-summary-chip is-safe">On track: <strong>${onTrack.length}</strong></span>
+        </div>
+        ${tracked.length ? tracked.map((row) => `
           <div class="risk-row">
             <span class="risk-dot ${riskClass(row.risk)}" aria-hidden="true"></span>
             <div class="risk-copy">
               <span class="risk-name">${esc(row.name)}</span>
-              <span class="risk-meta">${riskLabel(row.risk)} · target ${row.target}%</span>
+              <span class="risk-meta">${row.attended}/${row.total} attended · target ${row.target}%</span>
             </div>
+            ${tierBadge(row)}
             <span class="risk-pct ${riskClass(row.risk)}">${row.percentage}%</span>
-          </div>`).join('') : '<p class="empty-inline">No subjects currently at risk.</p>'}
+          </div>`).join('') : '<p class="empty-inline">Mark classes to evaluate subject standing.</p>'}
       `;
     }
 
@@ -474,26 +537,35 @@
     toast('Open the print dialog and choose “Save as PDF” if you want a PDF copy.', 'info', 6000);
   }
 
-  function barChart(buckets, targetPct) {
-    if (!buckets.some((b) => b.total > 0)) {
-      return '<p class="empty-inline">No classes logged in this period.</p>';
+  function barChart(buckets, targetPct, opts) {
+    const list = Array.isArray(buckets) ? buckets : [];
+    const firstActive = list.findIndex((b) => b.total > 0);
+    if (firstActive === -1) {
+      return '<div class="insight-empty"><strong>No dated classes logged yet</strong><p class="empty-inline">Mark attendance on Dashboard, Calendar, or Timetable to populate this chart.</p></div>';
     }
-    const cols = buckets.map((bucket) => {
+    const minVisible = (opts && opts.minVisible) || 4;
+    const startIdx = Math.min(firstActive, Math.max(0, list.length - minVisible));
+    const visible = list.slice(startIdx);
+
+    const cols = visible.map((bucket) => {
       const pct = bucket.pctNum;
       const height = pct === null ? 0 : Math.max(4, Math.min(100, pct));
       const level = pct === null ? 'is-empty' : pct < targetPct ? 'risk-danger' : pct < targetPct + 5 ? 'risk-watch' : 'risk-safe';
-      const aria = pct === null
-        ? `${bucket.label}: no classes`
-        : `${bucket.label}: ${pct}% attendance (${bucket.present} present, ${bucket.absent} absent)`;
+      const tip = pct === null
+        ? `${bucket.label}: No classes recorded`
+        : `${bucket.label}: ${pct.toFixed(1)}% · ${bucket.present} attended, ${bucket.absent} missed`;
       return `
-        <div class="bar-col" role="img" aria-label="${esc(aria)}">
-          <span class="bar-value ${pct === null ? 'is-empty' : ''}">${pct === null ? '' : Math.round(pct) + '%'}</span>
-          <span class="bar-track"><span class="bar-fill ${level}" style="height:${height}%"></span></span>
+        <div class="bar-col" tabindex="0" role="img" title="${esc(tip)}" aria-label="${esc(tip)}" data-tooltip="${esc(tip)}">
+          <span class="bar-value ${pct === null ? 'is-empty' : ''}">${pct === null ? '—' : Math.round(pct) + '%'}</span>
+          <span class="bar-track ${pct === null ? 'is-empty-track' : ''}"><span class="bar-fill ${level}" style="height:${height}%"></span></span>
           <span class="bar-label">${esc(bucket.label)}</span>
         </div>`;
     }).join('');
-    return `<div class="bar-chart-inner">${cols}</div>
-      <p class="chart-caption">Bars show present ÷ (present + absent) per period. Gaps mean no classes were logged.</p>`;
+    return `<div class="bar-chart-inner${visible.length >= 6 ? ' is-dense' : ''}">
+        <div class="bar-target-line" style="bottom:calc(18px + (100% - 36px) * ${Math.min(100, Math.max(0, targetPct)) / 100});" aria-hidden="true"><span>${targetPct}%</span></div>
+        ${cols}
+      </div>
+      <p class="chart-caption">Hover or focus any bar for attended/missed counts. Empty slots mark periods with no recorded classes.</p>`;
   }
 
   // ===============================================================

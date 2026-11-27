@@ -1066,6 +1066,11 @@
       line-height: 1.35;
       overflow-wrap: break-word;
     }
+    .mini-stat-sub {
+      font-size: 11px;
+      color: var(--text-dim);
+      line-height: 1.35;
+    }
 
     /* ---- Dashboard Insights Grid ---- */
     .insight-grid {
@@ -1644,9 +1649,20 @@
     .scenario-actions { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; padding-top: 2px; }
 
     /* ---- 4. Analytics ---- */
-    .analytics-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); margin: var(--space-4) 0; }
-    .ana-filter-bar { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 2px; }
-    .ana-custom { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)) auto; gap: 8px; align-items: end; margin-top: 8px; }
+    #anaContent { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
+    .analytics-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); margin: 0; align-items: stretch; }
+    .ana-range-toolbar {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 12px;
+      border-radius: var(--radius-md);
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+    }
+    .ana-range-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+    .ana-filter-bar { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; }
+    .ana-custom { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)) auto; gap: 8px; align-items: end; margin-top: 4px; }
     .ana-custom[hidden] { display: none; }
     .ana-report-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
     .ana-insight { display: flex; gap: 9px; padding: 9px 0; border-bottom: 1px solid var(--border-subtle); font-size: 12px; }
@@ -1659,27 +1675,115 @@
     .ana-insight-dot.tone-success { background: var(--success); }
 
     .bar-chart { min-width: 0; }
-    .bar-chart-inner { display: flex; align-items: flex-end; gap: 8px; height: 148px; padding-top: 4px; }
-    .bar-col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 5px; height: 100%; }
-    .bar-value { font-size: 10.5px; font-weight: 700; color: var(--text-muted); font-variant-numeric: tabular-nums; min-height: 14px; }
-    .bar-value.is-empty { opacity: 0; }
+    .bar-chart-inner { position: relative; display: flex; align-items: flex-end; gap: 10px; height: 156px; padding: 6px 0 0 32px; }
+    .bar-target-line {
+      position: absolute;
+      left: 32px;
+      right: 0;
+      border-top: 1px dashed var(--border-accent);
+      pointer-events: none;
+      z-index: 1;
+    }
+    .bar-target-line span {
+      position: absolute;
+      left: -32px;
+      top: -8px;
+      font-size: 9.5px;
+      font-weight: 700;
+      color: var(--text-dim);
+      font-variant-numeric: tabular-nums;
+    }
+    .bar-col {
+      position: relative;
+      flex: 1 1 0;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      height: 100%;
+      z-index: 2;
+      outline: none;
+    }
+    .bar-col[data-tooltip]:hover::after,
+    .bar-col[data-tooltip]:focus-visible::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: calc(100% + 4px);
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 5px 9px;
+      border-radius: var(--radius-xs);
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-accent);
+      color: var(--text-strong);
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+      box-shadow: var(--shadow-card);
+      pointer-events: none;
+      z-index: 20;
+    }
+    .bar-col:first-of-type[data-tooltip]:hover::after,
+    .bar-col:first-of-type[data-tooltip]:focus-visible::after { left: 0; transform: none; }
+    .bar-col:last-of-type[data-tooltip]:hover::after,
+    .bar-col:last-of-type[data-tooltip]:focus-visible::after { left: auto; right: 0; transform: none; }
+    .bar-value { font-size: 10.5px; font-weight: 700; color: var(--text-muted); font-variant-numeric: tabular-nums; min-height: 14px; line-height: 14px; }
+    .bar-value.is-empty { color: var(--text-dim); opacity: 0.6; }
     .bar-track {
       position: relative;
       flex: 1 1 auto;
       width: 100%;
-      max-width: 34px;
+      max-width: 44px;
       background: var(--bg-input);
       border-radius: 7px;
       overflow: hidden;
       display: flex;
       align-items: flex-end;
     }
+    .bar-track.is-empty-track {
+      background: transparent;
+      border: 1px dashed var(--border);
+      opacity: 0.45;
+    }
     .bar-track.wide { max-width: none; height: 8px; border-radius: 999px; }
     .bar-fill { display: block; width: 100%; border-radius: 6px 6px 0 0; background: var(--brand); transition: height 0.3s var(--ease-out); }
+    .bar-fill.risk-safe { background: var(--success); }
+    .bar-fill.risk-watch { background: var(--warning); }
+    .bar-fill.risk-danger { background: var(--danger); }
     .bar-track.wide .bar-fill { border-radius: 999px; }
     .bar-fill.is-empty { background: transparent; }
-    .bar-label { font-size: 9.5px; color: var(--text-dim); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+    .bar-label { font-size: 10px; color: var(--text-dim); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
     .chart-caption { margin: 8px 0 0; font-size: 11px; color: var(--text-dim); line-height: 1.4; }
+
+    .risk-summary-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+    .risk-summary-chip {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-surface);
+      color: var(--text-muted);
+    }
+    .risk-summary-chip strong { color: var(--text-strong); font-variant-numeric: tabular-nums; }
+    .risk-summary-chip.is-danger { border-color: var(--danger-soft-strong); background: var(--danger-soft); color: var(--danger-text); }
+    .risk-summary-chip.is-danger strong { color: var(--danger-text); }
+    .risk-summary-chip.is-watch { border-color: rgba(245, 185, 66, 0.30); background: var(--warning-soft); color: var(--warning-text); }
+    .risk-summary-chip.is-watch strong { color: var(--warning-text); }
+    .risk-summary-chip.is-safe { border-color: var(--success-soft-strong); background: var(--success-soft); color: var(--success-text); }
+    .risk-summary-chip.is-safe strong { color: var(--success-text); }
+    .risk-tier-pill {
+      font-size: 10.5px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: var(--radius-pill);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .risk-tier-pill.is-danger { background: var(--danger-soft); color: var(--danger-text); }
+    .risk-tier-pill.is-watch { background: var(--warning-soft); color: var(--warning-text); }
+    .risk-tier-pill.is-safe { background: var(--success-soft); color: var(--success-text); }
 
     .subject-bars { display: flex; flex-direction: column; gap: 12px; }
     .subject-bar-row { display: flex; flex-direction: column; gap: 5px; }
@@ -2305,7 +2409,7 @@
       .semester-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .sim-compare { grid-template-columns: minmax(0, 1fr); }
       .bar-chart-inner { height: 132px; gap: 5px; }
-      .bar-col:nth-child(even) .bar-label { visibility: hidden; }
+      .bar-chart-inner.is-dense .bar-col:nth-child(even) .bar-label { visibility: hidden; }
       .insight-card { padding: 15px; }
     }
 
@@ -2331,7 +2435,7 @@
       .gauge-pct { font-size: 23px; }
       .welcome-panel { flex-wrap: wrap; gap: 10px; padding: 12px 14px; }
       .welcome-panel-cta { width: 100%; }
-      .sim-stepper-grid, .tt-time-grid { grid-template-columns: 1fr; }
+      .sim-stepper-grid, .tt-time-grid, .ana-custom { grid-template-columns: 1fr; }
       .cal-grid-days { gap: 4px; }
       .cal-cell { font-size: 12px; min-height: 36px; border-radius: 9px; }
       .settings-row { flex-wrap: wrap; gap: 8px; }
@@ -2888,28 +2992,6 @@
         </div>
       </div>
 
-      <div class="insight-card">
-        <div class="insight-head"><h3>Report range</h3><span class="insight-meta" id="anaRangeLabel">This week</span></div>
-        <div class="ana-filter-bar" id="anaRangeChips" role="group" aria-label="Choose report range">
-          <button type="button" class="filter-chip active" data-action="anaRange" data-range="week">This week</button>
-          <button type="button" class="filter-chip" data-action="anaRange" data-range="month">This month</button>
-          <button type="button" class="filter-chip" data-action="anaRange" data-range="semester">This semester</button>
-          <button type="button" class="filter-chip" data-action="anaRange" data-range="custom">Custom</button>
-        </div>
-        <div class="ana-custom" id="anaCustomRange" hidden>
-          <div class="form-group">
-            <label class="form-lbl" for="anaFrom">From</label>
-            <input type="date" id="anaFrom" class="form-inp">
-          </div>
-          <div class="form-group">
-            <label class="form-lbl" for="anaTo">To</label>
-            <input type="date" id="anaTo" class="form-inp">
-          </div>
-          <button type="button" class="btn-primary" data-action="anaApplyCustom">Apply</button>
-        </div>
-        <p class="form-hint" id="anaRangeMsg" role="status" aria-live="polite"></p>
-      </div>
-
       <div id="anaEmpty" class="subjects-empty-state" style="display:none;" role="region" aria-label="No analytics data yet">
         <div class="subjects-empty-inner">
           <div class="subjects-empty-icon" aria-hidden="true">
@@ -2921,8 +3003,8 @@
             </svg>
           </div>
           <div class="subjects-empty-copy">
-            <p class="subjects-empty-title">No attendance history yet</p>
-            <p class="subjects-empty-text">Charts appear as soon as you mark a class present or absent. Analytics never uses placeholder data.</p>
+            <p class="subjects-empty-title">No attendance data yet</p>
+            <p class="subjects-empty-text">Analytics appear as soon as you add subjects with classes or mark attendance on the calendar.</p>
           </div>
           <button type="button" class="btn-primary subjects-empty-cta" data-action="switchTab" data-tab="calendar">
             Log attendance in the calendar
@@ -2940,7 +3022,7 @@
           </div>
 
           <div class="insight-card">
-            <div class="insight-head"><h3>Monthly attendance</h3><span class="insight-meta">Last 6 months</span></div>
+            <div class="insight-head"><h3>Monthly attendance</h3><span class="insight-meta" id="anaMonthlyNote">Last 6 months</span></div>
             <div id="anaMonthlyChart" class="bar-chart" role="group" aria-label="Monthly attendance chart"></div>
           </div>
 
@@ -2950,14 +3032,14 @@
           </div>
 
           <div class="insight-card">
-            <div class="insight-head"><h3>Improvement trend</h3><span class="insight-meta">4-week windows</span></div>
+            <div class="insight-head"><h3>Trend &amp; subject standing</h3><span class="insight-meta" id="anaTrendWindowMeta">Insufficient history</span></div>
             <div id="anaTrend"></div>
             <div id="anaAtRisk"></div>
           </div>
         </div>
 
         <div class="insight-card">
-          <div class="insight-head"><h3>Semester report</h3><span class="insight-meta">Live from your records</span></div>
+          <div class="insight-head"><h3>Semester summary</h3><span class="insight-meta">Matches Dashboard &amp; Subjects</span></div>
           <div id="anaSemester"></div>
         </div>
 
@@ -2968,6 +3050,29 @@
               <button type="button" class="act-btn" data-action="anaExportCSV">Download CSV</button>
               <button type="button" class="act-btn" data-action="anaPrintReport">Print / Save PDF</button>
             </div>
+          </div>
+          <div class="ana-range-toolbar">
+            <div class="ana-range-top">
+              <div class="ana-filter-bar" id="anaRangeChips" role="group" aria-label="Choose report range">
+                <button type="button" class="filter-chip active" data-action="anaRange" data-range="week">This week</button>
+                <button type="button" class="filter-chip" data-action="anaRange" data-range="month">This month</button>
+                <button type="button" class="filter-chip" data-action="anaRange" data-range="semester">This semester</button>
+                <button type="button" class="filter-chip" data-action="anaRange" data-range="custom">Custom</button>
+              </div>
+              <span class="insight-meta" id="anaRangeLabel">This week</span>
+            </div>
+            <div class="ana-custom" id="anaCustomRange" hidden>
+              <div class="form-group">
+                <label class="form-lbl" for="anaFrom">From</label>
+                <input type="date" id="anaFrom" class="form-inp">
+              </div>
+              <div class="form-group">
+                <label class="form-lbl" for="anaTo">To</label>
+                <input type="date" id="anaTo" class="form-inp">
+              </div>
+              <button type="button" class="btn-primary" data-action="anaApplyCustom">Apply</button>
+            </div>
+            <p class="form-hint" id="anaRangeMsg" role="status" aria-live="polite"></p>
           </div>
           <div class="semester-grid" id="anaRangeSummary"></div>
           <h4 class="insight-subhead">Subjects in this range</h4>
@@ -4108,9 +4213,9 @@
     </div>
   </div>
 
-  <script src="calc.js?v=20261127r17" defer></script>
-  <script src="app.js?v=20261127r17" defer></script>
-  <script src="offline.js?v=20261127r17" defer></script>
-  <script src="features.js?v=20261127r17" defer></script>
+  <script src="calc.js?v=20261127r18" defer></script>
+  <script src="app.js?v=20261127r18" defer></script>
+  <script src="offline.js?v=20261127r18" defer></script>
+  <script src="features.js?v=20261127r18" defer></script>
 </body>
 </html>

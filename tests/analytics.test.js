@@ -135,3 +135,54 @@ test('weekly and monthly buckets keep empty periods so charts show real gaps', (
   assert.deepEqual(monthly.map((b) => b.key), ['2026-09', '2026-10', '2026-11']);
   assert.equal(monthly[2].total, calc.ledgerSummary(state, '2026-11-01', '2026-11-30').total);
 });
+
+test('holidays and calendar off entries are excluded from daily ledger, buckets and range reports', () => {
+  const withHoliday = {
+    subjects: [{ id: 'math', name: 'Mathematics', attended: 2, total: 3, target: 75 }],
+    history: [
+      { id: 'h1', subId: 'math', date: '2026-11-24', status: 'present' },
+      { id: 'h2', subId: 'math', date: '2026-11-25', status: 'absent' },
+      { id: 'h3', subId: 'math', date: '2026-11-26', status: 'present' } // marked off in calendar below
+    ],
+    calendar: {
+      '2026-11-25': { isHoliday: true, entries: { math: 'absent' } },
+      '2026-11-26': { isHoliday: false, entries: { math: 'off' } }
+    }
+  };
+  const ledger = calc.buildDailyLedger(withHoliday);
+  assert.equal(ledger['2026-11-25'], undefined, 'holiday dates must be excluded');
+  assert.equal(ledger['2026-11-26'], undefined, 'calendar off entries must be excluded');
+  assert.equal(ledger['2026-11-24'].present, 1);
+
+  const report = calc.rangeReport(withHoliday, '2026-11-23', '2026-11-29', 75);
+  assert.equal(report.present, 1);
+  assert.equal(report.absent, 0);
+  assert.equal(report.total, 1);
+  assert.equal(report.pctNum, 100);
+});
+
+test('aggregate separates below-target, near-target and on-track without counting above-target as at-risk', () => {
+  const agg = calc.aggregate([
+    { id: 'a', name: 'OS Lab', attended: 11, total: 18 },       // 61.1% -> below
+    { id: 'b', name: 'DSA', attended: 28, total: 36 },          // 77.8% -> near (above 75%)
+    { id: 'c', name: 'Algorithms', attended: 18, total: 20 }    // 90.0% -> on track
+  ], 75);
+  assert.equal(agg.belowTarget, 1);
+  assert.equal(agg.nearTarget, 1);
+  assert.equal(agg.onTrack, 2);
+  assert.equal(agg.atRisk, 1, 'above-target 77.8% subject must not inflate atRisk');
+});
+
+test('trend uses unrounded weighted totals and reports active window metadata honestly', () => {
+  const buckets = [
+    { key: '2026-11-09', present: 2, absent: 2, total: 4, pctNum: 50 },
+    { key: '2026-11-16', present: 0, absent: 0, total: 0, pctNum: null },
+    { key: '2026-11-23', present: 3, absent: 1, total: 4, pctNum: 75 }
+  ];
+  const t = calc.trend(buckets, 4);
+  assert.equal(t.window, 1);
+  assert.equal(t.activeWeeks, 2);
+  assert.equal(t.recentTotal, 4);
+  assert.equal(t.previousTotal, 4);
+  assert.equal(t.delta, 25);
+});

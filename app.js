@@ -2713,7 +2713,7 @@ Save this code to restore your courses on another phone or computer!`);
             window.location.reload();
           });
         }
-        navigator.serviceWorker.register('./sw.js?v=20261127r17', { updateViaCache: 'none' })
+        navigator.serviceWorker.register('./sw.js?v=20261127r18', { updateViaCache: 'none' })
           .then((reg) => {
             if (reg && typeof reg.update === 'function') reg.update().catch(() => {});
           })
