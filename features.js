@@ -2135,6 +2135,11 @@
 
     updateNetworkBanner();
     renderAll();
+    // Restore the saved destination so the highlighted nav item matches the
+    // visible view after a reload (dashboard and subjects share one view).
+    if (typeof switchTab === 'function' && liveState()) {
+      switchTab(liveState().activeTab || 'dashboard');
+    }
     setTimeout(checkNotifications, 1500);
     setInterval(() => {
       renderSyncStatus();

@@ -118,7 +118,7 @@
         themeMode: 'dark',
         privacyMode: false,
         activeCategory: 'all',
-        activeTab: 'subjects'
+        activeTab: 'dashboard'
       };
     }
 
@@ -340,7 +340,7 @@
         themeMode,
         privacyMode,
         activeCategory: raw.activeCategory || 'all',
-        activeTab: raw.activeTab || 'subjects'
+        activeTab: raw.activeTab || 'dashboard'
       };
     }
 
@@ -1716,7 +1716,9 @@ Created ${newSubjects.length} customized subjects for you.`);
       });
 
       document.querySelectorAll('.view-content').forEach(view => view.classList.remove('active'));
-      if (tab === 'subjects') document.getElementById('viewSubjects').classList.add('active');
+      // Dashboard and Subjects share one legacy view; both are real nav entries
+      // but only the clicked entry is highlighted.
+      if (tab === 'dashboard' || tab === 'subjects') document.getElementById('viewSubjects').classList.add('active');
       if (tab === 'calendar') {
         document.getElementById('viewCalendar').classList.add('active');
         renderCalendar();
