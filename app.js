@@ -156,6 +156,7 @@
 
     function saveState() {
       try {
+        appState.localUpdatedAt = Date.now();
         localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
         renderApp();
         if (appState.isSetupCompleted && appState.subjects && appState.subjects.length > 0) {
@@ -168,6 +169,7 @@
 
     function saveStateOnly() {
       try {
+        appState.localUpdatedAt = Date.now();
         localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
         renderApp();
       } catch (err) {
@@ -177,6 +179,11 @@
 
     // 2. SECURITY: SCHEMA VALIDATOR FOR IMPORTED & LOADED JSON
     function validateAndSanitizeState(raw) {
+      // calc.js owns the schema rules (and is unit-tested). The legacy body
+      // below stays as an offline fallback if calc.js ever fails to load.
+      if (window.AttendifyCalc && typeof window.AttendifyCalc.sanitizeState === 'function') {
+        return window.AttendifyCalc.sanitizeState(raw);
+      }
       if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
         throw new Error('Root data must be a valid JSON object.');
       }
@@ -468,7 +475,16 @@
     initSystemThemeListener();
 
     // 5. MATHEMATICAL FORMULAS FOR 75% ATTENDANCE CRITERIA
+    // Public entry point. The maths lives in calc.js so the browser and the
+    // automated test-suite run exactly the same formulas.
     function calcStats(sub) {
+      if (window.AttendifyCalc && typeof window.AttendifyCalc.stats === 'function') {
+        return window.AttendifyCalc.stats(sub, appState.globalTarget);
+      }
+      return legacyCalcStats(sub);
+    }
+
+    function legacyCalcStats(sub) {
       const a = Number(sub.attended) || 0;
       const t = Number(sub.total) || 0;
       const target = Number(sub.target) || appState.globalTarget || 75;
@@ -601,6 +617,11 @@
       }
       const badge = document.getElementById('subjectCountBadge');
       if (badge) badge.textContent = appState.subjects.length;
+
+      // Advanced surfaces (insights, analytics, timetable, notifications, sync state)
+      if (window.AttendifyFeatures && typeof window.AttendifyFeatures.render === 'function') {
+        window.AttendifyFeatures.render();
+      }
     }
 
     function updateCloudStatusUI() {
@@ -685,6 +706,13 @@
       const adviceEl = document.getElementById('dashAdviceText');
       const alertBar = document.getElementById('dashAlertBanner');
 
+      // Responsive max-width for dashboard container based on theme mode
+      const mode = appState.themeMode || 'dark';
+      const isLight = mode === 'light' || (mode === 'system' && window.matchMedia('(prefers-color-scheme: light)').matches);
+      const dashboardMaxWidth = isLight ? '560px' : '520px';
+      const appContainer = document.querySelector('.app-container');
+      if (appContainer) appContainer.style.maxWidth = dashboardMaxWidth;
+
       if (appState.subjects.length === 0) {
         document.getElementById('dashOverallPct').textContent = '--%';
         circle.style.strokeDashoffset = circumference;
@@ -732,19 +760,19 @@
         return;
       }
 
+      // Determine risk level and construct health tag
+      let healthHtml = '';
       if (overallPctNum >= 85) {
-        healthTag.textContent = '● A+ • Attendance Master';
-        healthTag.className = 'health-tag health-excellent';
+        healthHtml = '● A+ • Attendance Master';
       } else if (overallPctNum >= target) {
-        healthTag.textContent = '● B+ • Safe & On Track';
-        healthTag.className = 'health-tag health-good';
+        healthHtml = '● B+ • Safe & On Track';
       } else if (overallPctNum >= target - 8) {
-        healthTag.textContent = '● C • Borderline Warning';
-        healthTag.className = 'health-tag health-warning';
+        healthHtml = '● C • Borderline Warning';
       } else {
-        healthTag.textContent = '● Critical Detention Risk';
-        healthTag.className = 'health-tag health-danger';
+        healthHtml = '● Critical Detention Risk';
       }
+      healthTag.innerHTML = healthHtml;
+      healthTag.className = 'health-tag ' + (overallPctNum >= 85 ? 'health-excellent' : overallPctNum >= target ? 'health-good' : overallPctNum >= target - 8 ? 'health-warning' : 'health-danger');
 
       if (isOverallShort) {
         if (target >= 100) {
@@ -1161,6 +1189,7 @@
               <button type="button" class="act-btn ${currentStatus === 'present' ? 'act-present' : ''}" data-action="recordAttendanceEntry" data-date="${safeDateStr}" data-subid="${safeSubId}" data-status="present" aria-label="Mark ${safeSubName} present">✓</button>
               <button type="button" class="act-btn ${currentStatus === 'absent' ? 'act-absent' : ''}" data-action="recordAttendanceEntry" data-date="${safeDateStr}" data-subid="${safeSubId}" data-status="absent" aria-label="Mark ${safeSubName} absent">✕</button>
               <button type="button" class="act-btn ${currentStatus === 'off' ? 'act-off' : ''}" data-action="recordAttendanceEntry" data-date="${safeDateStr}" data-subid="${safeSubId}" data-status="off" aria-label="Mark ${safeSubName} off">—</button>
+              <button type="button" class="act-btn" data-action="clearAttendanceEntry" data-date="${safeDateStr}" data-subid="${safeSubId}" aria-label="Clear the ${safeSubName} entry for this day" title="Clear entry">⟲</button>
             </div>
           </div>
         `;
@@ -1688,8 +1717,18 @@ Created ${newSubjects.length} customized subjects for you.`);
         populateCalcOptions();
         runSimulation();
       }
+      if (tab === 'analytics') {
+        document.getElementById('viewAnalytics').classList.add('active');
+      }
+      if (tab === 'timetable') {
+        document.getElementById('viewTimetable').classList.add('active');
+      }
       if (tab === 'settings') {
         document.getElementById('viewSettings').classList.add('active');
+      }
+
+      if (window.AttendifyFeatures && typeof window.AttendifyFeatures.onTab === 'function') {
+        window.AttendifyFeatures.onTab(tab);
       }
 
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -2114,6 +2153,10 @@ Created ${newSubjects.length} customized subjects for you.`);
           activeTheme: appState.activeTheme || 'graphite',
           themeMode: appState.themeMode || 'dark',
           privacyMode: appState.privacyMode || false,
+          timetable: appState.timetable || [],
+          notifPrefs: appState.notifPrefs || {},
+          simScenarios: appState.simScenarios || [],
+          localUpdatedAt: appState.localUpdatedAt || 0,
           device: getDeviceProfile(),
           lastUpdated: new Date().toISOString()
         }
@@ -2637,7 +2680,7 @@ Save this code to restore your courses on another phone or computer!`);
             window.location.reload();
           });
         }
-        navigator.serviceWorker.register('./sw.js?v=20261127r11', { updateViaCache: 'none' })
+        navigator.serviceWorker.register('./sw.js?v=20261127r13', { updateViaCache: 'none' })
           .then((reg) => {
             if (reg && typeof reg.update === 'function') reg.update().catch(() => {});
           })
@@ -2744,6 +2787,9 @@ Save this code to restore your courses on another phone or computer!`);
           break;
         case 'recordAttendanceEntry':
           recordAttendanceEntry(el.getAttribute('data-date'), el.getAttribute('data-subid'), el.getAttribute('data-status'));
+          break;
+        case 'clearAttendanceEntry':
+          recordAttendanceEntry(el.getAttribute('data-date'), el.getAttribute('data-subid'), 'none');
           break;
         case 'prevMonth':
           prevMonth();
