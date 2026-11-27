@@ -715,12 +715,8 @@
       const adviceEl = document.getElementById('dashAdviceText');
       const alertBar = document.getElementById('dashAlertBanner');
 
-      // Responsive max-width for dashboard container based on theme mode
-      const mode = appState.themeMode || 'dark';
-      const isLight = mode === 'light' || (mode === 'system' && window.matchMedia('(prefers-color-scheme: light)').matches);
-      const dashboardMaxWidth = isLight ? '560px' : '520px';
       const appContainer = document.querySelector('.app-container');
-      if (appContainer) appContainer.style.maxWidth = dashboardMaxWidth;
+      if (appContainer && appContainer.style.maxWidth) appContainer.style.maxWidth = '';
 
       if (appState.subjects.length === 0) {
         document.getElementById('dashOverallPct').textContent = '--%';
@@ -973,7 +969,12 @@
 
     function quickMarkToday(subId, status) {
       triggerHaptic(18);
-      recordAttendanceEntry(getTodayDateStr(), subId, status);
+      const today = getTodayDateStr();
+      const recorded = recordAttendanceEntry(today, subId, status);
+      if (recorded === false) {
+        showToast('Today is marked as a holiday. Remove holiday in Calendar to log attendance.', 'warning', 3200);
+        return;
+      }
       const sub = appState.subjects.find(s => s.id === subId);
       const label = sub ? sub.name : 'Subject';
       const verb = status === 'present' ? 'present' : status === 'absent' ? 'absent' : 'off';
@@ -981,6 +982,12 @@
     }
 
     function recordAttendanceEntry(dateStr, subId, status) {
+      if (appState.calendar[dateStr] && appState.calendar[dateStr].isHoliday) {
+        if (appState.activeTab === 'calendar') {
+          renderCalendarDateDetail(dateStr);
+        }
+        return false;
+      }
       if (!appState.calendar[dateStr]) {
         appState.calendar[dateStr] = { isHoliday: false, entries: {} };
       }
@@ -1032,6 +1039,7 @@
       if (currentHistorySubId === subId) {
         renderHistoryList(subId);
       }
+      return true;
     }
 
     // 10. COMPONENT 3: ATTENDANCE CALENDAR (INTERACTIVE MONTHLY GRID)
@@ -1160,19 +1168,22 @@
       titleEl.textContent = dObj.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
 
       const dayData = appState.calendar[safeDateKey] || { isHoliday: false, entries: {} };
-      const isHoliday = dayData.isHoliday;
+      const isHoliday = Boolean(dayData.isHoliday);
 
       holidayBanner.style.display = isHoliday ? 'block' : 'none';
-      holidayBtn.innerHTML = isHoliday ? 'Unmark Holiday' : 'Holiday';
+      holidayBanner.innerHTML = '<strong>Official Holiday / Off Day:</strong> Normal attendance marking is disabled on holidays. Existing records are preserved.';
+      holidayBtn.textContent = isHoliday ? 'Remove Holiday' : 'Mark Holiday';
+      holidayBtn.setAttribute('aria-pressed', isHoliday ? 'true' : 'false');
 
       if (appState.subjects.length === 0) {
         listEl.innerHTML = `<div style="text-align:center; padding:12px; color:var(--text-dim);">No subjects configured.</div>`;
         return;
       }
 
+      const disabledAttr = isHoliday ? 'disabled aria-disabled="true"' : '';
       let html = '';
       appState.subjects.forEach(sub => {
-        const currentStatus = dayData.entries[sub.id] || 'none';
+        const currentStatus = (dayData.entries && dayData.entries[sub.id]) || 'none';
         const cat = sub.category || 'theory';
         const safeSubName = escapeHtml(sub.name);
         const safeSubId = escapeHtml(sub.id);
@@ -1180,14 +1191,14 @@
         const safeDateStr = escapeHtml(safeDateKey);
 
         html += `
-          <div class="day-sub-entry">
+          <div class="day-sub-entry ${isHoliday ? 'is-holiday-locked' : ''}">
             <div class="day-sub-info">
-              <div style="display:flex; align-items:center; gap:6px;">
+              <div class="day-sub-title-row">
                 <span class="cat-tag cat-${safeCat}">${safeCat.toUpperCase()}</span>
-                <strong style="font-size:13.5px; color:var(--text-strong);">${safeSubName}</strong>
+                <strong class="day-sub-name">${safeSubName}</strong>
               </div>
-              <span style="font-size:11px; color:var(--text-muted); margin-top:2px;">
-                Status on this day: 
+              <span class="day-sub-status-row">
+                Status on this day:
                 <span class="day-status-pill status-pill-${currentStatus}">
                   ${currentStatus === 'present' ? '✓ Present' : (currentStatus === 'absent' ? '✕ Absent' : (currentStatus === 'off' ? '— Off' : 'Not marked'))}
                 </span>
@@ -1195,10 +1206,10 @@
             </div>
 
             <div class="day-sub-actions">
-              <button type="button" class="act-btn ${currentStatus === 'present' ? 'act-present' : ''}" data-action="recordAttendanceEntry" data-date="${safeDateStr}" data-subid="${safeSubId}" data-status="present" aria-label="Mark ${safeSubName} present">✓</button>
-              <button type="button" class="act-btn ${currentStatus === 'absent' ? 'act-absent' : ''}" data-action="recordAttendanceEntry" data-date="${safeDateStr}" data-subid="${safeSubId}" data-status="absent" aria-label="Mark ${safeSubName} absent">✕</button>
-              <button type="button" class="act-btn ${currentStatus === 'off' ? 'act-off' : ''}" data-action="recordAttendanceEntry" data-date="${safeDateStr}" data-subid="${safeSubId}" data-status="off" aria-label="Mark ${safeSubName} off">—</button>
-              <button type="button" class="act-btn" data-action="clearAttendanceEntry" data-date="${safeDateStr}" data-subid="${safeSubId}" aria-label="Clear the ${safeSubName} entry for this day" title="Clear entry">⟲</button>
+              <button type="button" class="act-btn ${currentStatus === 'present' ? 'act-present' : ''}" data-action="recordAttendanceEntry" data-date="${safeDateStr}" data-subid="${safeSubId}" data-status="present" aria-label="Mark ${safeSubName} present" title="${isHoliday ? 'Attendance marking disabled on holidays' : 'Present'}" ${disabledAttr}>✓</button>
+              <button type="button" class="act-btn ${currentStatus === 'absent' ? 'act-absent' : ''}" data-action="recordAttendanceEntry" data-date="${safeDateStr}" data-subid="${safeSubId}" data-status="absent" aria-label="Mark ${safeSubName} absent" title="${isHoliday ? 'Attendance marking disabled on holidays' : 'Absent'}" ${disabledAttr}>✕</button>
+              <button type="button" class="act-btn ${currentStatus === 'off' ? 'act-off' : ''}" data-action="recordAttendanceEntry" data-date="${safeDateStr}" data-subid="${safeSubId}" data-status="off" aria-label="Mark ${safeSubName} off" title="${isHoliday ? 'Attendance marking disabled on holidays' : 'Off / Cancelled'}" ${disabledAttr}>—</button>
+              <button type="button" class="act-btn" data-action="clearAttendanceEntry" data-date="${safeDateStr}" data-subid="${safeSubId}" aria-label="Clear the ${safeSubName} entry for this day" title="${isHoliday ? 'Attendance marking disabled on holidays' : 'Reset entry'}" ${disabledAttr}>⟲</button>
             </div>
           </div>
         `;
@@ -1211,6 +1222,9 @@
       const dateStr = calSelectedDate;
       if (!appState.calendar[dateStr]) {
         appState.calendar[dateStr] = { isHoliday: false, entries: {} };
+      }
+      if (!appState.calendar[dateStr].entries || typeof appState.calendar[dateStr].entries !== 'object') {
+        appState.calendar[dateStr].entries = {};
       }
       appState.calendar[dateStr].isHoliday = !appState.calendar[dateStr].isHoliday;
       saveState();
@@ -2699,7 +2713,7 @@ Save this code to restore your courses on another phone or computer!`);
             window.location.reload();
           });
         }
-        navigator.serviceWorker.register('./sw.js?v=20261127r13', { updateViaCache: 'none' })
+        navigator.serviceWorker.register('./sw.js?v=20261127r16', { updateViaCache: 'none' })
           .then((reg) => {
             if (reg && typeof reg.update === 'function') reg.update().catch(() => {});
           })

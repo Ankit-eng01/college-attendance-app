@@ -7,19 +7,19 @@
 // 4. Non-GET requests: Direct bypass
 // ==========================================================================
 
-const CACHE_NAME = 'attendify-v36-offline-nav';
+const CACHE_NAME = 'attendify-v37-layout-fix';
 
 // Critical core assets to precache on install
 const PRECACHE_ASSETS = [
   './',
   './index.html',
-  './calc.js?v=20261127r15',
+  './calc.js?v=20261127r16',
   './calc.js',
-  './app.js?v=20261127r15',
+  './app.js?v=20261127r16',
   './app.js',
-  './offline.js?v=20261127r15',
+  './offline.js?v=20261127r16',
   './offline.js',
-  './features.js?v=20261127r15',
+  './features.js?v=20261127r16',
   './features.js',
   './manifest.json',
   './icon.svg',

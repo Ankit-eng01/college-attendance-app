@@ -100,14 +100,17 @@
     }
     const risky = agg.rows
       .filter((row) => row.hasData && (row.risk === 'danger' || row.risk === 'watch'))
-      .sort((a, b) => a.pctNum - b.pctNum)
-      .slice(0, 4);
+      .sort((a, b) => a.pctNum - b.pctNum);
 
     if (!risky.length) {
       const noData = agg.rows.every((row) => !row.hasData);
-      host.innerHTML = `<p class="empty-inline">${noData
-        ? 'Mark your first class to start risk tracking.'
-        : 'Every subject is comfortably above your target.'}</p>`;
+      host.innerHTML = `
+        <div class="insight-empty">
+          <strong>${noData ? 'No risk data yet' : 'No subjects at risk'}</strong>
+          <p class="empty-inline">${noData
+            ? 'Mark your first class as Present or Absent to unlock risk alerts.'
+            : 'Every tracked subject is comfortably above your target.'}</p>
+        </div>`;
       return;
     }
 
@@ -130,15 +133,23 @@
     if (!host) return;
     setText('dashTargetLabel', `${agg.target}%`);
     if (!agg.subjects) {
-      host.innerHTML = '<p class="empty-inline">No subjects yet.</p>';
+      host.innerHTML = `
+        <div class="insight-empty">
+          <strong>No subjects yet</strong>
+          <p class="empty-inline">Add your courses below to monitor target progress.</p>
+        </div>`;
       return;
     }
     const short = agg.rows.filter((row) => row.isShort).sort((a, b) => a.pctNum - b.pctNum);
     if (!short.length) {
-      host.innerHTML = `<p class="empty-inline">Nothing below ${agg.target}%. Keep logging classes to stay safe.</p>`;
+      host.innerHTML = `
+        <div class="insight-empty">
+          <strong>All subjects on track</strong>
+          <p class="empty-inline">Nothing is below ${agg.target}% right now. Keep logging classes to stay safe.</p>
+        </div>`;
       return;
     }
-    host.innerHTML = short.slice(0, 4).map((row) => `
+    host.innerHTML = short.map((row) => `
       <div class="below-row">
         <div class="below-copy">
           <span class="risk-name">${esc(row.name)}</span>
@@ -153,9 +164,13 @@
     const host = $('dashRecentList');
     const state = liveState();
     if (!host || !state) return;
-    const rows = C.recentActivity(state, 5);
+    const rows = C.recentActivity(state, 6);
     if (!rows.length) {
-      host.innerHTML = '<p class="empty-inline">No attendance logged yet. Mark a class as present or absent to see it here.</p>';
+      host.innerHTML = `
+        <div class="insight-empty">
+          <strong>No activity logged yet</strong>
+          <p class="empty-inline">Mark a class as present or absent from Subjects or Calendar to see your latest logs here.</p>
+        </div>`;
       return;
     }
     host.innerHTML = rows.map((row) => `
@@ -174,13 +189,23 @@
     const state = liveState();
     if (!host || !state) return;
     if (!Array.isArray(state.timetable) || state.timetable.length === 0) {
-      host.innerHTML = '<p class="empty-inline">No timetable yet. <button type="button" class="link-btn" data-action="switchTab" data-tab="timetable">Add your weekly classes</button></p>';
+      host.innerHTML = `
+        <div class="insight-empty">
+          <strong>No upcoming classes scheduled</strong>
+          <p class="empty-inline">Add your weekly schedule so your next lectures and labs appear here automatically.</p>
+          <button type="button" class="btn-quiet btn-inline" data-action="switchTab" data-tab="timetable">Set up timetable</button>
+        </div>`;
       return;
     }
     const view = C.upcomingClasses(state.timetable, new Date());
-    const rows = view.upcoming.slice(0, 4);
+    const rows = view.upcoming.slice(0, 6);
     if (!rows.length) {
-      host.innerHTML = '<p class="empty-inline">No more classes scheduled this week.</p>';
+      host.innerHTML = `
+        <div class="insight-empty">
+          <strong>All caught up for now</strong>
+          <p class="empty-inline">No remaining active classes are scheduled for this week.</p>
+          <button type="button" class="btn-quiet btn-inline" data-action="switchTab" data-tab="timetable">View timetable</button>
+        </div>`;
       return;
     }
     host.innerHTML = rows.map((entry) => `
@@ -822,7 +847,10 @@
     const dateIso = C.todayISO();
     // recordAttendanceEntry deduplicates by date + subject id and adjusts
     // subject totals itself, so repeated taps never create duplicate records.
-    recordAttendanceEntry(dateIso, entry.subjectId, status);
+    if (recordAttendanceEntry(dateIso, entry.subjectId, status) === false) {
+      toast('Today is marked as a holiday. Remove holiday in Calendar to log attendance.', 'warning', 3200);
+      return;
+    }
     renderTimetable();
     renderDashboard();
     renderAnalytics();
@@ -1313,6 +1341,7 @@
       const originalMark = window.recordAttendanceEntry;
       const wrappedMark = function () {
         const result = originalMark.apply(this, arguments);
+        if (result === false) return false;
         const fp = stateFingerprint();
         const date = String(arguments[0] || '');
         const subId = String(arguments[1] || '');
