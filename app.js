@@ -2171,6 +2171,7 @@ Created ${newSubjects.length} customized subjects for you.`);
           privacyMode: appState.privacyMode || false,
           timetable: appState.timetable || [],
           notifPrefs: appState.notifPrefs || {},
+          notifications: appState.notifications || [],
           simScenarios: appState.simScenarios || [],
           localUpdatedAt: appState.localUpdatedAt || 0,
           device: getDeviceProfile(),

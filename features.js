@@ -1251,12 +1251,21 @@
   }
 
   // ===============================================================
-  // 8. Sync queue + conflict resolution
+  // 8. Durable offline outbox, sync guard + conflict resolution
   // ===============================================================
   let pendingConflict = null;
   let pendingImport = null;
   let lastRemoteCheckAt = 0;
   let forceRemoteCheck = false;
+  let forcePushOnce = false;
+  let syncingNow = false;
+  let retryTimer = null;
+  let offlineAdapter = null;
+  let offlineOps = [];
+  let lastPushedFingerprint = '';
+
+  const OFFLINE = () => (typeof window.AttendifyOffline !== 'undefined' ? window.AttendifyOffline : null);
+  const isOnline = () => typeof navigator === 'undefined' || navigator.onLine !== false;
 
   function syncMeta() {
     const state = liveState();
@@ -1265,45 +1274,208 @@
     return state.syncMeta;
   }
 
+  function stateFingerprint() {
+    try {
+      return C.fingerprintState(liveState() || {});
+    } catch (err) {
+      return '';
+    }
+  }
+
+  function persistOfflineOps() {
+    if (!offlineAdapter) return;
+    offlineAdapter.put('operations', 'outbox', offlineOps)
+      .catch((err) => console.warn('[Attendify] Could not persist the offline outbox:', err));
+  }
+
+  function persistOfflineMeta() {
+    if (!offlineAdapter) return;
+    offlineAdapter.put('meta', 'sync', {
+      lastPushedFingerprint,
+      storage: offlineAdapter.kind,
+      updatedAt: Date.now()
+    }).catch((err) => console.warn('[Attendify] Could not persist sync metadata:', err));
+  }
+
+  function queueOfflineOperation(raw) {
+    const O = OFFLINE();
+    if (!O) return;
+    const result = O.enqueueOperation(offlineOps, raw);
+    if (!result.added) return;
+    offlineOps = result.operations;
+    persistOfflineOps();
+    renderSyncStatus();
+  }
+
+  /** Every attendance mutation becomes a durable record before it is pushed. */
+  function installQueueWrappers() {
+    if (typeof window.recordAttendanceEntry === 'function' && !window.recordAttendanceEntry.__attendifyOffline) {
+      const originalMark = window.recordAttendanceEntry;
+      const wrappedMark = function () {
+        const result = originalMark.apply(this, arguments);
+        const fp = stateFingerprint();
+        const date = String(arguments[0] || '');
+        const subId = String(arguments[1] || '');
+        queueOfflineOperation({
+          id: `attendance:${date}:${subId}:${fp}`,
+          type: 'attendance',
+          entity: 'calendar',
+          ref: `${date}:${subId}`,
+          fingerprint: fp,
+          createdAt: Date.now()
+        });
+        return result;
+      };
+      wrappedMark.__attendifyOffline = true;
+      window.recordAttendanceEntry = wrappedMark;
+    }
+
+    if (typeof window.queueCloudSync === 'function' && !window.queueCloudSync.__attendifyOffline) {
+      const originalQueue = window.queueCloudSync;
+      const wrappedQueue = function () {
+        const fp = stateFingerprint();
+        if (fp) {
+          queueOfflineOperation({
+            id: `state:${fp}`,
+            type: 'state',
+            entity: 'state',
+            ref: '',
+            fingerprint: fp,
+            createdAt: Date.now()
+          });
+        }
+        return originalQueue.apply(this, arguments);
+      };
+      wrappedQueue.__attendifyOffline = true;
+      window.queueCloudSync = wrappedQueue;
+    }
+  }
+
+  /** Load persisted work, keeping anything queued before the adapter was ready. */
+  function installOfflineLayer() {
+    installQueueWrappers();
+    const O = OFFLINE();
+    if (!O) {
+      renderSyncStatus();
+      return;
+    }
+    O.createAdapter().then((adapter) => {
+      offlineAdapter = adapter;
+      return Promise.all([adapter.getAll('operations'), adapter.get('meta', 'sync')]);
+    }).then((results) => {
+      const rows = Array.isArray(results[0]) ? results[0] : [];
+      rows.forEach((row) => {
+        if (!row || !Array.isArray(row.value)) return;
+        row.value.forEach((item) => {
+          offlineOps = O.enqueueOperation(offlineOps, item).operations;
+        });
+      });
+      persistOfflineOps();
+      const meta = results[1];
+      if (meta && typeof meta === 'object' && meta.lastPushedFingerprint) {
+        lastPushedFingerprint = String(meta.lastPushedFingerprint).slice(0, 40);
+      }
+      cancelRetry();
+      if (isOnline() && O.pendingOperations(offlineOps).length) scheduleRetry();
+      renderSyncStatus();
+    }).catch((err) => {
+      console.warn('[Attendify] Offline outbox could not be opened:', err);
+      renderSyncStatus();
+    });
+  }
+
   function renderSyncStatus() {
     const pill = $('syncStatusPill');
     const note = $('syncQueueNote');
+    const detail = $('syncOutboxDetail');
     const retry = $('syncRetryBtn');
     const meta = syncMeta();
-    const online = typeof navigator === 'undefined' || navigator.onLine !== false;
+    const online = isOnline();
     const state = liveState();
+    const O = OFFLINE();
+    const summary = O ? O.operationSummary(offlineOps) : { pending: 0, count: 0, oldestAt: 0 };
+    const pending = summary.pending;
 
     let label = 'Not synced yet';
     let tone = 'pill-neutral';
-    if (!online) { label = 'Offline'; tone = 'pill-neutral'; }
-    else if (meta.pending) { label = 'Pending upload'; tone = 'pill-short'; }
+    if (pendingConflict) { label = 'Conflict — needs review'; tone = 'pill-short'; }
+    else if (!online) { label = pending ? `Offline · ${pending} queued` : 'Offline'; tone = 'pill-neutral'; }
+    else if (syncingNow) { label = 'Syncing…'; tone = 'pill-neutral'; }
+    else if (pending > 0) { label = `${pending} change${pending === 1 ? '' : 's'} queued`; tone = 'pill-short'; }
     else if (meta.lastError) { label = 'Sync failed'; tone = 'pill-short'; }
     else if (state && state.lastSyncedAt) { label = 'Synced'; tone = 'pill-safe'; }
+
     if (pill) {
       pill.textContent = label;
       pill.className = 'criteria-pill ' + tone;
     }
+
+    let storageNote;
+    if (!offlineAdapter) storageNote = 'Offline storage could not be opened — queued changes may not survive a reload.';
+    else if (offlineAdapter.durable) storageNote = `Queued changes are stored on this device (${offlineAdapter.kind}).`;
+    else storageNote = 'Browser storage is blocked — this queue exists only in the current tab and will be lost on reload.';
+
+    const pendingNote = pending
+      ? `${pending} change${pending === 1 ? '' : 's'} awaiting upload${summary.oldestAt ? ` since ${new Date(summary.oldestAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}` : ''}. `
+      : '';
     if (note) {
       note.textContent = !online
-        ? 'You are offline. Every change is saved on this device and uploads automatically when the connection returns.'
-        : meta.pending
-          ? `Queued ${meta.queuedAt ? 'at ' + new Date(meta.queuedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'changes'} — will retry automatically.`
-          : meta.lastError
-            ? `Last attempt failed: ${meta.lastError}`
-            : state && state.lastSyncedAt
-              ? `Last synced ${new Date(state.lastSyncedAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}.`
-              : 'Cloud backup starts once you add a subject.';
+        ? `${pendingNote}You are offline. Changes are saved locally and retried when the connection returns.`
+        : pendingConflict
+          ? 'A different cloud copy was found. Nothing was overwritten — choose an option below.'
+          : pending > 0
+            ? `${pendingNote}Retries happen automatically; an item is cleared only after the server accepts the upload.`
+            : meta.lastError
+              ? `Last attempt failed: ${meta.lastError}. Your local records are intact.`
+              : state && state.lastSyncedAt
+                ? `Last uploaded ${new Date(state.lastSyncedAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}.`
+                : 'Cloud backup starts once you add a subject.';
     }
-    if (retry) retry.hidden = !(meta.pending || meta.lastError || !online === false && false);
+    if (detail) detail.textContent = storageNote;
+    if (retry) retry.hidden = !(pending > 0 || Boolean(meta.lastError) || !online || Boolean(pendingConflict));
   }
 
-  function markSyncPending(reason) {
+  function cancelRetry() {
+    if (retryTimer) {
+      clearTimeout(retryTimer);
+      retryTimer = null;
+    }
+  }
+
+  function scheduleRetry() {
+    if (retryTimer || !isOnline()) return;
+    const O = OFFLINE();
+    const attempts = O ? O.pendingOperations(offlineOps).map((op) => op.attempts) : [];
+    const worst = attempts.length ? Math.max.apply(null, attempts) : 0;
+    const delay = Math.min(300000, 5000 * Math.pow(2, Math.min(worst, 5)));
+    retryTimer = setTimeout(() => {
+      retryTimer = null;
+      if (!isOnline()) return;
+      forceRemoteCheck = true;
+      const sync = window.syncToCloudStorage;
+      if (typeof sync === 'function') Promise.resolve(sync()).catch(() => {});
+    }, delay);
+  }
+
+  function noteFailure(reason) {
     const meta = syncMeta();
     meta.pending = true;
     meta.queuedAt = Date.now();
-    if (reason) meta.lastError = reason;
+    meta.lastError = String(reason || 'Sync failed').slice(0, 160);
+    const O = OFFLINE();
+    if (O) {
+      const ids = O.pendingOperations(offlineOps).map((op) => op.id);
+      if (ids.length) {
+        offlineOps = O.markOperationAttempts(offlineOps, ids, meta.lastError);
+        persistOfflineOps();
+      }
+    }
     persist();
     renderSyncStatus();
+  }
+
+  function markSyncPending(reason) {
+    noteFailure(reason || 'Offline');
   }
 
   function clearSyncPending() {
@@ -1315,68 +1487,189 @@
     renderSyncStatus();
   }
 
+  function storeConflictRecord(remoteData, reason) {
+    if (!offlineAdapter) return;
+    let remoteFingerprint = '';
+    try { remoteFingerprint = C.fingerprintState(remoteData || {}); } catch (err) { /* keep empty */ }
+    offlineAdapter.put('conflicts', 'latest', {
+      reason: String(reason || 'diverged').slice(0, 80),
+      remoteFingerprint,
+      createdAt: Date.now(),
+      status: 'open'
+    }).catch((err) => console.warn('[Attendify] Could not record the sync conflict:', err));
+  }
+
+  function resolveConflictRecord(status) {
+    if (!offlineAdapter) return;
+    offlineAdapter.put('conflicts', 'latest', { status, resolvedAt: Date.now() })
+      .catch((err) => console.warn('[Attendify] Could not update the sync conflict record:', err));
+  }
+
+  function recordResolution(mode, fp) {
+    queueOfflineOperation({
+      id: `conflict:${mode}:${Date.now()}`,
+      type: 'conflict-resolution',
+      entity: 'sync',
+      ref: mode,
+      fingerprint: fp,
+      createdAt: Date.now()
+    });
+  }
+
+  /** Run the real push, then acknowledge only the work captured before it. */
+  async function pushWithOutbox(original, self, args) {
+    const O = OFFLINE();
+    const capturedIds = O ? O.pendingOperations(offlineOps).map((op) => op.id) : [];
+    syncingNow = true;
+    renderSyncStatus();
+    let result;
+    try {
+      result = await original.apply(self, args);
+    } catch (err) {
+      result = { ok: false, error: (err && err.message) || 'Network unavailable' };
+    } finally {
+      syncingNow = false;
+    }
+
+    if (result && result.ok) {
+      // HTTP 200 from /push is the only condition that clears queued work.
+      const fp = stateFingerprint();
+      if (O && capturedIds.length) {
+        offlineOps = O.markOperations(offlineOps, capturedIds, {
+          status: 'synced', syncedAt: Date.now(), fingerprint: fp, lastError: ''
+        });
+        persistOfflineOps();
+      }
+      lastPushedFingerprint = fp;
+      persistOfflineMeta();
+      clearSyncPending();
+      cancelRetry();
+    } else if (result && !result.busy) {
+      noteFailure((result && result.error) || 'Sync failed');
+      scheduleRetry();
+    }
+    renderSyncStatus();
+    return result;
+  }
+
   /**
-   * Pull first, then push, so a second device writing to the same code is
-   * never overwritten silently. The remote probe is throttled because the
-   * app pushes on every save.
+   * Pull first, then push. A remote copy that differs from both our current
+   * data and the last snapshot we pushed is a conflict the user must resolve.
    */
   function installSyncGuard() {
-    if (typeof window.syncToCloudStorage !== 'function' || window.syncToCloudStorage.__attendifyGuarded) return;
+    if (typeof window.syncToCloudStorage !== 'function' || window.syncToCloudStorage.__attendifyOfflineGuard) return;
     const original = window.syncToCloudStorage;
 
     const guarded = function () {
       const state = liveState();
-      const meta = syncMeta();
       if (!state) return original.apply(this, arguments);
 
-      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      if (!isOnline()) {
         markSyncPending('Offline');
         return Promise.resolve({ ok: false, queued: true, error: 'offline' });
       }
       if (!state.syncCode || !state.syncAuthKey || !state.isSetupCompleted || !state.subjects.length) {
-        return original.apply(this, arguments);
+        return pushWithOutbox(original, this, arguments);
       }
 
-      const shouldProbe = forceRemoteCheck || (Date.now() - lastRemoteCheckAt > 120000);
+      const shouldProbe = forceRemoteCheck || (Date.now() - lastRemoteCheckAt > 60000);
       forceRemoteCheck = false;
-      if (!shouldProbe) return original.apply(this, arguments);
+      if (!shouldProbe) return pushWithOutbox(original, this, arguments);
+
+      lastRemoteCheckAt = Date.now();
+      const self = this;
+      const args = arguments;
+      const approved = forcePushOnce;
+      forcePushOnce = false;
 
       return (async () => {
+        let remoteData = null;
+        let hasRemote = false;
+        let remoteUpdated = 0;
+        let pullError = '';
         try {
           const response = await syncApiRequest('/pull', {
             sync_code: state.syncCode,
             auth_token: state.syncAuthKey
           });
-          lastRemoteCheckAt = Date.now();
           if (response.ok) {
             const json = await response.json().catch(() => ({}));
-            const decision = C.decideSync(state, {
-              hasRemote: true,
-              data: json.data,
-              updatedAt: (json.data && Date.parse(json.data.lastUpdated)) || Date.parse(json.updated_at || json.lastUpdated || '') || 0
-            });
-            if (decision.action === 'conflict') {
-              openSyncConflict(json.data);
-              return { ok: false, conflict: true };
+            const data = json && json.data;
+            if (data && typeof data === 'object') {
+              remoteData = data;
+              hasRemote = true;
             }
+            remoteUpdated = (data && Date.parse(data.lastUpdated)) ||
+              Date.parse((json && (json.updated_at || json.lastUpdated)) || '') || 0;
+          } else if (response.status !== 404) {
+            pullError = `Cloud check failed (${response.status})`;
           }
         } catch (err) {
-          /* Offline or server unreachable: fall through to a normal push attempt. */
+          pullError = (err && err.message) || 'Cloud check unavailable';
         }
-        const result = await original.apply(this, arguments);
-        if (result && result.ok) clearSyncPending();
-        else if (result && !result.busy) markSyncPending((result && result.error) || 'Sync failed');
-        return result;
+
+        if (pullError) {
+          // A failed pull means we cannot prove the remote copy is safe to
+          // overwrite. Keep the work queued instead of pushing blindly.
+          noteFailure(pullError);
+          scheduleRetry();
+          return { ok: false, error: pullError };
+        }
+
+        let conflict = false;
+        let reason = '';
+        if (!approved) {
+          try {
+            const decision = C.decideSync(state, { hasRemote, data: remoteData, updatedAt: remoteUpdated });
+            if (decision && decision.action === 'conflict') {
+              conflict = true;
+              reason = decision.reason;
+            }
+          } catch (err) {
+            conflict = true;
+            reason = 'remote-unreadable';
+          }
+
+          const O = OFFLINE();
+          if (O) {
+            let remoteFp = '';
+            try { remoteFp = hasRemote ? C.fingerprintState(remoteData) : ''; } catch (err) { /* keep empty */ }
+            const flush = O.decideFlush({
+              localFingerprint: stateFingerprint(),
+              remoteFingerprint: remoteFp,
+              lastPushedFingerprint,
+              hasRemote,
+              pendingCount: O.pendingOperations(offlineOps).length
+            });
+            if (flush.action === 'conflict') {
+              conflict = true;
+              reason = flush.reason;
+            } else if (flush.reason === 'our-last-push') {
+              // Fingerprints prove the cloud copy is our own previous upload;
+              // a timestamp heuristic alone must not manufacture a conflict.
+              conflict = false;
+              reason = '';
+            }
+          }
+        }
+
+        if (conflict) {
+          openSyncConflict(remoteData, reason);
+          noteFailure('Conflict — awaiting your choice');
+          return { ok: false, conflict: true };
+        }
+        return pushWithOutbox(original, self, args);
       })();
     };
-    guarded.__attendifyGuarded = true;
+    guarded.__attendifyOfflineGuard = true;
     window.syncToCloudStorage = guarded;
   }
 
-  function openSyncConflict(remoteData) {
+  function openSyncConflict(remoteData, reason) {
     const state = liveState();
     if (!state) return;
     pendingConflict = remoteData;
+    storeConflictRecord(remoteData, reason);
     const summary = $('syncConflictSummary');
     if (summary) {
       let remoteSubjects = 0;
@@ -1388,27 +1681,39 @@
       const remoteUpdated = (remoteData && Date.parse(remoteData.lastUpdated)) || 0;
       summary.textContent = `The cloud backup has ${remoteSubjects} subjects and was updated ${
         remoteUpdated ? new Date(remoteUpdated).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'recently'
-      }. This device has ${state.subjects.length}. Nothing has been overwritten.`;
+      }. This device has ${state.subjects.length}. Nothing has been overwritten.${
+        reason ? ` Reason: ${String(reason).replace(/_/g, ' ')}.` : ''
+      }`;
     }
     const modal = $('syncConflictModal');
     if (modal) modal.classList.add('open');
     else toast('Cloud backup differs from this device. Open Settings → Cloud sync to resolve it.', 'warning', 8000);
+    renderSyncStatus();
   }
 
   function resolveSyncConflict(mode) {
     const state = liveState();
     if (!state) return;
     const remote = pendingConflict;
+    let remoteFp = '';
+    try { remoteFp = remote ? C.fingerprintState(remote) : ''; } catch (err) { /* keep empty */ }
     pendingConflict = null;
     const modal = $('syncConflictModal');
     if (modal) modal.classList.remove('open');
+    resolveConflictRecord(mode);
 
     if (mode === 'local') {
-      forceRemoteCheck = false;
-      lastRemoteCheckAt = Date.now() + 600000;
+      // The user explicitly chose this device. Remember the cloud copy we are
+      // replacing so the next probe recognises our own upload.
+      lastPushedFingerprint = remoteFp;
+      persistOfflineMeta();
+      recordResolution('local', stateFingerprint());
+      forcePushOnce = true;
+      forceRemoteCheck = true;
       const doPush = window.syncToCloudStorage;
-      if (typeof doPush === 'function') doPush();
+      if (typeof doPush === 'function') Promise.resolve(doPush()).catch(() => {});
       toast('Keeping this device. Uploading it as the cloud backup.', 'success');
+      renderSyncStatus();
       return;
     }
     if (!remote) return;
@@ -1423,9 +1728,16 @@
         appState.accountEmail = creds.accountEmail;
         appState.authChoice = creds.authChoice;
         appState.isSetupCompleted = true;
+        // The cloud copy is the merge base; the merged state is ours to upload.
+        lastPushedFingerprint = remoteFp;
+        persistOfflineMeta();
+        recordResolution('merge', C.fingerprintState(appState));
         persist(false);
         if (typeof renderApp === 'function') renderApp();
         renderAll();
+        forceRemoteCheck = true;
+        const sync = window.syncToCloudStorage;
+        if (typeof sync === 'function') Promise.resolve(sync()).catch(() => {});
         toast(`Merged both copies: +${merged.added.subjects} subjects, +${merged.added.history} log entries.`, 'success', 6000);
       } catch (err) {
         toast('Could not merge the cloud backup: ' + err.message, 'error');
@@ -1433,8 +1745,18 @@
       return;
     }
 
-    // mode === 'remote'
+    // mode === 'remote': local work is deliberately discarded, not "synced".
     try {
+      const O = OFFLINE();
+      if (O) {
+        const ids = O.pendingOperations(offlineOps).map((op) => op.id);
+        if (ids.length) {
+          offlineOps = O.markOperations(offlineOps, ids, {
+            status: 'discarded', lastError: 'Replaced by the cloud copy on user instruction'
+          });
+          persistOfflineOps();
+        }
+      }
       const restored = C.sanitizeState(remote);
       const email = state.accountEmail;
       const choice = state.authChoice;
@@ -1445,39 +1767,45 @@
       appState.syncAuthKey = state.syncAuthKey;
       appState.lastSyncedAt = Date.now();
       appState.isSetupCompleted = true;
+      lastPushedFingerprint = C.fingerprintState(appState);
+      persistOfflineMeta();
+      recordResolution('remote', lastPushedFingerprint);
       persist(false);
       if (typeof applyThemeUI === 'function') applyThemeUI(appState.activeTheme || 'graphite');
       if (typeof renderApp === 'function') renderApp();
       renderAll();
-      toast(`Restored the cloud copy (${appState.subjects.length} subjects).`, 'success');
+      toast(`Restored the cloud copy (${appState.subjects.length} subjects). Local-only changes were discarded as requested.`, 'success', 6000);
     } catch (err) {
       toast('The cloud backup could not be validated: ' + err.message, 'error');
     }
   }
 
   function retrySync() {
-    if (!syncMeta().pending && !syncMeta().lastError) {
+    const O = OFFLINE();
+    const pending = O ? O.operationSummary(offlineOps).pending : 0;
+    if (!pending && !syncMeta().lastError && !pendingConflict) {
       toast('Everything is already synced.', 'info', 2400);
       return;
     }
+    if (!isOnline()) {
+      toast('You are offline. Queued changes will retry when the connection returns.', 'info', 3000);
+      return;
+    }
+    cancelRetry();
     forceRemoteCheck = true;
     const sync = window.syncToCloudStorage;
     if (typeof sync !== 'function') return;
     toast('Retrying cloud sync…', 'info', 2000);
     Promise.resolve(sync()).then((res) => {
       if (res && res.ok) {
-        clearSyncPending();
         toast('Cloud sync succeeded.', 'success');
       } else if (res && res.conflict) {
         renderSyncStatus();
       } else if (res && !res.busy && !res.queued) {
-        const meta = syncMeta();
-        meta.retries = (meta.retries || 0) + 1;
-        persist();
-        renderSyncStatus();
-        toast('Sync still failing. Your data stays safe on this device.', 'warning');
+        toast('Sync still failing. Your changes remain queued on this device.', 'warning');
       }
     }).catch(() => {});
+    renderSyncStatus();
   }
 
   // ===============================================================
@@ -1752,11 +2080,17 @@
 
   window.addEventListener('online', () => {
     updateNetworkBanner();
+    cancelRetry();
     if (syncMeta().pending) {
-      setTimeout(() => retrySync(), 1200);
+      setTimeout(() => {
+        forceRemoteCheck = true;
+        const sync = window.syncToCloudStorage;
+        if (typeof sync === 'function') Promise.resolve(sync()).catch(() => {});
+      }, 1200);
     }
   });
   window.addEventListener('offline', () => {
+    cancelRetry();
     markSyncPending('Offline');
     updateNetworkBanner();
   });
@@ -1790,6 +2124,7 @@
   };
 
   document.addEventListener('DOMContentLoaded', () => {
+    installOfflineLayer();
     installSyncGuard();
     installExportWrapper();
     installImportWrapper();
